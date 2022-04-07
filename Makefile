@@ -1,4 +1,4 @@
-MODULE = github.com/elastic/elastic-payloa-generator-tool
+MODULE = github.com/elastic/elastic-integration-corpus-generator-tool
 VERSION_IMPORT_PATH = $(MODULE)/internal/version
 VERSION_COMMIT_HASH = `git describe --always --long --dirty`
 SOURCE_DATE_EPOCH = `git log -1 --pretty=%ct` # https://reproducible-builds.org/docs/source-date-epoch/

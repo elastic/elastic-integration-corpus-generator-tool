@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/internal/corpus"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -74,15 +75,18 @@ func GenerateCmd() *cobra.Command {
 				return err
 			}
 
-			if err := fc.Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion, totEvents); err != nil {
+			payloadFilename, err := fc.Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion, totEvents)
+			if err != nil {
 				return err
 			}
+
+			fmt.Println("File generated:", payloadFilename)
 
 			return nil
 		},
 	}
 
-	generateCmd.Flags().StringVarP(&packageRegistryBaseURL, "package-registry-base-url", "r", "https://epr.elastic.co/ ", "base url of the package registry with schema")
+	generateCmd.Flags().StringVarP(&packageRegistryBaseURL, "package-registry-base-url", "r", "https://epr.elastic.co/", "base url of the package registry with schema")
 	generateCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
 	generateCmd.Flags().IntVarP(&totEvents, "tot-events", "t", 0, "total number of events to generate")
 	return generateCmd

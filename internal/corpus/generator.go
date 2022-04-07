@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/brianvoe/gofakeit/v6"
-	"go.uber.org/multierr"
 	"io/ioutil"
 	"math"
 	"math/rand"
@@ -231,7 +230,7 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, eve
 	}
 
 	configField, fieldHasConfig := gc.config.getField(field.Name)
-	if configField.Value != nil {
+	if fieldHasConfig && configField.Value != nil {
 		event[field.Name] = configField.Value
 		return event, nil
 	}
@@ -464,24 +463,20 @@ func collectFields(fieldsFromYaml YamlFields, namePrefix string) Fields {
 }
 
 // Generate generates a bulk request corpus and persist it to file.
-func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion string, totEvents int) error {
-	var errs []error
-	if len(errs) > 0 {
-		return multierr.Combine(errs...)
-	}
+func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion string, totEvents int) (string, error) {
 	if err := gc.fs.MkdirAll(gc.location, corpusLocPerm); err != nil {
-		return fmt.Errorf("cannot generate corpus location folder: %v", err)
+		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
 	}
 
 	packageURL, err := url.Parse(packageRegistryBaseURL)
 	if err != nil {
-		return err
+		return "", err
 	}
 	packageURL.Path = path.Join(packageSlug, integrationPackage, packageVersion)
 
 	fieldsContent, err := gc.getFieldsFiles(packageURL, dataStream)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	fieldsFromYaml, err := loadFieldsFromYaml(fieldsContent)
@@ -489,12 +484,12 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 	fields := collectFields(fieldsFromYaml, "")
 	fields, err = normaliseFields(fields)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	events, err := gc.eventsFromFields(fields, totEvents)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	payload := []byte("")
@@ -503,13 +498,15 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 		payload = append(payload, createPayload...)
 		eventPayload, err := json.Marshal(event)
 		if err != nil {
-			return err
+			return "", err
 		}
+
 		payload = append(payload, eventPayload...)
 		payload = append(payload, []byte("\n")...)
 	}
 
-	return afero.WriteFile(gc.fs, path.Join(gc.location, gc.bulkPayloadFilename(integrationPackage, dataStream, packageVersion)), payload, corpusPerm)
+	payloadFilename := path.Join(gc.location, gc.bulkPayloadFilename(integrationPackage, dataStream, packageVersion))
+	return payloadFilename, afero.WriteFile(gc.fs, payloadFilename, payload, corpusPerm)
 }
 
 func getFromURL(getURL *url.URL) ([]byte, error) {

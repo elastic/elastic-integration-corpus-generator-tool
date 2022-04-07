@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/OpenPeeDeeP/xdg v1.0.0
 	github.com/brianvoe/gofakeit/v6 v6.15.0
-	github.com/elastic/go-ucfg v0.8.3
+	github.com/elastic/go-ucfg v0.8.4
 	github.com/spf13/afero v1.8.2
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.10.1

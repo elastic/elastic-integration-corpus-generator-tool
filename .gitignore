@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+elastic-integration-corpus-generator-tool
 
 # Test binary, built with `go test -c`
 *.test

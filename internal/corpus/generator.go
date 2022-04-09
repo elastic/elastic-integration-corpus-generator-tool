@@ -123,14 +123,13 @@ func NewGenerator(config Config, fs afero.Fs, location string) (GeneratorCorpus,
 	}
 
 	return GeneratorCorpus{
-		config:                       config,
-		fs:                           fs,
-		location:                     location,
-		timestamp:                    time.Now().Unix,
-		constantKeyword:              make(map[string]string, 0),
-		keywordFieldValueRegex:       keywordRegex,
-		objectFieldNameReplacer:      strings.NewReplacer(".*", ""),
-		objectFieldValueNameReplacer: strings.NewReplacer(".*", "", ".", "-"),
+		config:                      config,
+		fs:                          fs,
+		location:                    location,
+		timestamp:                   time.Now().Unix,
+		constantKeyword:             make(map[string]string, 0),
+		keywordFieldValueRegex:      keywordRegex,
+		objectRootFieldNameReplacer: strings.NewReplacer(".*", ""),
 	}, nil
 }
 
@@ -155,10 +154,7 @@ type GeneratorCorpus struct {
 	keywordFieldValueRegex *regexp.Regexp
 
 	// replacer for object type processing
-	objectFieldNameReplacer *strings.Replacer
-
-	// replacer for object type processin
-	objectFieldValueNameReplacer *strings.Replacer
+	objectRootFieldNameReplacer *strings.Replacer
 }
 
 func (gc GeneratorCorpus) Location() string {
@@ -239,7 +235,7 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, eve
 		cardinalityIndex := int(math.Ceil(float64(totEvents) * (float64(configField.Cardinality) / 100.)))
 		originalFieldName := field.Name
 		if strings.HasSuffix(field.Name, ".*") {
-			originalFieldName = gc.objectFieldNameReplacer.Replace(field.Name)
+			originalFieldName = gc.objectRootFieldNameReplacer.Replace(field.Name)
 		}
 
 		if i%cardinalityIndex > 0 {
@@ -347,19 +343,19 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, eve
 			field.Type = "keyword"
 		}
 
-		originalFieldName := gc.objectFieldNameReplacer.Replace(field.Name)
+		objectRootFieldName := gc.objectRootFieldNameReplacer.Replace(field.Name)
 		totObjectsKeys := rand.Intn(10)
 		objectsKeys := make([]string, 0, totObjectsKeys)
 		if len(configField.ObjectKeys) > 0 {
 			for _, objectsKey := range configField.ObjectKeys {
-				objectsKeys = append(objectsKeys, objectsKey)
+				objectsKeys = append(objectsKeys, objectRootFieldName+"."+objectsKey)
 			}
 		} else {
 			for i := 0; i < totObjectsKeys; i++ {
-				objectsKeys = append(objectsKeys, fmt.Sprintf("%s-%d", gc.objectFieldValueNameReplacer.Replace(field.Name), i))
+				objectsKeys = append(objectsKeys, objectRootFieldName+"."+gofakeit.Word())
 			}
 		}
-		objectEvent := make(map[string]interface{}, totObjectsKeys)
+
 		for _, objectsKey := range objectsKeys {
 			field.Name = objectsKey
 			var err error
@@ -369,10 +365,9 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, eve
 				return event, err
 			}
 
-			objectEvent[field.Name] = currentEvent[field.Name]
+			event[field.Name] = currentEvent[field.Name]
 		}
 
-		event[originalFieldName] = objectEvent
 		break
 	default:
 		event[field.Name] = gofakeit.Sentence(rand.Intn(25))

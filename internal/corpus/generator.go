@@ -8,7 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/brianvoe/gofakeit/v6"
+	"github.com/dustin/go-humanize"
+	"io"
 	"io/ioutil"
 	"math"
 	"math/rand"
@@ -23,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/brianvoe/gofakeit/v6"
+	_ "github.com/dustin/go-humanize"
 	"github.com/elastic/go-ucfg/yaml"
 	"github.com/spf13/afero"
 )
@@ -219,7 +222,7 @@ func mergeFields(fields Fields, fieldsToMerge ...Field) Fields {
 	return fields
 }
 
-func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, event map[string]interface{}, events []map[string]interface{}) (map[string]interface{}, error) {
+func (gc GeneratorCorpus) eventFieldFaker(field Field, globalIndex, totEvents uint64, event map[string]interface{}, previousEvent map[string]interface{}) (map[string]interface{}, error) {
 	if len(field.Value) > 0 {
 		event[field.Name] = field.Value
 		return event, nil
@@ -231,15 +234,15 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, eve
 		return event, nil
 	}
 
-	if i > 0 && fieldHasConfig && configField.Cardinality > 0 {
-		cardinalityIndex := int(math.Ceil(float64(totEvents) * (float64(configField.Cardinality) / 100.)))
+	if previousEvent != nil && fieldHasConfig && configField.Cardinality > 0 {
+		cardinalityIndex := uint64(math.Ceil(float64(totEvents) * (float64(configField.Cardinality) / 1000.)))
 		originalFieldName := field.Name
 		if strings.HasSuffix(field.Name, ".*") {
 			originalFieldName = gc.objectRootFieldNameReplacer.Replace(field.Name)
 		}
 
-		if i%cardinalityIndex > 0 {
-			event[originalFieldName] = events[i-1][originalFieldName]
+		if globalIndex%cardinalityIndex > 0 {
+			event[originalFieldName] = previousEvent[originalFieldName]
 			return event, nil
 		}
 	}
@@ -254,6 +257,7 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, eve
 	case "double":
 		fallthrough
 	case "long":
+		var err error
 		var dummy string
 		var totDigit int
 		var fuzziness int
@@ -262,40 +266,45 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, eve
 			fuzziness = configField.Fuzziness
 		}
 
-		if totDigit > 0 {
-			dummy = strconv.Itoa(rand.Intn(totDigit))
-		} else if len(field.Example) > 0 {
-			totDigit := len(field.Example)
-			dummy = gofakeit.DigitN(uint(totDigit))
-		} else {
-			dummy = gofakeit.Digit()
-		}
+		dummyInt := 0
+		for dummyInt == 0 {
+			if totDigit > 0 {
+				dummy = strconv.Itoa(rand.Intn(totDigit))
+			} else if len(field.Example) > 0 {
+				totDigit := len(field.Example)
+				dummy = gofakeit.DigitN(uint(totDigit))
+			} else {
+				dummy = gofakeit.Digit()
+			}
 
-		dummyInt, err := strconv.Atoi(dummy)
-		if err != nil {
-			return event, err
+			dummyInt, err = strconv.Atoi(dummy)
+			if err != nil {
+				return event, err
+			}
 		}
 
 		if field.Type == "long" {
-			if fuzziness > 0 && i > 0 {
-				previousDummyInt := events[i-1][field.Name].(int)
+			if fuzziness > 0 && previousEvent != nil {
+				previousDummyInt := previousEvent[field.Name].(int)
 				adjustedRatio := 1. - float64(rand.Intn(fuzziness))/100.
 				if rand.Int()%2 == 0 {
 					adjustedRatio = 1. + float64(rand.Intn(fuzziness))/100.
 				}
 				dummyInt = int(math.Ceil(float64(previousDummyInt) * adjustedRatio))
 			}
+
 			event[field.Name] = dummyInt
 		} else {
 			dummyFloat := float64(dummyInt) / rand.Float64()
-			if fuzziness > 0 && i > 0 {
-				previousDummyFloat := events[i-1][field.Name].(float64)
-				adjustedRatio := 1. + float64(rand.Intn(fuzziness))/100.
+			if fuzziness > 0 && previousEvent != nil {
+				previousDummyFloat := previousEvent[field.Name].(float64)
+				adjustedRatio := 1. - float64(rand.Intn(fuzziness))/100.
 				if rand.Int()%2 == 0 {
 					adjustedRatio = 1. + float64(rand.Intn(fuzziness))/100.
 				}
 				dummyFloat = previousDummyFloat * adjustedRatio
 			}
+
 			event[field.Name] = dummyFloat
 		}
 
@@ -319,16 +328,14 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, eve
 			}
 
 			dummy = gc.keywordFieldValueRegex.ReplaceAllString(strings.ToLower(strings.TrimSuffix(dummy, ".")), joiner)
-		} else {
-			dummy = strings.ToLower(gofakeit.Word())
-		}
-
-		if field.Type == "constant_keyword" {
+		} else if field.Type == "constant_keyword" {
 			if value, ok := gc.constantKeyword[field.Name]; !ok {
-				gc.constantKeyword[field.Name] = dummy
+				gc.constantKeyword[field.Name] = strings.ToLower(gofakeit.Word())
 			} else {
 				dummy = value
 			}
+		} else {
+			dummy = strings.ToLower(gofakeit.Word())
 		}
 
 		event[field.Name] = dummy
@@ -360,7 +367,7 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, eve
 			field.Name = objectsKey
 			var err error
 			currentEvent := make(map[string]interface{})
-			currentEvent, err = gc.eventFieldFaker(field, i, totEvents, currentEvent, events)
+			currentEvent, err = gc.eventFieldFaker(field, globalIndex, totEvents, currentEvent, previousEvent)
 			if err != nil {
 				return event, err
 			}
@@ -375,23 +382,62 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, i int, totEvents int, eve
 
 	return event, nil
 }
-func (gc GeneratorCorpus) eventsFromFields(fields Fields, totEvents int) ([]map[string]interface{}, error) {
-	events := make([]map[string]interface{}, totEvents)
-
+func (gc GeneratorCorpus) eventsPayloadFromFields(fields Fields, totSize uint64, createPayload []byte, f afero.File) error {
 	var err error
-	for i := 0; i < totEvents; i++ {
+	var totEvents uint64
+	var currentSize uint64
+	var globalIndex uint64
+	var previousEvent map[string]interface{}
+
+	for currentSize < totSize {
 		event := make(map[string]interface{})
 		for _, field := range fields {
-			event, err = gc.eventFieldFaker(field, i, totEvents, event, events)
+			event, err = gc.eventFieldFaker(field, globalIndex, totEvents, event, previousEvent)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 
-		events[i] = event
+		eventPayload, err := json.Marshal(event)
+		if err != nil {
+			return err
+		}
+
+		eventPayload = append(eventPayload, []byte("\n")...)
+
+		var n int
+		n, err = f.Write(createPayload)
+		if err == nil && n < len(createPayload) {
+			err = io.ErrShortWrite
+		}
+
+		if err != nil {
+			return err
+		}
+
+		n, err = f.Write(eventPayload)
+		if err == nil && n < len(eventPayload) {
+			err = io.ErrShortWrite
+		}
+
+		if err != nil {
+			return err
+		}
+
+		currentSize += uint64(len(eventPayload))
+		if err != nil {
+			return err
+		}
+
+		if globalIndex == 0 {
+			totEvents = totSize / currentSize
+		}
+
+		previousEvent = event
+		globalIndex++
 	}
 
-	return events, nil
+	return nil
 }
 
 func normaliseFields(fields Fields) (Fields, error) {
@@ -458,7 +504,11 @@ func collectFields(fieldsFromYaml YamlFields, namePrefix string) Fields {
 }
 
 // Generate generates a bulk request corpus and persist it to file.
-func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion string, totEvents int) (string, error) {
+func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion, totSize string) (string, error) {
+	totSizeInBytes, err := humanize.ParseBytes(totSize)
+	if err != nil {
+		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
+	}
 	if err := gc.fs.MkdirAll(gc.location, corpusLocPerm); err != nil {
 		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
 	}
@@ -475,6 +525,9 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 	}
 
 	fieldsFromYaml, err := loadFieldsFromYaml(fieldsContent)
+	if err != nil {
+		return "", err
+	}
 
 	fields := collectFields(fieldsFromYaml, "")
 	fields, err = normaliseFields(fields)
@@ -482,26 +535,24 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 		return "", err
 	}
 
-	events, err := gc.eventsFromFields(fields, totEvents)
+	payloadFilename := path.Join(gc.location, gc.bulkPayloadFilename(integrationPackage, dataStream, packageVersion))
+	f, err := gc.fs.OpenFile(payloadFilename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, corpusPerm)
 	if err != nil {
 		return "", err
 	}
 
-	payload := []byte("")
 	createPayload := []byte(`{ "create" : { "_index": "metrics-` + integrationPackage + `.` + dataStream + `-default" } }` + "\n")
-	for _, event := range events {
-		payload = append(payload, createPayload...)
-		eventPayload, err := json.Marshal(event)
-		if err != nil {
-			return "", err
-		}
 
-		payload = append(payload, eventPayload...)
-		payload = append(payload, []byte("\n")...)
+	err = gc.eventsPayloadFromFields(fields, totSizeInBytes, createPayload, f)
+	if err != nil {
+		return "", err
 	}
 
-	payloadFilename := path.Join(gc.location, gc.bulkPayloadFilename(integrationPackage, dataStream, packageVersion))
-	return payloadFilename, afero.WriteFile(gc.fs, payloadFilename, payload, corpusPerm)
+	if err := f.Close(); err == nil {
+		return "", err
+	}
+
+	return payloadFilename, err
 }
 
 func getFromURL(getURL *url.URL) ([]byte, error) {
@@ -533,6 +584,9 @@ func getFromURL(getURL *url.URL) ([]byte, error) {
 
 func (gc GeneratorCorpus) getFieldsFiles(packageIntegrationURL *url.URL, dataStream string) ([]byte, error) {
 	body, err := getFromURL(packageIntegrationURL)
+	if err != nil {
+		return nil, err
+	}
 
 	var assetsPayload struct {
 		Assets []string `json:"assets"`

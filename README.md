@@ -18,8 +18,8 @@ Flags:
   -c, --config-file string                 path to config file for generator settings
   -h, --help                               help for generate
   -r, --package-registry-base-url string   base url of the package registry with schema (default "https://epr.elastic.co/")
-  -t, --tot-events int                     total number of events to generate
-  ```
+  -t, --tot-size string                    total size of the corpus to generate
+```
 
 #### Mandatory arguments
 - integration
@@ -27,7 +27,7 @@ Flags:
 - version
 
 #### Mandatory flags
-`--tot-events`
+`--tot-size`
 
 ### Example
 ```shell
@@ -63,9 +63,9 @@ It is possible to tweak the randomness of the generated data through a config fi
 - name: data_stream.namespace
   value: default
 - name: aws.dimensions.TableName
-  cardinality: 100
+  cardinality: 1000
 - name: aws.dimensions.Operation
-  cardinality: 50
+  cardinality: 500
 ```
 
 #### Config entries definition
@@ -74,8 +74,8 @@ For each config entry the following fileds are available
 - `name` *mandatory*: dotted path field
 - `fuzziness` *optional (`long` and `double` type only)*: delta from the previous generated value for the same field
 - `range` *optional (`long` and `double` type only)*: value will be generated between 0 and range
-- `cardinality` *optional*: percentage distribution of different values for the field
+- `cardinality` *optional*: per-mille distribution of different values for the field
 - `object_keys` *optional (`object` type only)*: list of field names to generate in a object field type. if not specified a random number of field names will be generated in the object filed type.
 - `value` *optional*: hardcoded value to set for the field (any `cardinality` will be ignored)
 
-If you have an `object` type field that you defined one or multiple `object_keys` for, you can reference them as a root level field with their own customisation. Beware that if a `cardinality` is set for the `object` type field, cardinality will be ignored of the children `object_keys` fields.
+If you have an `object` type field that you defined one or multiple `object_keys` for, you can reference them as a root level field with their own customisation. Beware that if a `cardinality` is set for the `object` type field, cardinality will be ignored for the children `object_keys` fields.

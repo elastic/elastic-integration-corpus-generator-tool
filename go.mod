@@ -4,7 +4,8 @@ go 1.18
 
 require (
 	github.com/OpenPeeDeeP/xdg v1.0.0
-	github.com/brianvoe/gofakeit/v6 v6.15.0
+	github.com/brianvoe/gofakeit/v6 v6.16.0
+	github.com/dustin/go-humanize v1.0.0
 	github.com/elastic/go-ucfg v0.8.4
 	github.com/spf13/afero v1.8.2
 	github.com/spf13/cobra v1.4.0
@@ -15,7 +16,6 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect

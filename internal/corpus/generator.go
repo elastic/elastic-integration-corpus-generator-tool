@@ -548,7 +548,7 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 		return "", err
 	}
 
-	if err := f.Close(); err == nil {
+	if err := f.Close(); err != nil {
 		return "", err
 	}
 

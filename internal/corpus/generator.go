@@ -228,13 +228,13 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, globalIndex, totEvents ui
 		return event, nil
 	}
 
-	configField, fieldHasConfig := gc.config.getField(field.Name)
-	if fieldHasConfig && configField.Value != nil {
+	configField, _ := gc.config.getField(field.Name)
+	if configField.Value != nil {
 		event[field.Name] = configField.Value
 		return event, nil
 	}
 
-	if previousEvent != nil && fieldHasConfig && configField.Cardinality > 0 {
+	if previousEvent != nil && configField.Cardinality > 0 {
 		cardinalityIndex := uint64(math.Ceil(float64(totEvents) * (float64(configField.Cardinality) / 1000.)))
 		originalFieldName := field.Name
 		if strings.HasSuffix(field.Name, ".*") {
@@ -259,28 +259,23 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, globalIndex, totEvents ui
 	case "long":
 		var err error
 		var dummy string
-		var totDigit int
-		var fuzziness int
-		if fieldHasConfig {
-			totDigit = configField.Range
-			fuzziness = configField.Fuzziness
-		}
+
+		maxValue := configField.Range
+		fuzziness := configField.Fuzziness
 
 		dummyInt := 0
-		for dummyInt == 0 {
-			if totDigit > 0 {
-				dummy = strconv.Itoa(rand.Intn(totDigit))
-			} else if len(field.Example) > 0 {
-				totDigit := len(field.Example)
-				dummy = gofakeit.DigitN(uint(totDigit))
-			} else {
-				dummy = gofakeit.Digit()
-			}
+		if maxValue > 0 {
+			dummy = strconv.Itoa(rand.Intn(maxValue))
+		} else if len(field.Example) > 0 {
+			totDigit := len(field.Example)
+			dummy = gofakeit.DigitN(uint(totDigit))
+		} else {
+			dummy = gofakeit.Digit()
+		}
 
-			dummyInt, err = strconv.Atoi(dummy)
-			if err != nil {
-				return event, err
-			}
+		dummyInt, err = strconv.Atoi(dummy)
+		if err != nil {
+			return event, err
 		}
 
 		if field.Type == "long" {
@@ -385,6 +380,7 @@ func (gc GeneratorCorpus) eventFieldFaker(field Field, globalIndex, totEvents ui
 func (gc GeneratorCorpus) eventsPayloadFromFields(fields Fields, totSize uint64, createPayload []byte, f afero.File) error {
 	var err error
 	var totEvents uint64
+	var payloadSize uint64
 	var currentSize uint64
 	var globalIndex uint64
 	var previousEvent map[string]interface{}
@@ -424,15 +420,12 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(fields Fields, totSize uint64,
 			return err
 		}
 
-		currentSize += uint64(len(eventPayload))
-		if err != nil {
-			return err
-		}
-
 		if globalIndex == 0 {
-			totEvents = totSize / currentSize
+			payloadSize = uint64(len(eventPayload))
+			totEvents = totSize / payloadSize
 		}
 
+		currentSize += payloadSize
 		previousEvent = event
 		globalIndex++
 	}

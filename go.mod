@@ -6,7 +6,7 @@ require (
 	github.com/OpenPeeDeeP/xdg v1.0.0
 	github.com/brianvoe/gofakeit/v6 v6.16.0
 	github.com/dustin/go-humanize v1.0.0
-	github.com/elastic/go-ucfg v0.8.4
+	github.com/elastic/go-ucfg v0.8.5
 	github.com/spf13/afero v1.8.2
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.11.0

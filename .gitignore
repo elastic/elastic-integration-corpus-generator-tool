@@ -14,3 +14,6 @@ elastic-integration-corpus-generator-tool
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# OSX
+.DS_Store

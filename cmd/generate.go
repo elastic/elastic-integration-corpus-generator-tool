@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/internal/corpus"
+	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -65,7 +66,7 @@ func GenerateCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			location := viper.GetString("corpora_location")
-			config, err := corpus.LoadConfig(configFile)
+			config, err := config.LoadConfig(configFile)
 			if err != nil {
 				return err
 			}

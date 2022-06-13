@@ -152,36 +152,53 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]emitF) error {
 
 		// Have we rolled over once?  If not, generate a value and cache it.
 		if len(va) < cardinality {
-			var tmp bytes.Buffer
-			if err := boundF(state, dupes, &tmp); err != nil {
-				return err
-			}
 
-			// check for dupes O(n)
-			isDupe := false
-			for _, b := range va {
-				if bytes.Equal(tmp.Bytes(), b.Bytes()) {
-					isDupe = true
+			// Do college try dupe detection on value;
+			// Allow dupe if no unique value in nTries.
+			nTries := 11 // "These go to 11."
+			var tmp bytes.Buffer
+			for i := 0; i < nTries; i++ {
+
+				tmp.Reset()
+				if err := boundF(state, dupes, &tmp); err != nil {
+					return err
+				}
+
+				if !isDupe(va, tmp.Bytes()) {
 					break
 				}
 			}
 
-			// ok, we succeeed, append the value to our cache
-			if !isDupe {
-				state.prevCache[field.Name] = append(va, tmp)
-			}
-
-			buf.Write(tmp.Bytes())
-			return nil
+			va = append(va, tmp)
+			state.prevCache[field.Name] = va
 		}
 
-		choice := va[rand.Intn(len(va))]
+		idx := int(state.counter % uint64(cardinality))
+
+		// Safety check; should be a noop
+		if idx >= len(va) {
+			idx = len(va) - 1
+		}
+
+		choice := va[idx]
 		buf.Write(choice.Bytes())
 		return nil
 	}
 
 	return nil
 
+}
+
+// Check for dupes O(n)
+func isDupe(va []bytes.Buffer, dst []byte) bool {
+	var dupe bool
+	for _, b := range va {
+		if bytes.Equal(dst, b.Bytes()) {
+			dupe = true
+			break
+		}
+	}
+	return dupe
 }
 
 func bindByType(cfg Config, field Field, fieldMap map[string]emitF) (err error) {

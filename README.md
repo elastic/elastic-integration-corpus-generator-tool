@@ -37,7 +37,7 @@ File generated: /Users/andreaspacca/Library/Application Support/elastic-integrat
 
 
 ### Config file
-It is possible to tweak the randomness of the generated data through a config file provivde by the `--config-file` flag
+It is possible to tweak the randomness of the generated data through a config file provided by the `--config-file` flag
 
 ##### Sample config
 ```yaml
@@ -70,7 +70,7 @@ It is possible to tweak the randomness of the generated data through a config fi
 
 #### Config entries definition
 The config file is a yaml file consisting of an array of config entry.
-For each config entry the following fileds are available
+For each config entry the following fields are available
 - `name` *mandatory*: dotted path field
 - `fuzziness` *optional (`long` and `double` type only)*: delta from the previous generated value for the same field
 - `range` *optional (`long` and `double` type only)*: value will be generated between 0 and range

@@ -2,18 +2,15 @@ package fields
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/elastic/elastic-integration-corpus-generator-tool/internal/settings"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -95,38 +92,25 @@ func getFieldsFiles(ctx context.Context, baseURL, integration, dataStream, versi
 
 	downloadURL, err := makeDownloadURL(baseURL, downloadPayload.Download)
 	r, err = getFromURL(ctx, downloadURL.String())
+	defer func(r io.ReadCloser) {
+		if r != nil {
+			_ = r.Close()
+		}
+	}(r)
+
 	if err != nil {
 		return nil, err
 	}
 
-	h := sha256.New()
-	h.Write([]byte(downloadURL.String()))
-	prefix := hex.EncodeToString(h.Sum(nil))
-
-	packageTempDir, err := os.MkdirTemp(settings.CacheDir(), prefix)
-	if err != nil {
-		return nil, err
-	}
-	packageArchive := path.Join(packageTempDir, "package.zip")
-	f, err := os.Create(packageArchive)
+	zipContent, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = io.Copy(f, r)
-	_ = f.Close()
-	if err != nil {
-
-		return nil, err
-	}
-
-	archive, err := zip.OpenReader(packageArchive)
+	archive, err := zip.NewReader(bytes.NewReader(zipContent), int64(len(zipContent)))
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = archive.Close()
-	}()
 
 	prefixFieldsPath := path.Join(fmt.Sprintf("%s-%s", integration, version), dataStreamSlug, dataStream, fieldsSlug)
 
@@ -143,11 +127,17 @@ func getFieldsFiles(ctx context.Context, baseURL, integration, dataStream, versi
 		fieldsFileName := z.Name
 		zr, err := z.Open()
 		if err != nil {
+			if zr != nil {
+				_ = zr.Close()
+			}
 			return nil, err
 		}
 
 		fieldsFileContent, err := ioutil.ReadAll(zr)
 		if err != nil {
+			if zr != nil {
+				_ = zr.Close()
+			}
 			return nil, err
 		}
 
@@ -175,20 +165,16 @@ func getFromURL(ctx context.Context, srcURL string) (io.ReadCloser, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		defer func(r io.ReadCloser) {
-			if r != nil {
-				_ = r.Close()
-			}
-		}(resp.Body)
+		if resp.Body != nil {
+			_ = resp.Body.Close()
+		}
 		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		defer func(r io.ReadCloser) {
-			if r != nil {
-				_ = r.Close()
-			}
-		}(resp.Body)
+		if resp.Body != nil {
+			_ = resp.Body.Close()
+		}
 		return nil, ErrNotFound
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/url"
 	"path"
 	"strings"
@@ -17,13 +18,19 @@ func MapVersion(ctx context.Context, baseUrl, integration, kibanaVersion string)
 		return "", err
 	}
 
-	body, err := getFromURL(ctx, searchUrl.String())
+	r, err := getFromURL(ctx, searchUrl.String())
 	if err != nil {
 		return "", err
 	}
 
 	var payload []struct {
 		Version string `json:"version"`
+	}
+
+	body, err := ioutil.ReadAll(r)
+	if err != nil {
+		_ = r.Close()
+		return "", err
 	}
 
 	if err = json.Unmarshal(body, &payload); err != nil {

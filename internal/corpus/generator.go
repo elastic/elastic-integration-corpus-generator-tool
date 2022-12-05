@@ -154,7 +154,7 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 }
 
 // GenerateWithTemplate generates a bulk request corpus and persist it to file.
-func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPath, dataType, totSize string) (string, error) {
+func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPath, totSize string) (string, error) {
 	totSizeInBytes, err := humanize.ParseBytes(totSize)
 	if err != nil {
 		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
@@ -184,9 +184,7 @@ func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPat
 		return "", err
 	}
 
-	createPayload := []byte(`{ "create" : { "_index": "` + dataType + `generic-default" } }` + "\n")
-
-	err = gc.eventsPayloadFromFields(template, fields, totSizeInBytes, createPayload, f)
+	err = gc.eventsPayloadFromFields(template, fields, totSizeInBytes, nil, f)
 	if err != nil {
 		return "", err
 	}

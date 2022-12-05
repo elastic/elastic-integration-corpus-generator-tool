@@ -17,17 +17,16 @@ import (
 
 var templatePath string
 var fieldsDefinitionPath string
-var dataType string
 
 func GenerateWithTemplateCmd() *cobra.Command {
 	generateWithTemplateCmd := &cobra.Command{
-		Use:   "generate-with-template template-path fields-definition-path data-type",
+		Use:   "generate-with-template template-path fields-definition-path",
 		Short: "Generate a corpus",
-		Long:  "Generate a bulk request corpus given a template path and a data type",
+		Long:  "Generate a bulk request corpus given a template path and a fields definition path",
 		Args: func(cmd *cobra.Command, args []string) error {
 			var errs []error
-			if len(args) != 3 {
-				return errors.New("you must pass the template path and the data type")
+			if len(args) != 2 {
+				return errors.New("you must pass the template path and the fields definition path")
 			}
 
 			if totSize == "" {
@@ -42,10 +41,6 @@ func GenerateWithTemplateCmd() *cobra.Command {
 			fieldsDefinitionPath = args[1]
 			if fieldsDefinitionPath == "" {
 				errs = append(errs, errors.New("you must provide a not empty fields definition path argument"))
-			}
-			dataType = args[2]
-			if dataType == "" {
-				errs = append(errs, errors.New("you must provide a not empty data type argument"))
 			}
 
 			if len(errs) > 0 {
@@ -67,7 +62,7 @@ func GenerateWithTemplateCmd() *cobra.Command {
 				return err
 			}
 
-			payloadFilename, err := fc.GenerateWithTemplate(templatePath, fieldsDefinitionPath, dataType, totSize)
+			payloadFilename, err := fc.GenerateWithTemplate(templatePath, fieldsDefinitionPath, totSize)
 			if err != nil {
 				return err
 			}

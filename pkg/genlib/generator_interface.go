@@ -81,12 +81,12 @@ func NewGenState() *GenState {
 	}
 }
 
-func bindField(cfg Config, field Field, fieldMap map[string]emitF, withTemplate bool) error {
+func bindField(cfg Config, field Field, fieldMap map[string]emitF, objectKeys map[string]struct{}, templateFieldMap map[string][]byte) error {
 
 	// Check for hardcoded field value
 	if len(field.Value) > 0 {
-		if withTemplate {
-			return bindStaticWithTemplate(field, field.Value, fieldMap)
+		if len(templateFieldMap) > 0 {
+			return bindStaticWithTemplate(templateFieldMap[field.Name], field, field.Value, fieldMap)
 		}
 		return bindStatic(field, field.Value, fieldMap)
 	}
@@ -94,20 +94,20 @@ func bindField(cfg Config, field Field, fieldMap map[string]emitF, withTemplate 
 	// Check config override of value
 	fieldCfg, _ := cfg.GetField(field.Name)
 	if fieldCfg.Value != nil {
-		if withTemplate {
-			return bindStaticWithTemplate(field, fieldCfg.Value, fieldMap)
+		if len(templateFieldMap) > 0 {
+			return bindStaticWithTemplate(templateFieldMap[field.Name], field, fieldCfg.Value, fieldMap)
 		}
 		return bindStatic(field, fieldCfg.Value, fieldMap)
 	}
 
 	if fieldCfg.Cardinality > 0 {
-		if withTemplate {
-			return bindCardinalityWithTemplate(cfg, field, fieldMap)
+		if len(templateFieldMap) > 0 {
+			return bindCardinalityWithTemplate(cfg, field, fieldMap, objectKeys, templateFieldMap)
 		}
 		return bindCardinality(cfg, field, fieldMap)
 	}
 
-	return bindByType(cfg, field, fieldMap, withTemplate)
+	return bindByType(cfg, field, fieldMap, objectKeys, templateFieldMap)
 }
 
 // Check for dupes O(n)
@@ -122,32 +122,32 @@ func isDupe(va []bytes.Buffer, dst []byte) bool {
 	return dupe
 }
 
-func bindByType(cfg Config, field Field, fieldMap map[string]emitF, withTemplate bool) (err error) {
+func bindByType(cfg Config, field Field, fieldMap map[string]emitF, objectKeys map[string]struct{}, templateFieldMap map[string][]byte) (err error) {
 
 	fieldCfg, _ := cfg.GetField(field.Name)
 
-	if withTemplate {
+	if len(templateFieldMap) > 0 {
 		switch field.Type {
 		case FieldTypeDate:
-			err = bindNearTimeWithTemplate(field, fieldMap)
+			err = bindNearTimeWithTemplate(templateFieldMap[field.Name], field, fieldMap)
 		case FieldTypeIP:
-			err = bindIPWithTemplate(field, fieldMap)
+			err = bindIPWithTemplate(templateFieldMap[field.Name], field, fieldMap)
 		case FieldTypeDouble, FieldTypeFloat, FieldTypeHalfFloat, FieldTypeScaledFloat:
-			err = bindDoubleWithTemplate(fieldCfg, field, fieldMap)
+			err = bindDoubleWithTemplate(templateFieldMap[field.Name], fieldCfg, field, fieldMap)
 		case FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong: // TODO: generate > 63 bit values for unsigned_long
-			err = bindLongWithTemplate(fieldCfg, field, fieldMap)
+			err = bindLongWithTemplate(templateFieldMap[field.Name], fieldCfg, field, fieldMap)
 		case FieldTypeConstantKeyword:
-			err = bindConstantKeywordWithTemplate(field, fieldMap)
+			err = bindConstantKeywordWithTemplate(templateFieldMap[field.Name], field, fieldMap)
 		case FieldTypeKeyword:
-			err = bindKeywordWithTemplate(fieldCfg, field, fieldMap)
+			err = bindKeywordWithTemplate(templateFieldMap[field.Name], fieldCfg, field, fieldMap)
 		case FieldTypeBool:
-			err = bindBoolWithTemplate(field, fieldMap)
+			err = bindBoolWithTemplate(templateFieldMap[field.Name], field, fieldMap)
 		case FieldTypeObject, FieldTypeNested, FieldTypeFlattened:
-			err = bindObject(cfg, fieldCfg, field, fieldMap, withTemplate)
+			err = bindObject(cfg, fieldCfg, field, fieldMap, objectKeys, templateFieldMap)
 		case FieldTypeGeoPoint:
-			err = bindGeoPointWithTemplate(field, fieldMap)
+			err = bindGeoPointWithTemplate(templateFieldMap[field.Name], field, fieldMap)
 		default:
-			err = bindWordNWithTemplate(field, 25, fieldMap)
+			err = bindWordNWithTemplate(templateFieldMap[field.Name], field, 25, fieldMap)
 		}
 	} else {
 		switch field.Type {
@@ -166,7 +166,7 @@ func bindByType(cfg Config, field Field, fieldMap map[string]emitF, withTemplate
 		case FieldTypeBool:
 			err = bindBool(field, fieldMap)
 		case FieldTypeObject, FieldTypeNested, FieldTypeFlattened:
-			err = bindObject(cfg, fieldCfg, field, fieldMap, withTemplate)
+			err = bindObject(cfg, fieldCfg, field, fieldMap, nil, nil)
 		case FieldTypeGeoPoint:
 			err = bindGeoPoint(field, fieldMap)
 		default:
@@ -198,7 +198,7 @@ func makeIntFunc(fieldCfg ConfigField, field Field) func() int {
 	return dummyFunc
 }
 
-func bindObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[string]emitF, withTemplate bool) error {
+func bindObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[string]emitF, objectKeys map[string]struct{}, templateFieldMap map[string][]byte) error {
 	if len(field.ObjectType) > 0 {
 		field.Type = field.ObjectType
 	} else {
@@ -207,12 +207,11 @@ func bindObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[stri
 
 	objectRootFieldName := replacer.Replace(field.Name)
 
-	objectsKeys := fieldCfg.ObjectKeys
-	if len(objectsKeys) > 0 {
-		for _, objectsKey := range objectsKeys {
+	if len(fieldCfg.ObjectKeys) > 0 {
+		for _, objectsKey := range fieldCfg.ObjectKeys {
 			field.Name = objectRootFieldName + "." + objectsKey
 
-			if err := bindField(cfg, field, fieldMap, withTemplate); err != nil {
+			if err := bindField(cfg, field, fieldMap, objectKeys, templateFieldMap); err != nil {
 				return err
 			}
 		}
@@ -224,40 +223,36 @@ func bindObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[stri
 	// Will creating a special emit function that binds statically,
 	// but only fires randomly.
 	N := 5
-	return bindDynamicObject(cfg, fieldCfg, field, fieldMap, N, withTemplate)
+	return bindDynamicObject(cfg, fieldCfg, field, fieldMap, N, objectKeys, templateFieldMap)
 }
 
-func bindDynamicObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[string]emitF, N int, withTemplate bool) error {
+func bindDynamicObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[string]emitF, N int, objectKeys map[string]struct{}, templateFieldMap map[string][]byte) error {
 
 	// Temporary fieldMap which we pass to the bind function,
 	// then extract the generated emitFunction for use in the stub.
 	dynMap := make(map[string]emitF)
+
+	if len(templateFieldMap) > 0 {
+		if err := bindField(cfg, field, dynMap, objectKeys, templateFieldMap); err != nil {
+			return err
+		}
+		stub := makeDynamicStubWithTemplate(templateFieldMap[field.Name], dynMap[field.Name])
+		fieldMap[field.Name] = stub
+
+		return nil
+	}
 
 	objectRootFieldName := replacer.Replace(field.Name)
 
 	for i := 0; i < N; i++ {
 		// Generate a guid for binding, we will replace later
 		key := shortuuid.New()
-
-		if withTemplate {
-			field.Name = fmt.Sprintf("%s.%d", field.Name, i)
-		} else {
-			field.Name = key
-		}
-
-		if err := bindField(cfg, field, dynMap, withTemplate); err != nil {
+		field.Name = key
+		if err := bindField(cfg, field, dynMap, nil, nil); err != nil {
 			return err
 		}
-
-		var stub emitF
-		if withTemplate {
-			stub = makeDynamicStubWithTemplate(objectRootFieldName, i, dynMap[field.Name])
-			fieldMap[fmt.Sprintf("%s.%d", objectRootFieldName, i)] = stub
-		} else {
-			stub = makeDynamicStub(objectRootFieldName, key, dynMap[key])
-			fieldMap[objectRootFieldName+"."+key] = stub
-		}
-
+		stub := makeDynamicStub(objectRootFieldName, key, dynMap[key])
+		fieldMap[objectRootFieldName+"."+key] = stub
 	}
 
 	return nil

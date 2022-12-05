@@ -28,7 +28,7 @@ func NewGenerator(cfg Config, fields Fields) (Generator, error) {
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]emitF)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, false); err != nil {
+		if err := bindField(cfg, field, fieldMap, nil, nil); err != nil {
 			return nil, err
 		}
 	}
@@ -308,7 +308,7 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]emitF) error {
 	}
 
 	// Go ahead and bind the original field
-	if err := bindByType(cfg, field, fieldMap, false); err != nil {
+	if err := bindByType(cfg, field, fieldMap, nil, nil); err != nil {
 		return err
 	}
 

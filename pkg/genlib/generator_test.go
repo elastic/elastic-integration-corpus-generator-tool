@@ -27,19 +27,32 @@ const cardinalityCfg = `
 */
 
 func Test_EmptyCase(t *testing.T) {
-
-	g, state := makeGenerator(t, Config{}, []Field{})
-
-	var buf bytes.Buffer
-
-	if err := g.Emit(state, &buf); err != nil {
-		t.Fatal(err)
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(""),
+		},
 	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			g, state := makeGenerator(t, Config{}, []Field{}, testCase.template)
 
-	m := unmarshalJSONT[any](t, buf.Bytes())
+			var buf bytes.Buffer
 
-	if len(m) != 0 {
-		t.Errorf("Expected empty map")
+			if err := g.Emit(state, &buf); err != nil {
+				t.Fatal(err)
+			}
+
+			m := unmarshalJSONT[any](t, buf.Bytes())
+
+			if len(m) != 0 {
+				t.Errorf("Expected empty map")
+			}
+		})
 	}
 }
 
@@ -54,81 +67,111 @@ func Test_Cardinality(t *testing.T) {
 }
 
 func test_CardinalityT[T any](t *testing.T, ty string) {
-
+	template := `{"alpha":"{{.alpha}}"}`
+	if ty == "integer" || ty == "float" {
+		template = `{"alpha":{{.alpha}}}`
+	}
 	fld := Field{
 		Name: "alpha",
 		Type: ty,
 	}
 
-	// It's cardinality per mille, so a bit confusing :shrug:
-	for cardinality := 1000; cardinality >= 10; cardinality /= 10 {
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(template),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("for type %s, with template: %s", ty, string(testCase.template)), func(t *testing.T) {
+			// It's cardinality per mille, so a bit confusing :shrug:
+			for cardinality := 1000; cardinality >= 10; cardinality /= 10 {
 
-		// Add the range to get some variety in integers
-		tmpl := "- name: alpha\n  cardinality: %d\n  range: 10000"
-		yaml := []byte(fmt.Sprintf(tmpl, cardinality))
+				// Add the range to get some variety in integers
+				tmpl := "- name: alpha\n  cardinality: %d\n  range: 10000"
+				yaml := []byte(fmt.Sprintf(tmpl, cardinality))
 
-		cfg, err := config.LoadConfigFromYaml(yaml)
-		if err != nil {
-			t.Fatal(err)
-		}
+				cfg, err := config.LoadConfigFromYaml(yaml)
+				if err != nil {
+					t.Fatal(err)
+				}
 
-		g, state := makeGenerator(t, cfg, []Field{fld})
+				g, state := makeGenerator(t, cfg, []Field{fld}, testCase.template)
 
-		vmap := make(map[any]int)
+				vmap := make(map[any]int)
 
-		nSpins := 16384
-		for i := 0; i < nSpins; i++ {
+				nSpins := 16384
+				for i := 0; i < nSpins; i++ {
 
-			var buf bytes.Buffer
-			if err := g.Emit(state, &buf); err != nil {
-				t.Fatal(err)
+					var buf bytes.Buffer
+					if err := g.Emit(state, &buf); err != nil {
+						t.Fatal(err)
+					}
+
+					m := unmarshalJSONT[T](t, buf.Bytes())
+
+					if len(m) != 1 {
+						t.Errorf("Expected map size 1, got %d", len(m))
+					}
+
+					v, ok := m[fld.Name]
+
+					if !ok {
+						t.Errorf("Missing key %v", fld.Name)
+					}
+
+					vmap[v] = vmap[v] + 1
+				}
+
+				if len(vmap) != 1000/cardinality {
+					t.Errorf("Expected cardinality of %d got %d", 1000/cardinality, len(vmap))
+				}
 			}
-
-			m := unmarshalJSONT[T](t, buf.Bytes())
-
-			if len(m) != 1 {
-				t.Errorf("Expected map size 1, got %d", len(m))
-			}
-
-			v, ok := m[fld.Name]
-
-			if !ok {
-				t.Errorf("Missing key %v", fld.Name)
-			}
-
-			vmap[v] = vmap[v] + 1
-		}
-
-		if len(vmap) != 1000/cardinality {
-			t.Errorf("Expected cardinality of %d got %d", 1000/cardinality, len(vmap))
-		}
+		})
 	}
 }
 
 func Test_FieldBool(t *testing.T) {
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeBool,
 	}
 
-	// Enough spins so we can make sure we get at least one true and at least one false
-	var cntTrue int
-	nSpins := 1024
-	for i := 0; i < nSpins; i++ {
-		b := testSingleT[bool](t, fld, nil)
-
-		if b {
-			cntTrue += 1
-		}
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(`{"alpha":{{.alpha}}}`),
+		},
 	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			// Enough spins, so we can make sure we get at least one true and at least one false
+			var cntTrue int
+			nSpins := 1024
+			for i := 0; i < nSpins; i++ {
+				b := testSingleT[bool](t, fld, nil, testCase.template)
 
-	if cntTrue == 0 {
-		t.Errorf("No true values, really?")
-	}
+				if b {
+					cntTrue += 1
+				}
+			}
 
-	if cntTrue == nSpins {
-		t.Errorf("No false values, really?")
+			if cntTrue == 0 {
+				t.Errorf("No true values, really?")
+			}
+
+			if cntTrue == nSpins {
+				t.Errorf("No false values, really?")
+			}
+		})
 	}
 }
 
@@ -140,30 +183,54 @@ func Test_FieldConstKeyword(t *testing.T) {
 		Value: "constant_keyword",
 	}
 
-	b := testSingleT[string](t, fld, nil)
-
-	if b != fld.Value {
-		t.Errorf("static value not match")
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(`{"alpha":{{.alpha}}}`),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			b := testSingleT[string](t, fld, nil, testCase.template)
+			if b != fld.Value {
+				t.Errorf("static value not match")
+			}
+		})
 	}
 }
 
 func Test_FieldStaticOverrideString(t *testing.T) {
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeKeyword,
 	}
 
 	yaml := []byte("- name: alpha\n  value: beta")
-	b := testSingleT[string](t, fld, yaml)
-
-	if b != "beta" {
-		t.Errorf("static value not match")
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(`{"alpha":{{.alpha}}}`),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			b := testSingleT[string](t, fld, yaml, testCase.template)
+			if b != "beta" {
+				t.Errorf("static value not match")
+			}
+		})
 	}
 }
 
 func Test_FieldStaticOverrideNumeric(t *testing.T) {
-
 	fld := Field{
 
 		Name: "alpha",
@@ -171,25 +238,52 @@ func Test_FieldStaticOverrideNumeric(t *testing.T) {
 	}
 
 	yaml := []byte("- name: alpha\n  value: 33")
-	b := testSingleT[float64](t, fld, yaml)
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(`{"alpha":{{.alpha}}}`),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			b := testSingleT[float64](t, fld, yaml, testCase.template)
 
-	if b != 33.0 {
-		t.Errorf("static value not match")
+			if b != 33.0 {
+				t.Errorf("static value not match")
+			}
+		})
 	}
 }
 
 func Test_FieldStaticOverrideBool(t *testing.T) {
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeKeyword,
 	}
 
 	yaml := []byte("- name: alpha\n  value: true")
-	b := testSingleT[bool](t, fld, yaml)
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(`{"alpha":{{.alpha}}}`),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			b := testSingleT[bool](t, fld, yaml, testCase.template)
 
-	if b != true {
-		t.Errorf("static value not match")
+			if b != true {
+				t.Errorf("static value not match")
+			}
+		})
 	}
 }
 
@@ -199,99 +293,139 @@ func Test_FieldGeoPoint(t *testing.T) {
 		Type: FieldTypeGeoPoint,
 	}
 
-	nSpins := 1024
-	for i := 0; i < nSpins; i++ {
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(`{"alpha":"{{.alpha}}"}`),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			nSpins := 1024
+			for i := 0; i < nSpins; i++ {
 
-		b := testSingleT[string](t, fld, nil)
+				b := testSingleT[string](t, fld, nil, testCase.template)
 
-		// Expect geo point in form of lat,long
-		// where lat is [-90.0..90.0]
-		// and long is  [-180.0..180.0]
+				// Expect geo point in form of lat,long
+				// where lat is [-90.0..90.0]
+				// and long is  [-180.0..180.0]
 
-		s := strings.Split(b, ",")
-		if len(s) != 2 {
-			t.Fatal("expected comma separated lat,long")
-		}
+				s := strings.Split(b, ",")
+				if len(s) != 2 {
+					t.Fatal("expected comma separated lat,long")
+				}
 
-		lat := s[0]
-		long := s[1]
+				lat := s[0]
+				long := s[1]
 
-		// no whitespace please
-		if len(lat) != len(strings.TrimSpace(lat)) {
-			t.Errorf("extra whitespace on latitude %s", lat)
-		}
+				// no whitespace please
+				if len(lat) != len(strings.TrimSpace(lat)) {
+					t.Errorf("extra whitespace on latitude %s", lat)
+				}
 
-		// no whitespace please
-		if len(long) != len(strings.TrimSpace(long)) {
-			t.Errorf("extra whitespace on longitude %s", long)
-		}
+				// no whitespace please
+				if len(long) != len(strings.TrimSpace(long)) {
+					t.Errorf("extra whitespace on longitude %s", long)
+				}
 
-		latF, err := strconv.ParseFloat(lat, 64)
-		if err != nil {
-			t.Errorf("Fail parse latitude as float")
-		}
-		longF, err := strconv.ParseFloat(long, 64)
-		if err != nil {
-			t.Errorf("Fail parse longitude as float")
-		}
+				latF, err := strconv.ParseFloat(lat, 64)
+				if err != nil {
+					t.Errorf("Fail parse latitude as float")
+				}
+				longF, err := strconv.ParseFloat(long, 64)
+				if err != nil {
+					t.Errorf("Fail parse longitude as float")
+				}
 
-		if latF < -90.0 || latF > 90.0 {
-			t.Errorf("latitude out of range %v", latF)
-		}
+				if latF < -90.0 || latF > 90.0 {
+					t.Errorf("latitude out of range %v", latF)
+				}
 
-		if longF < -180.0 || longF > 180.0 {
-			t.Errorf("longitutde out of range %v", longF)
-		}
+				if longF < -180.0 || longF > 180.0 {
+					t.Errorf("longitutde out of range %v", longF)
+				}
+			}
+		})
 	}
 }
 
 func Test_FieldDate(t *testing.T) {
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
 	}
 
-	nSpins := rand.Intn(1024) + 1
-	for i := 0; i < nSpins; i++ {
-		now := time.Now()
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(`{"alpha":"{{.alpha}}"}`),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			nSpins := rand.Intn(1024) + 1
+			for i := 0; i < nSpins; i++ {
+				now := time.Now()
 
-		b := testSingleT[string](t, fld, nil)
+				b := testSingleT[string](t, fld, nil, testCase.template)
 
-		if ts, err := time.Parse(FieldTypeTimeLayout, b); err != nil {
-			t.Errorf("Fail parse timestamp %v", err)
-		} else {
-			// Timestamp should be +- FieldTypeDurationSpan from now within a second of slop
-			ts.Add(time.Second * -1)
-			ts.Add(time.Second)
+				if ts, err := time.Parse(FieldTypeTimeLayout, b); err != nil {
+					t.Errorf("Fail parse timestamp %v", err)
+				} else {
+					// Timestamp should be +- FieldTypeDurationSpan from now within a second of slop
+					ts.Add(time.Second * -1)
+					ts.Add(time.Second)
 
-			diff := ts.Sub(now)
-			if diff < 0 {
-				diff = -diff
+					diff := ts.Sub(now)
+					if diff < 0 {
+						diff = -diff
+					}
+
+					if diff >= FieldTypeTimeRange*time.Second {
+						t.Errorf("Date generated out of span range %v", diff)
+					}
+				}
 			}
-
-			if diff >= FieldTypeTimeRange*time.Second {
-				t.Errorf("Date generated out of span range %v", diff)
-			}
-		}
+		})
 	}
 }
 
 func Test_FieldIP(t *testing.T) {
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeIP,
 	}
 
-	nSpins := rand.Intn(1024) + 1
-	for i := 0; i < nSpins; i++ {
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(`{"alpha":"{{.alpha}}"}`),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			nSpins := rand.Intn(1024) + 1
+			for i := 0; i < nSpins; i++ {
 
-		b := testSingleT[string](t, fld, nil)
+				b := testSingleT[string](t, fld, nil, testCase.template)
 
-		if ip := net.ParseIP(b); ip == nil {
-			t.Errorf("Fail parse ip %s", b)
-		}
+				if ip := net.ParseIP(b); ip == nil {
+					t.Errorf("Fail parse ip %s", b)
+				}
+			}
+		})
 	}
 }
 
@@ -315,13 +449,27 @@ func _testNumeric[T any](t *testing.T, ty string) {
 		Type: ty,
 	}
 
-	nSpins := rand.Intn(1024) + 1
-	for i := 0; i < nSpins; i++ {
-		testSingleT[T](t, fld, nil)
+	testCases := []struct {
+		template []byte
+	}{
+		{
+			template: nil,
+		},
+		{
+			template: []byte(`{"alpha":{{.alpha}}}`),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			nSpins := rand.Intn(1024) + 1
+			for i := 0; i < nSpins; i++ {
+				testSingleT[T](t, fld, nil, testCase.template)
+			}
+		})
 	}
 }
 
-func testSingleT[T any](t *testing.T, fld Field, yaml []byte) T {
+func testSingleT[T any](t *testing.T, fld Field, yaml []byte, template []byte) T {
 	var err error
 	var cfg Config
 
@@ -332,7 +480,7 @@ func testSingleT[T any](t *testing.T, fld Field, yaml []byte) T {
 		}
 	}
 
-	g, state := makeGenerator(t, cfg, []Field{fld})
+	g, state := makeGenerator(t, cfg, []Field{fld}, template)
 
 	var buf bytes.Buffer
 
@@ -365,9 +513,15 @@ func unmarshalJSONT[T any](t *testing.T, data []byte) map[string]T {
 	return m
 }
 
-func makeGenerator(t *testing.T, cfg Config, fields Fields) (*Generator, *GenState) {
+func makeGenerator(t *testing.T, cfg Config, fields Fields, template []byte) (Generator, *GenState) {
+	var g Generator
+	var err error
+	if len(template) == 0 {
+		g, err = NewGenerator(cfg, fields)
+	} else {
+		g, err = NewGeneratorWithTemplate(template, cfg, fields)
+	}
 
-	g, err := NewGenerator(cfg, fields)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -392,6 +546,34 @@ func Benchmark_Generator(b *testing.B) {
 	var buf bytes.Buffer
 
 	state := NewGenState()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := g.Emit(state, &buf)
+		if err != nil {
+			b.Fatal(err)
+		}
+		buf.Reset()
+	}
+}
+
+func Benchmark_GeneratorWithTemplate(b *testing.B) {
+	ctx := context.Background()
+	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	g, err := NewGeneratorWithTemplate(nil, Config{}, flds)
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	var buf bytes.Buffer
+
+	state := NewGenState()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		err := g.Emit(state, &buf)
 		if err != nil {

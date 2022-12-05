@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,34 +19,143 @@ import (
 	"github.com/lithammer/shortuuid/v3"
 )
 
-// GeneratorJson is resolved at construction to a slice of emit functions
-type GeneratorJson struct {
+var templateFieldMap map[string][]byte
+var trailingTemplate []byte
+
+// GeneratorWithTemplate is resolved at construction to a slice of emit functions
+type GeneratorWithTemplate struct {
 	emitFuncs []emitF
 }
 
-func NewGenerator(cfg Config, fields Fields) (Generator, error) {
+func generateTemplateFromField(cfg Config, fields Fields) []byte {
+	templateBuffer := bytes.NewBufferString("{")
+	for i, field := range fields {
+		fieldWrap := fieldValueWrapByType(field)
+		if fieldCfg, ok := cfg.GetField(field.Name); ok {
+			if fieldCfg.Value != nil {
+				fieldWrap = ""
+			}
+		}
 
+		fieldTrailer := []byte(",")
+		if i == len(fields)-1 {
+			fieldTrailer = []byte("}")
+		}
+
+		if strings.HasSuffix(field.Name, ".*") || field.Type == FieldTypeObject || field.Type == FieldTypeNested || field.Type == FieldTypeFlattened {
+			// This is a special case.  We are randomly generating keys on the fly
+			// Will set the json field name as "field.Name.N"
+			N := 5
+			for i := 0; i < N; i++ {
+				if string(fieldTrailer) == "}" && i < N-1 {
+					fieldTrailer = []byte(",")
+				}
+
+				fieldNameRoot := replacer.Replace(field.Name)
+				fieldTemplate := fmt.Sprintf(`"%s.%d": %s{{.%s.%d}}%s%s`, fieldNameRoot, i, fieldWrap, fieldNameRoot, i, fieldWrap, fieldTrailer)
+				templateBuffer.WriteString(fieldTemplate)
+			}
+		} else {
+			fieldTemplate := fmt.Sprintf(`"%s": %s{{.%s}}%s%s`, field.Name, fieldWrap, field.Name, fieldWrap, fieldTrailer)
+			templateBuffer.WriteString(fieldTemplate)
+		}
+	}
+
+	return templateBuffer.Bytes()
+}
+
+func NewGeneratorWithTemplate(template []byte, cfg Config, fields Fields) (*GeneratorWithTemplate, error) {
+	if len(template) == 0 {
+		template = generateTemplateFromField(cfg, fields)
+	}
+
+	tokenizer := regexp.MustCompile(`([^{]*)({{\.[^}]+}})*`)
+	allIndexes := tokenizer.FindAllSubmatchIndex(template, -1)
+
+	var fieldPrefixBuffer []byte
+	var fieldPrefixPreviousN int
+
+	orderedField := make([]string, 0, len(allIndexes))
+	templateFieldMap = make(map[string][]byte, len(allIndexes))
+
+	for _, loc := range allIndexes {
+		var fieldName []byte
+		var fieldPrefix []byte
+
+		if loc[4] > -1 && loc[5] > -1 {
+			fieldName = template[loc[4]+3 : loc[5]-2]
+		}
+
+		if loc[2] > -1 && loc[3] > -1 {
+			fieldPrefix = template[loc[2]:loc[3]]
+		}
+
+		if len(fieldName) == 0 {
+			if template[fieldPrefixPreviousN] == byte(123) {
+				fieldPrefixBuffer = append(fieldPrefixBuffer, byte(123))
+			} else {
+				fieldPrefixBuffer = append(fieldPrefixBuffer, fieldPrefix...)
+			}
+		} else {
+			fieldPrefixBuffer = append(fieldPrefixBuffer, fieldPrefix...)
+			templateFieldMap[string(fieldName)] = fieldPrefixBuffer
+			orderedField = append(orderedField, string(fieldName))
+			fieldPrefixBuffer = nil
+		}
+
+		fieldPrefixPreviousN = loc[2]
+	}
+
+	trailingTemplate = fieldPrefixBuffer
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]emitF)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, false); err != nil {
+		if err := bindField(cfg, field, fieldMap, true); err != nil {
 			return nil, err
 		}
 	}
 
 	// Roll into slice of emit functions
 	emitFuncs := make([]emitF, 0, len(fieldMap))
-	for _, f := range fieldMap {
+	for _, fieldName := range orderedField {
+		f := fieldMap[fieldName]
 		emitFuncs = append(emitFuncs, f)
 	}
 
-	return &GeneratorJson{emitFuncs: emitFuncs}, nil
-
+	return &GeneratorWithTemplate{emitFuncs: emitFuncs}, nil
 }
 
-func bindConstantKeyword(field Field, fieldMap map[string]emitF) error {
+func fieldValueWrapByType(field Field) string {
+	fieldType := field.Type
+	switch fieldType {
+	case FieldTypeDate, FieldTypeIP:
+		return "\""
+	case FieldTypeDouble, FieldTypeFloat, FieldTypeHalfFloat, FieldTypeScaledFloat:
+		return ""
+	case FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong: // TODO: generate > 63 bit values for unsigned_long
+		return ""
+	case FieldTypeConstantKeyword:
+		return "\""
+	case FieldTypeKeyword:
+		return "\""
+	case FieldTypeBool:
+		return ""
+	case FieldTypeObject, FieldTypeNested, FieldTypeFlattened:
+		if len(field.ObjectType) > 0 {
+			field.Type = field.ObjectType
+		} else {
+			field.Type = FieldTypeKeyword
+		}
+		return fieldValueWrapByType(field)
+	case FieldTypeGeoPoint:
+		return "\""
+	default:
+		return "\""
+	}
+}
 
-	prefix := fmt.Sprintf("\"%s\":\"", field.Name)
+func bindConstantKeywordWithTemplate(field Field, fieldMap map[string]emitF) error {
+	prefix := templateFieldMap[field.Name]
 
 	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
 		value, ok := state.prevCache[field.Name].(string)
@@ -53,25 +163,23 @@ func bindConstantKeyword(field Field, fieldMap map[string]emitF) error {
 			value = randomdata.Noun()
 			state.prevCache[field.Name] = value
 		}
-		buf.WriteString(prefix)
+		buf.Write(prefix)
 		buf.WriteString(value)
-		buf.WriteByte('"')
 		return nil
 	}
 
 	return nil
 }
 
-func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
-	if len(fieldCfg.Enum) > 0 {
-		prefix := fmt.Sprintf("\"%s\":\"", field.Name)
+func bindKeywordWithTemplate(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
+	prefix := templateFieldMap[field.Name]
 
+	if len(fieldCfg.Enum) > 0 {
 		fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
-			idx := rand.Intn(len(fieldCfg.Enum) - 1)
+			idx := rand.Intn(len(fieldCfg.Enum))
 			value := fieldCfg.Enum[idx]
-			buf.WriteString(prefix)
+			buf.Write(prefix)
 			buf.WriteString(value)
-			buf.WriteByte('"')
 			return nil
 		}
 	} else if len(field.Example) > 0 {
@@ -89,64 +197,57 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) e
 			joiner = " "
 		}
 
-		return bindJoinRand(field, totWords, joiner, fieldMap)
+		return bindJoinRandWithTemplate(field, totWords, joiner, fieldMap)
 	} else {
-		prefix := fmt.Sprintf("\"%s\":\"", field.Name)
-
 		fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
 			value := randomdata.Noun()
-			buf.WriteString(prefix)
+			buf.Write(prefix)
 			buf.WriteString(value)
-			buf.WriteByte('"')
 			return nil
 		}
 	}
 	return nil
 }
 
-func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]emitF) error {
-
-	prefix := fmt.Sprintf("\"%s\":\"", field.Name)
+func bindJoinRandWithTemplate(field Field, N int, joiner string, fieldMap map[string]emitF) error {
+	prefix := templateFieldMap[field.Name]
 
 	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
-
-		buf.WriteString(prefix)
+		buf.Write(prefix)
 
 		for i := 0; i < N-1; i++ {
 			buf.WriteString(randomdata.Noun())
 			buf.WriteString(joiner)
 		}
 		buf.WriteString(randomdata.Noun())
-		buf.WriteByte('"')
 		return nil
 	}
 
 	return nil
 }
 
-func bindStatic(field Field, v interface{}, fieldMap map[string]emitF) error {
+func bindStaticWithTemplate(field Field, v interface{}, fieldMap map[string]emitF) error {
+	prefix := templateFieldMap[field.Name]
 
 	vstr, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
 
-	payload := fmt.Sprintf("\"%s\":%s", field.Name, vstr)
-
 	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
-		buf.WriteString(payload)
+		buf.Write(prefix)
+		buf.Write(vstr)
 		return nil
 	}
 
 	return nil
 }
 
-func bindBool(field Field, fieldMap map[string]emitF) error {
-
-	prefix := fmt.Sprintf("\"%s\":", field.Name)
+func bindBoolWithTemplate(field Field, fieldMap map[string]emitF) error {
+	prefix := templateFieldMap[field.Name]
 
 	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
-		buf.WriteString(prefix)
+		buf.Write(prefix)
 		switch rand.Int() % 2 {
 		case 0:
 			buf.WriteString("false")
@@ -159,79 +260,74 @@ func bindBool(field Field, fieldMap map[string]emitF) error {
 	return nil
 }
 
-func bindGeoPoint(field Field, fieldMap map[string]emitF) error {
-
-	prefix := fmt.Sprintf("\"%s\":\"", field.Name)
+func bindGeoPointWithTemplate(field Field, fieldMap map[string]emitF) error {
+	prefix := templateFieldMap[field.Name]
 
 	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
-		buf.WriteString(prefix)
+		buf.Write(prefix)
 		err := randGeoPoint(buf)
-		buf.WriteByte('"')
 		return err
 	}
 
 	return nil
 }
 
-func bindWordN(field Field, n int, fieldMap map[string]emitF) error {
-	prefix := fmt.Sprintf("\"%s\":\"", field.Name)
+func bindWordNWithTemplate(field Field, n int, fieldMap map[string]emitF) error {
+	prefix := templateFieldMap[field.Name]
 
 	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
-		buf.WriteString(prefix)
+		buf.Write(prefix)
 		genNounsN(rand.Intn(n), buf)
-		buf.WriteByte('"')
 		return nil
 	}
 
 	return nil
 }
 
-func bindNearTime(field Field, fieldMap map[string]emitF) error {
-	prefix := fmt.Sprintf("\"%s\":\"", field.Name)
+func bindNearTimeWithTemplate(field Field, fieldMap map[string]emitF) error {
+	prefix := templateFieldMap[field.Name]
 
 	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
 		offset := time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
 		newTime := time.Now().Add(offset)
 
-		buf.WriteString(prefix)
+		buf.Write(prefix)
 		buf.WriteString(newTime.Format(FieldTypeTimeLayout))
-		buf.WriteByte('"')
 		return nil
 	}
 
 	return nil
 }
 
-func bindIP(field Field, fieldMap map[string]emitF) error {
-	prefix := fmt.Sprintf("\"%s\":", field.Name)
+func bindIPWithTemplate(field Field, fieldMap map[string]emitF) error {
+	prefix := templateFieldMap[field.Name]
 
 	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
-
-		buf.WriteString(prefix)
+		buf.Write(prefix)
 
 		i0 := rand.Intn(255)
 		i1 := rand.Intn(255)
 		i2 := rand.Intn(255)
 		i3 := rand.Intn(255)
 
-		_, err := fmt.Fprintf(buf, "\"%d.%d.%d.%d\"", i0, i1, i2, i3)
+		_, err := fmt.Fprintf(buf, "%d.%d.%d.%d", i0, i1, i2, i3)
 		return err
 	}
 
 	return nil
 }
 
-func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
+func bindLongWithTemplate(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
 
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
 	fuzziness := fieldCfg.Fuzziness
 
-	prefix := fmt.Sprintf("\"%s\":", field.Name)
+	prefix := templateFieldMap[field.Name]
 
 	if fuzziness <= 0 {
 		fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
-			buf.WriteString(prefix)
+			buf.Write(prefix)
 			v := make([]byte, 0, 32)
 			v = strconv.AppendInt(v, int64(dummyFunc()), 10)
 			buf.Write(v)
@@ -251,7 +347,7 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) erro
 			dummyInt = int(math.Ceil(float64(previousDummyInt) * adjustedRatio))
 		}
 		state.prevCache[field.Name] = dummyInt
-		buf.WriteString(prefix)
+		buf.Write(prefix)
 		v := make([]byte, 0, 32)
 		v = strconv.AppendInt(v, int64(dummyInt), 10)
 		buf.Write(v)
@@ -261,18 +357,18 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) erro
 	return nil
 }
 
-func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
+func bindDoubleWithTemplate(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
 
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
 	fuzziness := fieldCfg.Fuzziness
 
-	prefix := fmt.Sprintf("\"%s\":", field.Name)
+	prefix := templateFieldMap[field.Name]
 
 	if fuzziness <= 0 {
 		fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
 			dummyFloat := float64(dummyFunc()) / rand.Float64()
-			buf.WriteString(prefix)
+			buf.Write(prefix)
 			_, err := fmt.Fprintf(buf, "%f", dummyFloat)
 			return err
 		}
@@ -290,7 +386,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) er
 			dummyFloat = previousDummyFloat * adjustedRatio
 		}
 		state.prevCache[field.Name] = dummyFloat
-		buf.WriteString(prefix)
+		buf.Write(prefix)
 		_, err := fmt.Fprintf(buf, "%f", dummyFloat)
 		return err
 	}
@@ -298,7 +394,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) er
 	return nil
 }
 
-func bindCardinality(cfg Config, field Field, fieldMap map[string]emitF) error {
+func bindCardinalityWithTemplate(cfg Config, field Field, fieldMap map[string]emitF) error {
 
 	fieldCfg, _ := cfg.GetField(field.Name)
 	cardinality := int(math.Ceil((1000. / float64(fieldCfg.Cardinality))))
@@ -308,7 +404,7 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]emitF) error {
 	}
 
 	// Go ahead and bind the original field
-	if err := bindByType(cfg, field, fieldMap, false); err != nil {
+	if err := bindByType(cfg, field, fieldMap, true); err != nil {
 		return err
 	}
 
@@ -361,18 +457,16 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]emitF) error {
 
 }
 
-func makeDynamicStub(root, key string, boundF emitF) emitF {
-	target := fmt.Sprintf("\"%s\":", key)
+func makeDynamicStubWithTemplate(root string, key int, boundF emitF) emitF {
+	fieldName := fmt.Sprintf("{{.%s.%d}}", root, key)
+	fieldReplace := []byte(fieldName)
+	prefix := templateFieldMap[fieldName]
 
 	return func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
-		// Fire or skip
-		if rand.Int()%2 == 0 {
-			return nil
-		}
-
 		v := state.pool.Get()
 		tmp := v.(*bytes.Buffer)
 		tmp.Reset()
+		tmp.Write(prefix)
 		defer state.pool.Put(tmp)
 
 		// Fire the bound function, write into temp buffer
@@ -380,12 +474,7 @@ func makeDynamicStub(root, key string, boundF emitF) emitF {
 			return err
 		}
 
-		// If bound function did not write for some reason; abort
-		if tmp.Len() <= len(target) {
-			return nil
-		}
-
-		if !bytes.HasPrefix(tmp.Bytes(), []byte(target)) {
+		if bytes.Contains(tmp.Bytes(), fieldReplace) {
 			return fmt.Errorf("Malformed dynamic function payload %s", tmp.String())
 		}
 
@@ -406,54 +495,35 @@ func makeDynamicStub(root, key string, boundF emitF) emitF {
 
 		dupes[rNoun] = struct{}{}
 
-		// ok, formatted as expected, swap it out the payload
-		buf.WriteByte('"')
-		buf.WriteString(root)
-		buf.WriteByte('.')
-		buf.WriteString(rNoun)
-		buf.WriteString("\":")
-		buf.Write(tmp.Bytes()[len(target):])
+		// ok, formatted as expected
+		// rename the field
+		replaced := bytes.ReplaceAll(tmp.Bytes(), []byte(fmt.Sprintf("\"%s.%d\"", root, key)), []byte(fmt.Sprintf("\"%s.%s\"", root, rNoun)))
+		buf.Write(replaced)
 		return nil
 	}
 }
 
-func (gen GeneratorJson) Emit(state *GenState, buf *bytes.Buffer) error {
-
-	buf.WriteByte('{')
-
+func (gen GeneratorWithTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
+	buf.Truncate(0)
 	if err := gen.emit(state, buf); err != nil {
 		return err
 	}
-
-	buf.WriteByte('}')
 
 	state.counter += 1
 
 	return nil
 }
 
-func (gen GeneratorJson) emit(state *GenState, buf *bytes.Buffer) error {
+func (gen GeneratorWithTemplate) emit(state *GenState, buf *bytes.Buffer) error {
 
 	dupes := make(map[string]struct{})
 
-	lastComma := -1
 	for _, f := range gen.emitFuncs {
-		pos := buf.Len()
 		if err := f(state, dupes, buf); err != nil {
 			return err
 		}
-
-		// If we emitted something, write the comma, otherwise skip.
-		if buf.Len() > pos {
-			buf.WriteByte(',')
-			lastComma = buf.Len()
-		}
 	}
 
-	// Strip dangling comma
-	if lastComma == buf.Len() {
-		buf.Truncate(buf.Len() - 1)
-	}
-
+	buf.Write(trailingTemplate)
 	return nil
 }

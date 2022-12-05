@@ -7,6 +7,7 @@ package corpus
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/dustin/go-humanize"
 	"os"
@@ -64,12 +65,29 @@ func (gc GeneratorCorpus) bulkPayloadFilename(integrationPackage, dataStream, pa
 	return filename
 }
 
+// bulkPayloadFilenameWithTemplate computes the bulkPayloadFilename for the corpus to be generated.
+// To provide unique names the provided slug is prepended with current timestamp.
+func (gc GeneratorCorpus) bulkPayloadFilenameWithTemplate(templatePath string) string {
+	slug := path.Base(templatePath)
+	ext := path.Ext(templatePath)
+	slug = slug[0 : len(slug)-len(ext)]
+	filename := fmt.Sprintf("%d-%s%s", gc.timestamp(), sanitizeFilename(slug), sanitizeFilename(ext))
+	return filename
+}
+
 var corpusLocPerm = os.FileMode(0770)
 var corpusPerm = os.FileMode(0660)
 
-func (gc GeneratorCorpus) eventsPayloadFromFields(fields Fields, totSize uint64, createPayload []byte, f afero.File) error {
+func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totSize uint64, createPayload []byte, f afero.File) error {
 
-	evgen, err := genlib.NewGenerator(gc.config, fields)
+	var evgen genlib.Generator
+	var err error
+	if len(template) == 0 {
+		evgen, err = genlib.NewGenerator(gc.config, fields)
+	} else {
+		evgen, err = genlib.NewGeneratorWithTemplate(template, gc.config, fields)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -123,7 +141,52 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 
 	createPayload := []byte(`{ "create" : { "_index": "metrics-` + integrationPackage + `.` + dataStream + `-default" } }` + "\n")
 
-	err = gc.eventsPayloadFromFields(fields, totSizeInBytes, createPayload, f)
+	err = gc.eventsPayloadFromFields([]byte(""), fields, totSizeInBytes, createPayload, f)
+	if err != nil {
+		return "", err
+	}
+
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+
+	return payloadFilename, err
+}
+
+// GenerateWithTemplate generates a bulk request corpus and persist it to file.
+func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPath, dataType, totSize string) (string, error) {
+	totSizeInBytes, err := humanize.ParseBytes(totSize)
+	if err != nil {
+		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
+	}
+	if err := gc.fs.MkdirAll(gc.location, corpusLocPerm); err != nil {
+		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
+	}
+
+	payloadFilename := path.Join(gc.location, gc.bulkPayloadFilenameWithTemplate(templatePath))
+	f, err := gc.fs.OpenFile(payloadFilename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, corpusPerm)
+	if err != nil {
+		return "", err
+	}
+
+	template, err := os.ReadFile(templatePath)
+	if err != nil {
+		return "", err
+	}
+
+	if len(template) == 0 {
+		return "", errors.New("you must provide a non empty template content")
+	}
+
+	ctx := context.Background()
+	fields, err := fields.LoadFieldsWithTemplate(ctx, fieldsDefinitionPath)
+	if err != nil {
+		return "", err
+	}
+
+	createPayload := []byte(`{ "create" : { "_index": "` + dataType + `generic-default" } }` + "\n")
+
+	err = gc.eventsPayloadFromFields(template, fields, totSizeInBytes, createPayload, f)
 	if err != nil {
 		return "", err
 	}

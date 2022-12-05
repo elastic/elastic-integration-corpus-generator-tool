@@ -15,6 +15,7 @@ type ConfigField struct {
 	Fuzziness   int         `config:"fuzziness"`
 	Range       int         `config:"range"`
 	Cardinality int         `config:"cardinality"`
+	Enum        []string    `config:"enum"`
 	ObjectKeys  []string    `config:"object_keys"`
 	Value       interface{} `config:"value"`
 }

@@ -141,7 +141,7 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 
 	createPayload := []byte(`{ "create" : { "_index": "metrics-` + integrationPackage + `.` + dataStream + `-default" } }` + "\n")
 
-	err = gc.eventsPayloadFromFields([]byte(""), fields, totSizeInBytes, createPayload, f)
+	err = gc.eventsPayloadFromFields(nil, fields, totSizeInBytes, createPayload, f)
 	if err != nil {
 		return "", err
 	}

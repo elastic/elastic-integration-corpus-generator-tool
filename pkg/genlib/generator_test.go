@@ -2,7 +2,6 @@ package genlib
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -13,7 +12,6 @@ import (
 	"time"
 
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
-	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 )
 
 /*
@@ -692,14 +690,100 @@ func makeGenerator(t *testing.T, cfg Config, fields Fields, template []byte) (Ge
 }
 
 func Benchmark_Generator(b *testing.B) {
-	ctx := context.Background()
-	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
+	flds := Fields{
+		{
+			Name: "Version",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "AccountID",
+			Type: FieldTypeLong,
+		},
+		{
+			Name:    "InterfaceID",
+			Type:    FieldTypeKeyword,
+			Example: "eni-1235b8ca123456789",
+		},
+		{
+			Name: "SrcAddr",
+			Type: FieldTypeIP,
+		},
+		{
+			Name: "DstAddr",
+			Type: FieldTypeIP,
+		},
+		{
+			Name: "SrcPort",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "DstPort",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "Protocol",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "Packets",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "Bytes",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "Start",
+			Type: FieldTypeDate,
+		},
+		{
+			Name: "End",
+			Type: FieldTypeDate,
+		},
+		{
+			Name: "Action",
+			Type: FieldTypeKeyword,
+		},
+		{
+			Name: "LogStatus",
+			Type: FieldTypeKeyword,
+		},
+	}
+
+	configYaml := `- name: Version
+  value: 2
+- name: AccountID
+  value: 627286350134
+- name: InterfaceID
+  cardinality: 10
+- name: SrcAddr
+  cardinality: 1
+- name: DstAddr
+  cardinality: 100
+- name: SrcPort
+  range: 65535
+- name: DstPort
+  range: 65535
+  cardinality: 100
+- name: Protocol
+  range: 256
+- name: Packets
+  range: 1048576
+- name: Bytes
+  range: 15728640
+- name: Action
+  enum: ["ACCEPT", "REJECT"]
+- name: LogStatus
+  enum: ["NODATA", "OK", "SKIPDATA"]
+`
+	cfg, err := config.LoadConfigFromYaml([]byte(configYaml))
 
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	g, err := NewGenerator(Config{}, flds)
+	template := []byte("{{.Version}} {{.AccountID}} {{.InterfaceID}} {{.SrcAddr}} {{.DstAddr}} {{.SrcPort}} {{.DstPort}} {{.Protocol}} {{.Packets}} {{.Bytes}} {{.Start}} {{.End}} {{.Action}} {{.LogStatus}}")
+	g, err := NewGeneratorWithTemplate(template, cfg, flds)
 
 	if err != nil {
 		b.Fatal(err)
@@ -718,16 +802,115 @@ func Benchmark_Generator(b *testing.B) {
 	}
 }
 
-func Benchmark_GeneratorWithTemplate(b *testing.B) {
-	ctx := context.Background()
-	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
+func Benchmark_GeneratorUsingExpression(b *testing.B) {
+	flds := Fields{
+		{
+			Name: "Version",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "AccountID",
+			Type: FieldTypeLong,
+		},
+		{
+			Name:    "InterfaceID",
+			Type:    FieldTypeKeyword,
+			Example: "eni-1235b8ca123456789",
+		},
+		{
+			Name: "SrcAddr",
+			Type: FieldTypeIP,
+		},
+		{
+			Name: "DstAddr",
+			Type: FieldTypeIP,
+		},
+		{
+			Name: "SrcPort",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "DstPort",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "Protocol",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "Packets",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "Bytes",
+			Type: FieldTypeLong,
+		},
+		{
+			Name: "Start",
+			Type: FieldTypeDate,
+		},
+		{
+			Name: "End",
+			Type: FieldTypeDate,
+		},
+		{
+			Name: "Action",
+			Type: FieldTypeKeyword,
+		},
+		{
+			Name: "LogStatus",
+			Type: FieldTypeKeyword,
+		},
+	}
+
+	configYaml := `- name: Version
+  value: 2
+- name: AccountID
+  value: 627286350134
+- name: InterfaceID
+  cardinality: 10
+- name: SrcAddr
+  cardinality: 1
+- name: DstAddr
+  cardinality: 100
+- name: SrcPort
+  range: 65535
+- name: DstPort
+  range: 65535
+  cardinality: 100
+- name: Protocol
+  range: 256
+- name: Packets
+  range: 1048576
+- name: Bytes
+  expression: >
+    function process() {
+      return {{.Packets}} * 15;
+    }
+- name: Action
+  enum: ["ACCEPT", "REJECT"]
+- name: LogStatus
+  expression: >
+    function process() {
+      if ({{.Packets}} == 0) { 
+        return "NODATA"; 
+      } else { 
+        if (Math.floor(Math.random() * 2) == 0) { 
+          return "OK";
+        } else { 
+          return "SKIPDATA"; 
+        }
+      }
+    }
+`
+	cfg, err := config.LoadConfigFromYaml([]byte(configYaml))
 
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	template := generateTemplateFromField(Config{}, flds)
-	g, err := NewGeneratorWithTemplate(template, Config{}, flds)
+	template := []byte("{{.Version}} {{.AccountID}} {{.InterfaceID}} {{.SrcAddr}} {{.DstAddr}} {{.SrcPort}} {{.DstPort}} {{.Protocol}} {{.Packets}} {{.Bytes}} {{.Start}} {{.End}} {{.Action}} {{.LogStatus}}")
+	g, err := NewGeneratorWithTemplate(template, cfg, flds)
 
 	if err != nil {
 		b.Fatal(err)

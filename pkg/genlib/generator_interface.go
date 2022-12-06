@@ -6,16 +6,18 @@ package genlib
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/Pallinder/go-randomdata"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
-	"github.com/lithammer/shortuuid/v3"
 	"math"
 	"math/rand"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type (
@@ -85,26 +87,17 @@ func bindField(cfg Config, field Field, fieldMap map[string]emitF, objectKeys ma
 
 	// Check for hardcoded field value
 	if len(field.Value) > 0 {
-		if len(templateFieldMap) > 0 {
-			return bindStaticWithTemplate(templateFieldMap[field.Name], field, field.Value, fieldMap)
-		}
-		return bindStatic(field, field.Value, fieldMap)
+		return bindStatic(templateFieldMap[field.Name], field, field.Value, fieldMap)
 	}
 
 	// Check config override of value
 	fieldCfg, _ := cfg.GetField(field.Name)
 	if fieldCfg.Value != nil {
-		if len(templateFieldMap) > 0 {
-			return bindStaticWithTemplate(templateFieldMap[field.Name], field, fieldCfg.Value, fieldMap)
-		}
-		return bindStatic(field, fieldCfg.Value, fieldMap)
+		return bindStatic(templateFieldMap[field.Name], field, fieldCfg.Value, fieldMap)
 	}
 
 	if fieldCfg.Cardinality > 0 {
-		if len(templateFieldMap) > 0 {
-			return bindCardinalityWithTemplate(cfg, field, fieldMap, objectKeys, templateFieldMap)
-		}
-		return bindCardinality(cfg, field, fieldMap)
+		return bindCardinality(cfg, field, fieldMap, objectKeys, templateFieldMap)
 	}
 
 	return bindByType(cfg, field, fieldMap, objectKeys, templateFieldMap)
@@ -126,52 +119,27 @@ func bindByType(cfg Config, field Field, fieldMap map[string]emitF, objectKeys m
 
 	fieldCfg, _ := cfg.GetField(field.Name)
 
-	if len(templateFieldMap) > 0 {
-		switch field.Type {
-		case FieldTypeDate:
-			err = bindNearTimeWithTemplate(templateFieldMap[field.Name], field, fieldMap)
-		case FieldTypeIP:
-			err = bindIPWithTemplate(templateFieldMap[field.Name], field, fieldMap)
-		case FieldTypeDouble, FieldTypeFloat, FieldTypeHalfFloat, FieldTypeScaledFloat:
-			err = bindDoubleWithTemplate(templateFieldMap[field.Name], fieldCfg, field, fieldMap)
-		case FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong: // TODO: generate > 63 bit values for unsigned_long
-			err = bindLongWithTemplate(templateFieldMap[field.Name], fieldCfg, field, fieldMap)
-		case FieldTypeConstantKeyword:
-			err = bindConstantKeywordWithTemplate(templateFieldMap[field.Name], field, fieldMap)
-		case FieldTypeKeyword:
-			err = bindKeywordWithTemplate(templateFieldMap[field.Name], fieldCfg, field, fieldMap)
-		case FieldTypeBool:
-			err = bindBoolWithTemplate(templateFieldMap[field.Name], field, fieldMap)
-		case FieldTypeObject, FieldTypeNested, FieldTypeFlattened:
-			err = bindObject(cfg, fieldCfg, field, fieldMap, objectKeys, templateFieldMap)
-		case FieldTypeGeoPoint:
-			err = bindGeoPointWithTemplate(templateFieldMap[field.Name], field, fieldMap)
-		default:
-			err = bindWordNWithTemplate(templateFieldMap[field.Name], field, 25, fieldMap)
-		}
-	} else {
-		switch field.Type {
-		case FieldTypeDate:
-			err = bindNearTime(field, fieldMap)
-		case FieldTypeIP:
-			err = bindIP(field, fieldMap)
-		case FieldTypeDouble, FieldTypeFloat, FieldTypeHalfFloat, FieldTypeScaledFloat:
-			err = bindDouble(fieldCfg, field, fieldMap)
-		case FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong: // TODO: generate > 63 bit values for unsigned_long
-			err = bindLong(fieldCfg, field, fieldMap)
-		case FieldTypeConstantKeyword:
-			err = bindConstantKeyword(field, fieldMap)
-		case FieldTypeKeyword:
-			err = bindKeyword(fieldCfg, field, fieldMap)
-		case FieldTypeBool:
-			err = bindBool(field, fieldMap)
-		case FieldTypeObject, FieldTypeNested, FieldTypeFlattened:
-			err = bindObject(cfg, fieldCfg, field, fieldMap, nil, nil)
-		case FieldTypeGeoPoint:
-			err = bindGeoPoint(field, fieldMap)
-		default:
-			err = bindWordN(field, 25, fieldMap)
-		}
+	switch field.Type {
+	case FieldTypeDate:
+		err = bindNearTime(templateFieldMap[field.Name], field, fieldMap)
+	case FieldTypeIP:
+		err = bindIP(templateFieldMap[field.Name], field, fieldMap)
+	case FieldTypeDouble, FieldTypeFloat, FieldTypeHalfFloat, FieldTypeScaledFloat:
+		err = bindDouble(templateFieldMap[field.Name], fieldCfg, field, fieldMap)
+	case FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong: // TODO: generate > 63 bit values for unsigned_long
+		err = bindLong(templateFieldMap[field.Name], fieldCfg, field, fieldMap)
+	case FieldTypeConstantKeyword:
+		err = bindConstantKeyword(templateFieldMap[field.Name], field, fieldMap)
+	case FieldTypeKeyword:
+		err = bindKeyword(templateFieldMap[field.Name], fieldCfg, field, fieldMap)
+	case FieldTypeBool:
+		err = bindBool(templateFieldMap[field.Name], field, fieldMap)
+	case FieldTypeObject, FieldTypeNested, FieldTypeFlattened:
+		err = bindObject(cfg, fieldCfg, field, fieldMap, objectKeys, templateFieldMap)
+	case FieldTypeGeoPoint:
+		err = bindGeoPoint(templateFieldMap[field.Name], field, fieldMap)
+	default:
+		err = bindWordN(templateFieldMap[field.Name], field, 25, fieldMap)
 	}
 
 	return
@@ -232,28 +200,11 @@ func bindDynamicObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap m
 	// then extract the generated emitFunction for use in the stub.
 	dynMap := make(map[string]emitF)
 
-	if len(templateFieldMap) > 0 {
-		if err := bindField(cfg, field, dynMap, objectKeys, templateFieldMap); err != nil {
-			return err
-		}
-		stub := makeDynamicStubWithTemplate(templateFieldMap[field.Name], dynMap[field.Name])
-		fieldMap[field.Name] = stub
-
-		return nil
+	if err := bindField(cfg, field, dynMap, objectKeys, templateFieldMap); err != nil {
+		return err
 	}
-
-	objectRootFieldName := replacer.Replace(field.Name)
-
-	for i := 0; i < N; i++ {
-		// Generate a guid for binding, we will replace later
-		key := shortuuid.New()
-		field.Name = key
-		if err := bindField(cfg, field, dynMap, nil, nil); err != nil {
-			return err
-		}
-		stub := makeDynamicStub(objectRootFieldName, key, dynMap[key])
-		fieldMap[objectRootFieldName+"."+key] = stub
-	}
+	stub := makeDynamicStub(templateFieldMap[field.Name], dynMap[field.Name])
+	fieldMap[field.Name] = stub
 
 	return nil
 }
@@ -281,4 +232,309 @@ func randGeoPoint(buf *bytes.Buffer) error {
 	}
 	_, err := fmt.Fprintf(buf, "%d.%d,%d.%d", lat, latD, long, longD)
 	return err
+}
+
+func bindConstantKeyword(prefix []byte, field Field, fieldMap map[string]emitF) error {
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		value, ok := state.prevCache[field.Name].(string)
+		if !ok {
+			value = randomdata.Noun()
+			state.prevCache[field.Name] = value
+		}
+		buf.Write(prefix)
+		buf.WriteString(value)
+		return nil
+	}
+
+	return nil
+}
+
+func bindKeyword(prefix []byte, fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
+	if len(fieldCfg.Enum) > 0 {
+		fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+			idx := rand.Intn(len(fieldCfg.Enum))
+			value := fieldCfg.Enum[idx]
+			buf.Write(prefix)
+			buf.WriteString(value)
+			return nil
+		}
+	} else if len(field.Example) > 0 {
+
+		totWords := len(keywordRegex.Split(field.Example, -1))
+
+		var joiner string
+		if strings.Contains(field.Example, "\\.") {
+			joiner = "\\."
+		} else if strings.Contains(field.Example, "-") {
+			joiner = "-"
+		} else if strings.Contains(field.Example, "_") {
+			joiner = "_"
+		} else if strings.Contains(field.Example, " ") {
+			joiner = " "
+		}
+
+		return bindJoinRand(prefix, field, totWords, joiner, fieldMap)
+	} else {
+		fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+			value := randomdata.Noun()
+			buf.Write(prefix)
+			buf.WriteString(value)
+			return nil
+		}
+	}
+	return nil
+}
+
+func bindJoinRand(prefix []byte, field Field, N int, joiner string, fieldMap map[string]emitF) error {
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		buf.Write(prefix)
+
+		for i := 0; i < N-1; i++ {
+			buf.WriteString(randomdata.Noun())
+			buf.WriteString(joiner)
+		}
+		buf.WriteString(randomdata.Noun())
+		return nil
+	}
+
+	return nil
+}
+
+func bindStatic(prefix []byte, field Field, v interface{}, fieldMap map[string]emitF) error {
+	vstr, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		buf.Write(prefix)
+		buf.Write(vstr)
+		return nil
+	}
+
+	return nil
+}
+
+func bindBool(prefix []byte, field Field, fieldMap map[string]emitF) error {
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		buf.Write(prefix)
+		switch rand.Int() % 2 {
+		case 0:
+			buf.WriteString("false")
+		case 1:
+			buf.WriteString("true")
+		}
+		return nil
+	}
+
+	return nil
+}
+
+func bindGeoPoint(prefix []byte, field Field, fieldMap map[string]emitF) error {
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		buf.Write(prefix)
+		err := randGeoPoint(buf)
+		return err
+	}
+
+	return nil
+}
+
+func bindWordN(prefix []byte, field Field, n int, fieldMap map[string]emitF) error {
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		buf.Write(prefix)
+		genNounsN(rand.Intn(n), buf)
+		return nil
+	}
+
+	return nil
+}
+
+func bindNearTime(prefix []byte, field Field, fieldMap map[string]emitF) error {
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		offset := time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
+		newTime := time.Now().Add(offset)
+
+		buf.Write(prefix)
+		buf.WriteString(newTime.Format(FieldTypeTimeLayout))
+		return nil
+	}
+
+	return nil
+}
+
+func bindIP(prefix []byte, field Field, fieldMap map[string]emitF) error {
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		buf.Write(prefix)
+
+		i0 := rand.Intn(255)
+		i1 := rand.Intn(255)
+		i2 := rand.Intn(255)
+		i3 := rand.Intn(255)
+
+		_, err := fmt.Fprintf(buf, "%d.%d.%d.%d", i0, i1, i2, i3)
+		return err
+	}
+
+	return nil
+}
+
+func bindLong(prefix []byte, fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
+
+	dummyFunc := makeIntFunc(fieldCfg, field)
+
+	fuzziness := fieldCfg.Fuzziness
+
+	if fuzziness <= 0 {
+		fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+			buf.Write(prefix)
+			v := make([]byte, 0, 32)
+			v = strconv.AppendInt(v, int64(dummyFunc()), 10)
+			buf.Write(v)
+			return nil
+		}
+
+		return nil
+	}
+
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		dummyInt := dummyFunc()
+		if previousDummyInt, ok := state.prevCache[field.Name].(int); ok {
+			adjustedRatio := 1. - float64(rand.Intn(fuzziness))/100.
+			if rand.Int()%2 == 0 {
+				adjustedRatio = 1. + float64(rand.Intn(fuzziness))/100.
+			}
+			dummyInt = int(math.Ceil(float64(previousDummyInt) * adjustedRatio))
+		}
+		state.prevCache[field.Name] = dummyInt
+		buf.Write(prefix)
+		v := make([]byte, 0, 32)
+		v = strconv.AppendInt(v, int64(dummyInt), 10)
+		buf.Write(v)
+		return nil
+	}
+
+	return nil
+}
+
+func bindDouble(prefix []byte, fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
+
+	dummyFunc := makeIntFunc(fieldCfg, field)
+
+	fuzziness := fieldCfg.Fuzziness
+
+	if fuzziness <= 0 {
+		fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+			dummyFloat := float64(dummyFunc()) / rand.Float64()
+			buf.Write(prefix)
+			_, err := fmt.Fprintf(buf, "%f", dummyFloat)
+			return err
+		}
+
+		return nil
+	}
+
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		dummyFloat := float64(dummyFunc()) / rand.Float64()
+		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
+			adjustedRatio := 1. - float64(rand.Intn(fuzziness))/100.
+			if rand.Int()%2 == 0 {
+				adjustedRatio = 1. + float64(rand.Intn(fuzziness))/100.
+			}
+			dummyFloat = previousDummyFloat * adjustedRatio
+		}
+		state.prevCache[field.Name] = dummyFloat
+		buf.Write(prefix)
+		_, err := fmt.Fprintf(buf, "%f", dummyFloat)
+		return err
+	}
+
+	return nil
+}
+
+func bindCardinality(cfg Config, field Field, fieldMap map[string]emitF, objectKeys map[string]struct{}, templateFieldMap map[string][]byte) error {
+
+	fieldCfg, _ := cfg.GetField(field.Name)
+	cardinality := int(math.Ceil((1000. / float64(fieldCfg.Cardinality))))
+
+	if strings.HasSuffix(field.Name, ".*") {
+		field.Name = replacer.Replace(field.Name)
+	}
+
+	// Go ahead and bind the original field
+	if err := bindByType(cfg, field, fieldMap, objectKeys, templateFieldMap); err != nil {
+		return err
+	}
+
+	// We will wrap the function we just generated
+	boundF := fieldMap[field.Name]
+
+	fieldMap[field.Name] = func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		var va []bytes.Buffer
+
+		if v, ok := state.prevCache[field.Name]; ok {
+			va = v.([]bytes.Buffer)
+		}
+
+		// Have we rolled over once?  If not, generate a value and cache it.
+		if len(va) < cardinality {
+
+			// Do college try dupe detection on value;
+			// Allow dupe if no unique value in nTries.
+			nTries := 11 // "These go to 11."
+			var tmp bytes.Buffer
+			for i := 0; i < nTries; i++ {
+
+				tmp.Reset()
+				if err := boundF(state, dupes, &tmp); err != nil {
+					return err
+				}
+
+				if !isDupe(va, tmp.Bytes()) {
+					break
+				}
+			}
+
+			va = append(va, tmp)
+			state.prevCache[field.Name] = va
+		}
+
+		idx := int(state.counter % uint64(cardinality))
+
+		// Safety check; should be a noop
+		if idx >= len(va) {
+			idx = len(va) - 1
+		}
+
+		choice := va[idx]
+		buf.Write(choice.Bytes())
+		return nil
+	}
+
+	return nil
+
+}
+
+func makeDynamicStub(prefix []byte, boundF emitF) emitF {
+	return func(state *GenState, dupes map[string]struct{}, buf *bytes.Buffer) error {
+		v := state.pool.Get()
+		tmp := v.(*bytes.Buffer)
+		tmp.Reset()
+		defer state.pool.Put(tmp)
+
+		// Fire the bound function, write into temp buffer
+		if err := boundF(state, dupes, tmp); err != nil {
+			return err
+		}
+
+		// If bound function did not write for some reason; abort
+		if tmp.Len() == 0 {
+			return nil
+		}
+
+		// ok, formatted as expected, swap it out the payload
+		buf.Write(prefix)
+		buf.Write(tmp.Bytes())
+		return nil
+	}
 }

@@ -94,11 +94,15 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 
 	state := genlib.NewGenState()
 
-	buf := bytes.NewBuffer(createPayload)
+	var buf *bytes.Buffer
+	if len(template) == 0 {
+		buf = bytes.NewBuffer(createPayload)
+	} else {
+		buf = bytes.NewBufferString("")
+	}
 
 	var currentSize uint64
 	for currentSize < totSize {
-
 		buf.Truncate(len(createPayload))
 
 		if err := evgen.Emit(state, buf); err != nil {

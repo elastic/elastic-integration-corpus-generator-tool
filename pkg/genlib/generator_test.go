@@ -26,6 +26,170 @@ const cardinalityCfg = `
 `
 */
 
+func Test_ParseTemplate(t *testing.T) {
+	testCases := []struct {
+		template                  []byte
+		expectedOrderFields       []string
+		expectedTemplateFieldsMap map[string][]byte
+		expectedTrailingTemplate  []byte
+	}{
+		{
+			template:                  []byte("no field"),
+			expectedOrderFields:       []string{},
+			expectedTemplateFieldsMap: map[string][]byte{},
+			expectedTrailingTemplate:  []byte("no field"),
+		},
+		{
+			template:                  []byte("{{.aField}}"),
+			expectedOrderFields:       []string{"aField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": nil},
+			expectedTrailingTemplate:  nil,
+		},
+		{
+			template:                  []byte("{{.aField}} {{.anotherField}}"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": nil, "anotherField": []byte(" ")},
+			expectedTrailingTemplate:  nil,
+		},
+		{
+			template:                  []byte("with prefix {{.aField}} {{.anotherField}}"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("with prefix"), "anotherField": []byte(" ")},
+			expectedTrailingTemplate:  nil,
+		},
+		{
+			template:                  []byte("{{.aField}} {{.anotherField}} with trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": nil, "anotherField": []byte(" ")},
+			expectedTrailingTemplate:  []byte(" with trailing"),
+		},
+		{
+			template:                  []byte("with prefix {{.aField}} {{.anotherField}} and trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("with prefix"), "anotherField": []byte(" ")},
+			expectedTrailingTemplate:  []byte(" and trailing"),
+		},
+		{
+			template:                  []byte("{{.aField}} with { in the middle {{.anotherField}}"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": nil, "anotherField": []byte(" with { in the middle ")},
+			expectedTrailingTemplate:  nil,
+		},
+		{
+			template:                  []byte("{ with curly brace as prefix {{.aField}} {{.anotherField}}"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{ with curly brace as prefix "), "anotherField": []byte(" ")},
+			expectedTrailingTemplate:  nil,
+		},
+		{
+			template:                  []byte("{ with curly brace as prefix {{.aField}} and { in the middle {{.anotherField}}"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{ with curly brace as prefix "), "anotherField": []byte(" and { in the middle ")},
+			expectedTrailingTemplate:  nil,
+		},
+		{
+			template:                  []byte("{ with curly brace as prefix {{.aField}} {{.anotherField}} and trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{ with curly brace as prefix "), "anotherField": []byte(" ")},
+			expectedTrailingTemplate:  []byte(" and trailing"),
+		},
+		{
+			template:                  []byte("{ with curly brace as prefix {{.aField}} and { in the middle {{.anotherField}} and trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{ with curly brace as prefix "), "anotherField": []byte(" and { in the middle ")},
+			expectedTrailingTemplate:  []byte(" and trailing"),
+		},
+		{
+			template:                  []byte("{ with curly brace as prefix {{.aField}} {{.anotherField}} and { curly brace in trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{ with curly brace as prefix "), "anotherField": []byte(" ")},
+			expectedTrailingTemplate:  []byte(" and { curly brace in trailing"),
+		},
+		{
+			template:                  []byte("{ with curly brace as prefix {{.aField}} and { in the middle {{.anotherField}} and { curly brace in trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{ with curly brace as prefix "), "anotherField": []byte(" and { in the middle ")},
+			expectedTrailingTemplate:  []byte(" and { curly brace in trailing"),
+		},
+		{
+			template:                  []byte("{ with curly brace as prefix {{.aField}} {{.anotherField}} and { curly brace in trailing with again { curly brace in trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{ with curly brace as prefix "), "anotherField": []byte(" ")},
+			expectedTrailingTemplate:  []byte(" and { curly brace in trailing with again { curly brace in trailing"),
+		},
+		{
+			template:                  []byte("{ with curly brace as prefix {{.aField}} and { in the middle {{.anotherField}} and { curly brace in trailing with again { curly brace in trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{ with curly brace as prefix "), "anotherField": []byte(" and { in the middle ")},
+			expectedTrailingTemplate:  []byte(" and { curly brace in trailing with again { curly brace in trailing"),
+		},
+		{
+			template:                  []byte("{{{.aField}} with curly brace as prefix just before a field {{.anotherField}} and trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{"), "anotherField": []byte(" with curly brace as prefix just before a field ")},
+			expectedTrailingTemplate:  []byte(" and trailing"),
+		},
+		{
+			template:                  []byte("{{{.aField}} with curly brace as prefix just before a field and { in the middle {{.anotherField}} and trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{"), "anotherField": []byte(" with curly brace as prefix just before a field and { in the middle ")},
+			expectedTrailingTemplate:  []byte(" and trailing"),
+		},
+		{
+			template:                  []byte("{{{.aField}} with curly brace as prefix just before a field {{.anotherField}} and { curly brace in trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{"), "anotherField": []byte(" with curly brace as prefix just before a field ")},
+			expectedTrailingTemplate:  []byte(" and { curly brace in trailing"),
+		},
+		{
+			template:                  []byte("{{{.aField}} with curly brace as prefix just before a field and { in the middle {{.anotherField}} and { curly brace in trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{"), "anotherField": []byte(" with curly brace as prefix just before a field and { in the middle ")},
+			expectedTrailingTemplate:  []byte(" and { curly brace in trailing"),
+		},
+		{
+			template:                  []byte("{{{.aField}} with curly brace as prefix just before a field {{.anotherField}} and { curly brace in trailing with again { curly brace in trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{"), "anotherField": []byte(" with curly brace as prefix just before a field ")},
+			expectedTrailingTemplate:  []byte(" and { curly brace in trailing with again { curly brace in trailing"),
+		},
+		{
+			template:                  []byte("{{{.aField}} with curly brace as prefix just before a field and { in the middle {{.anotherField}} and { curly brace in trailing with again { curly brace in trailing"),
+			expectedOrderFields:       []string{"aField", "anotherField"},
+			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{"), "anotherField": []byte(" with curly brace as prefix just before a field and { in the middle ")},
+			expectedTrailingTemplate:  []byte(" and { curly brace in trailing with again { curly brace in trailing"),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
+			orderedFields, templateFieldsMap, trailingTemplate := parseTemplate(testCase.template)
+			if len(orderedFields) != len(testCase.expectedOrderFields) {
+				t.Errorf("Expected equal orderedFields")
+			}
+
+			for i := range orderedFields {
+				if orderedFields[i] != testCase.expectedOrderFields[i] {
+					t.Errorf("Expected ordered field at position %d is wrong (expected: `%s`, given: `%s`", i, testCase.expectedOrderFields[i], orderedFields[i])
+				}
+			}
+
+			if len(templateFieldsMap) != len(testCase.expectedTemplateFieldsMap) {
+				t.Errorf("Expected equal templateFieldsMap")
+			}
+
+			for k := range templateFieldsMap {
+				if _, ok := testCase.expectedTemplateFieldsMap[k]; !ok {
+					t.Errorf("Missing expected field `%s` in templateFieldsMap", k)
+				}
+			}
+
+			if string(trailingTemplate) != string(testCase.expectedTrailingTemplate) {
+				t.Errorf("Expected trailing template is wrong (expected: `%s`, given: `%s`", testCase.expectedTrailingTemplate, trailingTemplate)
+			}
+		})
+	}
+}
+
 func Test_EmptyCase(t *testing.T) {
 	testCases := []struct {
 		template []byte
@@ -34,7 +198,7 @@ func Test_EmptyCase(t *testing.T) {
 			template: nil,
 		},
 		{
-			template: []byte(""),
+			template: generateTemplateFromField(Config{}, []Field{}),
 		},
 	}
 	for _, testCase := range testCases {
@@ -47,10 +211,8 @@ func Test_EmptyCase(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			m := unmarshalJSONT[any](t, buf.Bytes())
-
-			if len(m) != 0 {
-				t.Errorf("Expected empty map")
+			if len(buf.Bytes()) != 0 {
+				t.Errorf("Expected empty bytes")
 			}
 		})
 	}
@@ -564,7 +726,8 @@ func Benchmark_GeneratorWithTemplate(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	g, err := NewGeneratorWithTemplate(nil, Config{}, flds)
+	template := generateTemplateFromField(Config{}, flds)
+	g, err := NewGeneratorWithTemplate(template, Config{}, flds)
 
 	if err != nil {
 		b.Fatal(err)

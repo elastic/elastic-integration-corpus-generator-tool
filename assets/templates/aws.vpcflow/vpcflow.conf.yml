@@ -18,8 +18,23 @@
 - name: Packets
   range: 1048576
 - name: Bytes
-  range: 1572864000
+  expression: >
+    function process() {
+      return {{.Packets}} * 15;
+    }
 - name: Action
   enum: ["ACCEPT", "REJECT"]
 - name: LogStatus
-  enum: ["OK", "SKIPDATA", "NODATA"]
+  expression: >
+    function process() {
+      if ({{.Packets}} == 0) { 
+        return "NODATA"; 
+      } else { 
+        let idx = Math.floor(Math.random() * 2); 
+        if (idx == 0) { 
+          return "OK";
+        } else { 
+          return "SKIPDATA"; 
+        }
+      }
+    }

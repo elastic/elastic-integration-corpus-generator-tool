@@ -140,10 +140,10 @@ func (gen GeneratorWithTemplate) Emit(state *GenState, buf *bytes.Buffer) error 
 }
 
 func (gen GeneratorWithTemplate) emit(state *GenState, buf *bytes.Buffer) error {
-	dupes := make(map[string]struct{})
+	valueMap := make(map[string]interface{})
 
 	for _, f := range gen.emitFuncs {
-		if err := f(state, dupes, buf); err != nil {
+		if err := f(state, valueMap, buf); err != nil {
 			return err
 		}
 	}

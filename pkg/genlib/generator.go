@@ -58,6 +58,10 @@ func generateTemplateFromField(cfg Config, fields Fields) []byte {
 			if fieldCfg.Value != nil {
 				fieldWrap = ""
 			}
+
+			if fieldCfg.Expression != "" {
+				fieldWrap = "\""
+			}
 		}
 
 		fieldTrailer := []byte(",")

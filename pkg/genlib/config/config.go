@@ -18,6 +18,7 @@ type ConfigField struct {
 	Enum        []string    `config:"enum"`
 	ObjectKeys  []string    `config:"object_keys"`
 	Value       interface{} `config:"value"`
+	Expression  string      `config:"expression"`
 }
 
 func LoadConfig(configFile string) (Config, error) {

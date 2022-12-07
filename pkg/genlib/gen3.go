@@ -56,11 +56,13 @@ func NewGen3(tpl []byte, cfg Config, fields Fields) (*Gen3, error) {
 	t := template.New("generator")
 	t = t.Option("missingkey=error")
 
+	state := NewGenState()
+
 	templateFns := template.FuncMap{}
 	templateFns["generate"] = func(field string) string {
-		buf := &bytes.Buffer{}
-		_ = fieldMap[field](nil, nil, buf)
-		return buf.String()
+		b := &bytes.Buffer{}
+		_ = fieldMap[field](state, nil, b)
+		return b.String()
 	}
 	parsedTpl, err := t.Funcs(templateFns).Parse(string(tpl))
 	if err != nil {

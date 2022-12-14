@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/OpenPeeDeeP/xdg v1.0.0
 	github.com/Pallinder/go-randomdata v1.2.0
+	github.com/dop251/goja v0.0.0-20221118162653-d4bf6fde1b86
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elastic/go-ucfg v0.8.5
 	github.com/lithammer/shortuuid/v3 v3.0.7
@@ -20,7 +21,6 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
-	github.com/dop251/goja v0.0.0-20221118162653-d4bf6fde1b86 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/google/uuid v1.2.0 // indirect

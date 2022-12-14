@@ -7,7 +7,6 @@ package genlib
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/Pallinder/go-randomdata"
 	"github.com/dop251/goja"
@@ -15,7 +14,6 @@ import (
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 	"math"
 	"math/rand"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -70,7 +68,10 @@ type GenState struct {
 	counter uint64
 
 	// internal buffer pool to decrease load on GC
-	pool sync.Pool
+	dynamicStubPool sync.Pool
+
+	// internal goja vm buffer pool to decrease load on GC
+	vmPool sync.Pool
 
 	// previous value cache; necessary for fuzziness, cardinality, etc.
 	prevCache map[string]interface{}
@@ -79,9 +80,14 @@ type GenState struct {
 func NewGenState() *GenState {
 	return &GenState{
 		prevCache: make(map[string]interface{}),
-		pool: sync.Pool{
+		dynamicStubPool: sync.Pool{
 			New: func() any {
 				return new(bytes.Buffer)
+			},
+		},
+		vmPool: sync.Pool{
+			New: func() any {
+				return goja.New()
 			},
 		},
 	}
@@ -354,26 +360,15 @@ func bindExpression(prefix []byte, field Field, expression string, fieldMap map[
 			return err
 		}
 
-		// Validate processor source code.
-		prog, err := goja.Compile("inline.js", script.String(), true)
+		vm := state.vmPool.Get()
+		tmp := vm.(*goja.Runtime)
+		defer state.vmPool.Put(tmp)
+		value, err := tmp.RunString(script.String())
 		if err != nil {
 			return err
 		}
 
-		pool, err := newSessionPool(prog)
-		if err != nil {
-			return err
-		}
-
-		s := pool.Get()
-		defer pool.Put(s)
-
-		value, err := s.runProcessFunc()
-		if err != nil {
-			return err
-		}
-
-		valueMap[field.Name] = value
+		valueMap[field.Name] = value.Export()
 
 		vstr := fmt.Sprintf("%v", value)
 		if err != nil {
@@ -626,10 +621,10 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]emitF, objectK
 
 func makeDynamicStub(prefix []byte, fieldName string, boundF emitF) emitF {
 	return func(state *GenState, valueMap map[string]interface{}, buf *bytes.Buffer) error {
-		v := state.pool.Get()
+		v := state.dynamicStubPool.Get()
 		tmp := v.(*bytes.Buffer)
 		tmp.Reset()
-		defer state.pool.Put(tmp)
+		defer state.dynamicStubPool.Put(tmp)
 
 		// Fire the bound function, write into temp buffer
 		if err := boundF(state, valueMap, tmp); err != nil {
@@ -661,102 +656,3 @@ const (
 	entryPointFunction = "process"
 	timeoutError       = "javascript processor execution timeout"
 )
-
-// runProcessFunc executes process() from the JS script.
-func (s *session) runProcessFunc() (out interface{}, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("unexpected panic in javascript processor: %v", r)
-		}
-	}()
-
-	// Interrupt the JS code if execution exceeds timeout.
-	if s.timeout > 0 {
-		t := time.AfterFunc(s.timeout, func() {
-			s.vm.Interrupt(timeoutError)
-		})
-		defer t.Stop()
-	}
-
-	if out, err = s.processFunc(goja.Undefined()); err != nil {
-		return nil, fmt.Errorf("failed in process function: %w", err)
-	}
-
-	return out, nil
-}
-
-// setProcessFunction validates that the process() function exists and stores
-// the handle.
-func (s *session) setProcessFunction() error {
-	processFunc := s.vm.Get(entryPointFunction)
-	if processFunc == nil {
-		return errors.New("process function not found")
-	}
-	if processFunc.ExportType().Kind() != reflect.Func {
-		return errors.New("process is not a function")
-	}
-	if err := s.vm.ExportTo(processFunc, &s.processFunc); err != nil {
-		return fmt.Errorf("failed to export process function: %w", err)
-	}
-	return nil
-}
-
-func newSession(p *goja.Program) (*session, error) {
-	// Setup JS runtime.
-	s := &session{
-		vm:      goja.New(),
-		timeout: time.Second,
-	}
-
-	_, err := s.vm.RunProgram(p)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = s.setProcessFunction(); err != nil {
-		return nil, err
-	}
-
-	return s, nil
-}
-
-type sessionPool struct {
-	New func() *session
-	C   chan *session
-}
-
-func newSessionPool(p *goja.Program) (*sessionPool, error) {
-	s, err := newSession(p)
-	if err != nil {
-		return nil, err
-	}
-
-	pool := sessionPool{
-		New: func() *session {
-			s, _ := newSession(p)
-			return s
-		},
-		C: make(chan *session, 10),
-	}
-	pool.Put(s)
-
-	return &pool, nil
-}
-
-func (p *sessionPool) Get() *session {
-	select {
-	case s := <-p.C:
-		return s
-	default:
-		return p.New()
-	}
-}
-
-func (p *sessionPool) Put(s *session) {
-	if s != nil {
-		select {
-		case p.C <- s:
-		default:
-		}
-	}
-}

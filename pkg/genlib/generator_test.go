@@ -928,3 +928,31 @@ func Benchmark_GeneratorUsingExpression(b *testing.B) {
 		buf.Reset()
 	}
 }
+
+func Benchmark_GeneratorWithTemplateAWS(b *testing.B) {
+	ctx := context.Background()
+	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "aws", "vpcflow", "1.28.0")
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	template := generateTemplateFromField(Config{}, flds)
+	g, err := NewGeneratorWithTemplate(template, Config{}, flds)
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	var buf bytes.Buffer
+
+	state := NewGenState()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := g.Emit(state, &buf)
+		if err != nil {
+			b.Fatal(err)
+		}
+		buf.Reset()
+	}
+}

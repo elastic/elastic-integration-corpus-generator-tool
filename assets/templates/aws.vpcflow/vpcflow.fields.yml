@@ -19,10 +19,12 @@
   type: long
 - name: Bytes
   type: long
-- name: Start
-  type: date
 - name: End
   type: date
+- name: Start
+  type: date
+- name: StartOffset
+  type: long
 - name: Action
   type: keyword
 - name: LogStatus

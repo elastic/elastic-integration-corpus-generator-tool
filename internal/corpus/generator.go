@@ -85,7 +85,7 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 	if len(template) == 0 {
 		evgen, err = genlib.NewGenerator(gc.config, fields)
 	} else {
-		evgen, err = genlib.NewGeneratorWithTemplate(template, gc.config, fields)
+		evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields)
 	}
 
 	if err != nil {

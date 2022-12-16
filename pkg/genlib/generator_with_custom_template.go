@@ -6,16 +6,27 @@ package genlib
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
+	"time"
 )
 
 var trailingTemplate []byte
 
-// GeneratorWithTemplate is resolved at construction to a slice of emit functions
-type GeneratorWithTemplate struct {
-	emitFuncs []emitF
+type emitFWithFieldName struct {
+	fieldName string
+	emitF     emitF
+	emitName  string
+}
+
+// GeneratorWithCustomTemplate is resolved at construction to a slice of emit functions
+type GeneratorWithCustomTemplate struct {
+	emitFuncs         []emitFWithFieldName
+	templateFieldsMap map[string][]byte
 }
 
 func parseTemplate(template []byte) ([]string, map[string][]byte, []byte) {
@@ -95,7 +106,7 @@ func extractObjectKeys(templateFieldMap map[string][]byte, fields Fields) (map[s
 	return objectKeys, objectKeysFields
 }
 
-func NewGeneratorWithTemplate(template []byte, cfg Config, fields Fields) (*GeneratorWithTemplate, error) {
+func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) (*GeneratorWithCustomTemplate, error) {
 	// Parse the template and extract relevant information
 	orderedFields, templateFieldsMap, fieldPrefixBuffer := parseTemplate(template)
 	trailingTemplate = fieldPrefixBuffer
@@ -106,7 +117,7 @@ func NewGeneratorWithTemplate(template []byte, cfg Config, fields Fields) (*Gene
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]emitF)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, objectKeys, templateFieldsMap); err != nil {
+		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
 			return nil, err
 		}
 	}
@@ -114,22 +125,26 @@ func NewGeneratorWithTemplate(template []byte, cfg Config, fields Fields) (*Gene
 	// Preprocess the object keys, generating appropriate emit functions
 	for k := range objectKeysFields {
 		field := objectKeysFields[k]
-		if err := bindField(cfg, field, fieldMap, objectKeys, templateFieldsMap); err != nil {
+		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
 			return nil, err
 		}
 	}
 
 	// Roll into slice of emit functions
-	emitFuncs := make([]emitF, 0, len(fieldMap))
+	emitFuncs := make([]emitFWithFieldName, 0, len(fieldMap))
 	for _, fieldName := range orderedFields {
-		f := fieldMap[fieldName]
+		emitF := fieldMap[fieldName]
+		emitName := runtime.FuncForPC(reflect.ValueOf(emitF).Pointer()).Name()
+		emitName = strings.Replace(emitName, ".func1", "", -1)
+		emitName = strings.Replace(emitName, "github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib.", "", -1)
+		f := emitFWithFieldName{fieldName: fieldName, emitF: fieldMap[fieldName], emitName: emitName}
 		emitFuncs = append(emitFuncs, f)
 	}
 
-	return &GeneratorWithTemplate{emitFuncs: emitFuncs}, nil
+	return &GeneratorWithCustomTemplate{emitFuncs: emitFuncs, templateFieldsMap: templateFieldsMap}, nil
 }
 
-func (gen GeneratorWithTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
+func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
 	if err := gen.emit(state, buf); err != nil {
 		return err
 	}
@@ -139,12 +154,37 @@ func (gen GeneratorWithTemplate) Emit(state *GenState, buf *bytes.Buffer) error 
 	return nil
 }
 
-func (gen GeneratorWithTemplate) emit(state *GenState, buf *bytes.Buffer) error {
-	valueMap := make(map[string]interface{})
-
+func (gen GeneratorWithCustomTemplate) emit(state *GenState, buf *bytes.Buffer) error {
 	for _, f := range gen.emitFuncs {
-		if err := f(state, valueMap, buf); err != nil {
+		buf.Write(gen.templateFieldsMap[f.fieldName])
+
+		if value, err := f.emitF(state); err != nil {
 			return err
+		} else {
+			if f.emitName == "bindStatic" {
+				vstr, err := json.Marshal(value)
+				if err != nil {
+					return err
+				}
+
+				_, err = fmt.Fprintf(buf, "%s", vstr)
+				if err != nil {
+					return err
+				}
+
+			} else if f.emitName == "bindNearTime" {
+				vtime := value.(time.Time)
+				_, err = fmt.Fprintf(buf, "%s", vtime.Format(FieldTypeTimeLayout))
+				if err != nil {
+					return err
+				}
+			} else {
+				_, err = fmt.Fprintf(buf, "%v", value)
+				if err != nil {
+					return err
+				}
+			}
+
 		}
 	}
 

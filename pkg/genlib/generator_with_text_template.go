@@ -10,21 +10,13 @@ import (
 	"text/template"
 )
 
-// Gen2 is resolved at construction to a slice of emit functions
-type Gen3 struct {
-	tpl *template.Template
+// GeneratorWithTemplate
+type GeneratorWithTemplate struct {
+	tpl   *template.Template
+	state *GenState
 }
 
-// NewGen2
-//
-// From current benchmarks this generator is at least as CPU performant as Generator, while providing templating.
-// Is worse in terms of RAM used and memory allocations (but working on template parse optimization may help).
-//
-// If you're getting a nil pointer dereference like error, something like:
-// template: generator:2:2: executing "generator" at <generate "foobar">: error calling generate: runtime error: invalid memory address or nil pointer dereference
-// is probably due to the "foobar" not being a valid field. In this case the generate function will try accessing fieldMap at an invalid location.
-func NewGen3(tpl []byte, cfg Config, fields Fields) (*Gen3, error) {
-
+func NewGeneratorWithTemplate(tpl []byte, cfg Config, fields Fields) (*GeneratorWithTemplate, error) {
 	// extracts objects keys
 	// FIXME: this logic works for field.* but what about field.*.*.* (like in gcp package)?
 	objectKeys := make(map[string]struct{})
@@ -39,7 +31,7 @@ func NewGen3(tpl []byte, cfg Config, fields Fields) (*Gen3, error) {
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]emitF)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, objectKeys, nil); err != nil {
+		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
 			return nil, err
 		}
 	}
@@ -48,7 +40,7 @@ func NewGen3(tpl []byte, cfg Config, fields Fields) (*Gen3, error) {
 	// TODO: is this necessary? Works without and is not clear to me what is the benefit
 	for k := range objectKeysFields {
 		field := objectKeysFields[k]
-		if err := bindField(cfg, field, fieldMap, objectKeys, nil); err != nil {
+		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
 			return nil, err
 		}
 	}
@@ -59,24 +51,40 @@ func NewGen3(tpl []byte, cfg Config, fields Fields) (*Gen3, error) {
 	state := NewGenState()
 
 	templateFns := template.FuncMap{}
-	templateFns["generate"] = func(field string) string {
-		b := &bytes.Buffer{}
-		_ = fieldMap[field](state, nil, b)
-		return b.String()
+	templateFns["generate"] = func(field string) interface{} {
+		bindF, ok := fieldMap[field]
+		if !ok {
+			return nil
+		}
+
+		value, err := bindF(state)
+		if err != nil {
+			return nil
+		}
+
+		return value
 	}
 	parsedTpl, err := t.Funcs(templateFns).Parse(string(tpl))
 	if err != nil {
 		return nil, err
 	}
 
-	e := Gen3{}
-	e.tpl = parsedTpl
-
-	return &e, nil
+	return &GeneratorWithTemplate{tpl: parsedTpl, state: state}, nil
 }
 
-func (e Gen3) Emit(state *GenState, buf *bytes.Buffer) error {
-	err := e.tpl.Execute(buf, nil)
+func (gen GeneratorWithTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
+	state = gen.state
+	if err := gen.emit(state, buf); err != nil {
+		return err
+	}
+
+	state.counter += 1
+
+	return nil
+}
+
+func (gen GeneratorWithTemplate) emit(state *GenState, buf *bytes.Buffer) error {
+	err := gen.tpl.Execute(buf, nil)
 	if err != nil {
 		return err
 	}

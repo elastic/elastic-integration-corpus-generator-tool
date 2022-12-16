@@ -19,6 +19,8 @@ require (
 )
 
 require (
+	github.com/CloudyKit/fastprinter v0.0.0-20200109182630-33d98a066a53 // indirect
+	github.com/CloudyKit/jet v2.1.2+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect

@@ -54,7 +54,7 @@ func NewGeneratorWithJetHTML(tpl []byte, cfg Config, fields Fields) (*GeneratorW
 	}
 
 	// Preprocess the fields, generating appropriate emit functions
-	fieldMap := make(map[string]emitF)
+	fieldMap := make(map[string]EmitF)
 	for _, field := range fields {
 		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
 			return nil, err
@@ -95,6 +95,10 @@ func NewGeneratorWithJetHTML(tpl []byte, cfg Config, fields Fields) (*GeneratorW
 	}
 
 	return &GeneratorWithJetHTML{jetHTML: t, state: state}, nil
+}
+
+func (GeneratorWithJetHTML) Close() error {
+	return nil
 }
 
 func (gen GeneratorWithJetHTML) Emit(state *GenState, buf *bytes.Buffer) error {

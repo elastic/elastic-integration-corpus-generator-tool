@@ -38,6 +38,18 @@ func NewGenerator(config Config, fs afero.Fs, location string) (GeneratorCorpus,
 	}, nil
 }
 
+func NewGeneratorWithTemplate(config Config, fs afero.Fs, location, configPath, fieldsYamlPath string) (GeneratorCorpus, error) {
+
+	return GeneratorCorpus{
+		config:        config,
+		fs:            fs,
+		location:      location,
+		configPath:    configPath,
+		fieldYamlPath: fieldsYamlPath,
+		timestamp:     time.Now().Unix,
+	}, nil
+}
+
 // TestNewGenerator sets up a GeneratorCorpus configured to be used in testing.
 func TestNewGenerator() GeneratorCorpus {
 	f, _ := NewGenerator(Config{}, afero.NewMemMapFs(), "testdata")
@@ -46,9 +58,11 @@ func TestNewGenerator() GeneratorCorpus {
 }
 
 type GeneratorCorpus struct {
-	config   Config
-	fs       afero.Fs
-	location string
+	config        Config
+	fs            afero.Fs
+	location      string
+	configPath    string
+	fieldYamlPath string
 	// timestamp allow overriding value in tests
 	timestamp timestamp
 }
@@ -78,14 +92,14 @@ func (gc GeneratorCorpus) bulkPayloadFilenameWithTemplate(templatePath string) s
 var corpusLocPerm = os.FileMode(0770)
 var corpusPerm = os.FileMode(0660)
 
-func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totSize uint64, createPayload []byte, f afero.File) error {
+func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totSize uint64, createPayload []byte, f afero.File, configPath, fieldsYamlPath string) error {
 
 	var evgen genlib.Generator
 	var err error
 	if len(template) == 0 {
 		evgen, err = genlib.NewGenerator(gc.config, fields)
 	} else {
-		evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields)
+		evgen, err = genlib.NewGeneratorWithHero(template, gc.configPath, gc.fieldYamlPath)
 	}
 
 	if err != nil {
@@ -118,7 +132,7 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 		currentSize += uint64(buf.Len())
 	}
 
-	return nil
+	return evgen.Close()
 }
 
 // Generate generates a bulk request corpus and persist it to file.
@@ -145,7 +159,7 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 
 	createPayload := []byte(`{ "create" : { "_index": "metrics-` + integrationPackage + `.` + dataStream + `-default" } }` + "\n")
 
-	err = gc.eventsPayloadFromFields(nil, fields, totSizeInBytes, createPayload, f)
+	err = gc.eventsPayloadFromFields(nil, fields, totSizeInBytes, createPayload, f, "", "")
 	if err != nil {
 		return "", err
 	}
@@ -188,7 +202,7 @@ func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPat
 		return "", err
 	}
 
-	err = gc.eventsPayloadFromFields(template, fields, totSizeInBytes, nil, f)
+	err = gc.eventsPayloadFromFields(template, fields, totSizeInBytes, nil, f, gc.configPath, gc.fieldYamlPath)
 	if err != nil {
 		return "", err
 	}

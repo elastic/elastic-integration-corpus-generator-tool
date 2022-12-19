@@ -10,13 +10,13 @@ import (
 	"text/template"
 )
 
-// GeneratorWithTemplate
-type GeneratorWithTemplate struct {
+// GeneratorWithTextTemplate
+type GeneratorWithTextTemplate struct {
 	tpl   *template.Template
 	state *GenState
 }
 
-func NewGeneratorWithTemplate(tpl []byte, cfg Config, fields Fields) (*GeneratorWithTemplate, error) {
+func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*GeneratorWithTextTemplate, error) {
 	// extracts objects keys
 	// FIXME: this logic works for field.* but what about field.*.*.* (like in gcp package)?
 	objectKeys := make(map[string]struct{})
@@ -29,7 +29,7 @@ func NewGeneratorWithTemplate(tpl []byte, cfg Config, fields Fields) (*Generator
 	}
 
 	// Preprocess the fields, generating appropriate emit functions
-	fieldMap := make(map[string]emitF)
+	fieldMap := make(map[string]EmitF)
 	for _, field := range fields {
 		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
 			return nil, err
@@ -69,10 +69,14 @@ func NewGeneratorWithTemplate(tpl []byte, cfg Config, fields Fields) (*Generator
 		return nil, err
 	}
 
-	return &GeneratorWithTemplate{tpl: parsedTpl, state: state}, nil
+	return &GeneratorWithTextTemplate{tpl: parsedTpl, state: state}, nil
 }
 
-func (gen GeneratorWithTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
+func (GeneratorWithTextTemplate) Close() error {
+	return nil
+}
+
+func (gen GeneratorWithTextTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
 	state = gen.state
 	if err := gen.emit(state, buf); err != nil {
 		return err
@@ -83,7 +87,7 @@ func (gen GeneratorWithTemplate) Emit(state *GenState, buf *bytes.Buffer) error 
 	return nil
 }
 
-func (gen GeneratorWithTemplate) emit(state *GenState, buf *bytes.Buffer) error {
+func (gen GeneratorWithTextTemplate) emit(state *GenState, buf *bytes.Buffer) error {
 	err := gen.tpl.Execute(buf, nil)
 	if err != nil {
 		return err

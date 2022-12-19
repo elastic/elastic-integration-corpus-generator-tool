@@ -57,7 +57,7 @@ func GenerateWithTemplateCmd() *cobra.Command {
 				return err
 			}
 
-			fc, err := corpus.NewGenerator(config, afero.NewOsFs(), location)
+			fc, err := corpus.NewGeneratorWithTemplate(config, afero.NewOsFs(), location, configFile, fieldsDefinitionPath)
 			if err != nil {
 				return err
 			}

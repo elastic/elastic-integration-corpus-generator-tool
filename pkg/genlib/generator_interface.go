@@ -50,15 +50,13 @@ const (
 )
 
 var (
-	replacer     = strings.NewReplacer(".*", "")
-	keywordRegex = regexp.MustCompile("(\\.|-|_|\\s){1,1}")
+	replacer             = strings.NewReplacer(".*", "")
+	fieldNormalizerRegex = regexp.MustCompile("[^a-zA-Z0-9]")
+	keywordRegex         = regexp.MustCompile("(\\.|-|_|\\s){1,1}")
 )
 
-// Typedef of the internal emit function
-type emitF func(state *GenState) (interface{}, error)
-
-// EmitF if the exported typedef of the internal emit function to be used in Jade
-type EmitF emitF
+// Typedef of the emit function
+type EmitF func(state *GenState) (interface{}, error)
 
 // GenerateFromHero is the helper for hero
 func GenerateFromHero(field string, fieldMap map[string]EmitF, state *GenState) interface{} {
@@ -77,6 +75,7 @@ func GenerateFromHero(field string, fieldMap map[string]EmitF, state *GenState) 
 
 type Generator interface {
 	Emit(state *GenState, buf *bytes.Buffer) error
+	Close() error
 }
 
 type GenState struct {
@@ -101,17 +100,25 @@ func NewGenState() *GenState {
 	}
 }
 
-func bindField(cfg Config, field Field, fieldMap map[string]emitF, objectKeys map[string]struct{}) error {
+func (s *GenState) Inc() {
+	s.counter += 1
+}
 
-	// Check for hardcoded field value
-	if len(field.Value) > 0 {
-		return bindStatic(field, field.Value, fieldMap)
-	}
+// BindField is the exported symbol of bindField to be used in hero
+func BindField(cfg Config, field Field, fieldMap map[string]EmitF, objectKeys map[string]struct{}) error {
+	return bindField(cfg, field, fieldMap, objectKeys)
+}
 
+func bindField(cfg Config, field Field, fieldMap map[string]EmitF, objectKeys map[string]struct{}) error {
 	// Check config override of value
 	fieldCfg, _ := cfg.GetField(field.Name)
 	if fieldCfg.Value != nil {
 		return bindStatic(field, fieldCfg.Value, fieldMap)
+	}
+
+	// Check for hardcoded field value
+	if len(field.Value) > 0 {
+		return bindStatic(field, field.Value, fieldMap)
 	}
 
 	if fieldCfg.Cardinality > 0 {
@@ -133,7 +140,7 @@ func isDupe(va []interface{}, dst interface{}) bool {
 	return dupe
 }
 
-func bindByType(cfg Config, field Field, fieldMap map[string]emitF, objectKeys map[string]struct{}) (err error) {
+func bindByType(cfg Config, field Field, fieldMap map[string]EmitF, objectKeys map[string]struct{}) (err error) {
 
 	fieldCfg, _ := cfg.GetField(field.Name)
 
@@ -184,7 +191,7 @@ func makeIntFunc(fieldCfg ConfigField, field Field) func() int {
 	return dummyFunc
 }
 
-func bindObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[string]emitF, objectKeys map[string]struct{}) error {
+func bindObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[string]EmitF, objectKeys map[string]struct{}) error {
 	if len(field.ObjectType) > 0 {
 		field.Type = field.ObjectType
 	} else {
@@ -208,10 +215,10 @@ func bindObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[stri
 	return bindDynamicObject(cfg, field, fieldMap, objectKeys)
 }
 
-func bindDynamicObject(cfg Config, field Field, fieldMap map[string]emitF, objectKeys map[string]struct{}) error {
+func bindDynamicObject(cfg Config, field Field, fieldMap map[string]EmitF, objectKeys map[string]struct{}) error {
 	// Temporary fieldMap which we pass to the bind function,
-	// then extract the generated emitFunction for use in the stub.
-	dynMap := make(map[string]emitF)
+	// then extract the generated EmitFunction for use in the stub.
+	dynMap := make(map[string]EmitF)
 
 	if err := bindField(cfg, field, dynMap, objectKeys); err != nil {
 		return err
@@ -248,7 +255,7 @@ func randGeoPoint() string {
 	return fmt.Sprintf("%d.%d,%d.%d", lat, latD, long, longD)
 }
 
-func bindConstantKeyword(field Field, fieldMap map[string]emitF) error {
+func bindConstantKeyword(field Field, fieldMap map[string]EmitF) error {
 	fieldMap[field.Name] = func(state *GenState) (interface{}, error) {
 		value, ok := state.prevCache[field.Name].(string)
 
@@ -263,7 +270,7 @@ func bindConstantKeyword(field Field, fieldMap map[string]emitF) error {
 	return nil
 }
 
-func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
+func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]EmitF) error {
 	if len(fieldCfg.Enum) > 0 {
 		fieldMap[field.Name] = func(state *GenState) (interface{}, error) {
 			idx := rand.Intn(len(fieldCfg.Enum))
@@ -297,7 +304,7 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) e
 	return nil
 }
 
-func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]emitF) error {
+func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]EmitF) error {
 	fieldMap[field.Name] = func(state *GenState) (interface{}, error) {
 		value := ""
 		for i := 0; i < N-1; i++ {
@@ -313,7 +320,7 @@ func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]emitF) 
 	return nil
 }
 
-func bindStatic(field Field, v interface{}, fieldMap map[string]emitF) error {
+func bindStatic(field Field, v interface{}, fieldMap map[string]EmitF) error {
 	fieldMap[field.Name] = func(state *GenState) (interface{}, error) {
 		return v, nil
 	}
@@ -321,7 +328,7 @@ func bindStatic(field Field, v interface{}, fieldMap map[string]emitF) error {
 	return nil
 }
 
-func bindBool(field Field, fieldMap map[string]emitF) error {
+func bindBool(field Field, fieldMap map[string]EmitF) error {
 	fieldMap[field.Name] = func(state *GenState) (interface{}, error) {
 		var value bool
 		switch rand.Int() % 2 {
@@ -337,7 +344,7 @@ func bindBool(field Field, fieldMap map[string]emitF) error {
 	return nil
 }
 
-func bindGeoPoint(field Field, fieldMap map[string]emitF) error {
+func bindGeoPoint(field Field, fieldMap map[string]EmitF) error {
 	fieldMap[field.Name] = func(state *GenState) (interface{}, error) {
 		value := randGeoPoint()
 
@@ -347,7 +354,7 @@ func bindGeoPoint(field Field, fieldMap map[string]emitF) error {
 	return nil
 }
 
-func bindWordN(field Field, n int, fieldMap map[string]emitF) error {
+func bindWordN(field Field, n int, fieldMap map[string]EmitF) error {
 	fieldMap[field.Name] = func(state *GenState) (interface{}, error) {
 		value := genNounsN(rand.Intn(n))
 
@@ -357,7 +364,7 @@ func bindWordN(field Field, n int, fieldMap map[string]emitF) error {
 	return nil
 }
 
-func bindNearTime(field Field, fieldMap map[string]emitF) error {
+func bindNearTime(field Field, fieldMap map[string]EmitF) error {
 	fieldMap[field.Name] = func(state *GenState) (interface{}, error) {
 		offset := time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
 		newTime := time.Now().Add(offset)
@@ -368,7 +375,7 @@ func bindNearTime(field Field, fieldMap map[string]emitF) error {
 	return nil
 }
 
-func bindIP(field Field, fieldMap map[string]emitF) error {
+func bindIP(field Field, fieldMap map[string]EmitF) error {
 	fieldMap[field.Name] = func(state *GenState) (interface{}, error) {
 
 		i0 := rand.Intn(255)
@@ -384,7 +391,7 @@ func bindIP(field Field, fieldMap map[string]emitF) error {
 	return nil
 }
 
-func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
+func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]EmitF) error {
 
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
@@ -417,7 +424,7 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) erro
 	return nil
 }
 
-func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) error {
+func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]EmitF) error {
 
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
@@ -450,7 +457,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]emitF) er
 	return nil
 }
 
-func bindCardinality(cfg Config, field Field, fieldMap map[string]emitF, objectKeys map[string]struct{}) error {
+func bindCardinality(cfg Config, field Field, fieldMap map[string]EmitF, objectKeys map[string]struct{}) error {
 
 	fieldCfg, _ := cfg.GetField(field.Name)
 	cardinality := int(math.Ceil((1000. / float64(fieldCfg.Cardinality))))
@@ -513,7 +520,7 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]emitF, objectK
 
 }
 
-func makeDynamicStub(boundF emitF) emitF {
+func makeDynamicStub(boundF EmitF) EmitF {
 	return func(state *GenState) (interface{}, error) {
 		// Fire the bound function, write into temp buffer
 		value, err := boundF(state)

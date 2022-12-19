@@ -49,15 +49,29 @@ func LoadFields(ctx context.Context, baseURL, integration, dataStream, version s
 	return normaliseFields(fields)
 }
 
-func LoadFieldsWithTemplate(ctx context.Context, templatePath string) (Fields, error) {
-	fieldsFileContent, err := os.ReadFile(templatePath)
+func LoadFieldsContent(ctx context.Context, baseURL, integration, dataStream, version string) ([]byte, error) {
+
+	fieldsContent, err := getFieldsFiles(ctx, baseURL, integration, dataStream, version)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(fieldsContent) == 0 {
+		return nil, ErrNotFound
+	}
+
+	return fieldsContent, nil
+}
+
+func LoadFieldsWithTemplate(ctx context.Context, fieldYamlPath string) (Fields, error) {
+	fieldsFileContent, err := os.ReadFile(fieldYamlPath)
 	if err != nil {
 		return nil, err
 	}
 
 	var fieldsContent string
 
-	key := strings.TrimSuffix(filepath.Base(templatePath), filepath.Ext(templatePath))
+	key := strings.TrimSuffix(filepath.Base(fieldYamlPath), filepath.Ext(fieldYamlPath))
 	keyEntry := fmt.Sprintf("- key: %s\n  fields:\n", key)
 	for _, line := range strings.Split(string(fieldsFileContent), "\n") {
 		keyEntry += `    ` + line + "\n"

@@ -159,7 +159,7 @@ func Test_ParseTemplate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
-			orderedFields, templateFieldsMap, trailingTemplate := parseTemplate(testCase.template)
+			orderedFields, templateFieldsMap, _, trailingTemplate := parseTemplate(testCase.template)
 			if len(orderedFields) != len(testCase.expectedOrderFields) {
 				t.Errorf("Expected equal orderedFields")
 			}
@@ -514,7 +514,7 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 		t.Fatal(err)
 	}
 
-	// Buffer should now contain an event shaped like {"alpha": "constant_keyword"}
+	// BufferWithMutex should now contain an event shaped like {"alpha": "constant_keyword"}
 	m := unmarshalJSONT[T](t, buf.Bytes())
 
 	if len(m) != 1 {

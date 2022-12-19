@@ -350,7 +350,7 @@ func testSingleTWithJetHTML[T any](t *testing.T, fld Field, yaml []byte, templat
 		t.Fatal(err)
 	}
 
-	// Buffer should now contain an event shaped like {"alpha": "constant_keyword"}
+	// BufferWithMutex should now contain an event shaped like {"alpha": "constant_keyword"}
 	m := unmarshalJSONT[T](t, buf.Bytes())
 
 	if len(m) != 1 {

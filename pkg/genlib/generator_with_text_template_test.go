@@ -350,7 +350,7 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 		t.Fatal(err)
 	}
 
-	// Buffer should now contain an event shaped like {"alpha": "constant_keyword"}
+	// BufferWithMutex should now contain an event shaped like {"alpha": "constant_keyword"}
 	m := unmarshalJSONT[T](t, buf.Bytes())
 
 	if len(m) != 1 {
@@ -368,7 +368,7 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 }
 
 func makeGeneratorWithTemplate(t *testing.T, cfg Config, fields Fields, template []byte) (Generator, *GenState) {
-	g, err := NewGeneratorWithTemplate(template, cfg, fields)
+	g, err := NewGeneratorWithTextTemplate(template, cfg, fields)
 
 	if err != nil {
 		t.Fatal(err)

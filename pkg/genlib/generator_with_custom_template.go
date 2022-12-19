@@ -19,7 +19,7 @@ var trailingTemplate []byte
 
 type emitFWithFieldName struct {
 	fieldName string
-	emitF     emitF
+	emitF     EmitF
 	emitName  string
 }
 
@@ -29,9 +29,9 @@ type GeneratorWithCustomTemplate struct {
 	templateFieldsMap map[string][]byte
 }
 
-func parseTemplate(template []byte) ([]string, map[string][]byte, []byte) {
+func parseTemplate(template []byte) ([]string, map[string][]byte, []string, []byte) {
 	if len(template) == 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	tokenizer := regexp.MustCompile(`([^{]*)({{\.[^}]+}})*`)
@@ -39,6 +39,7 @@ func parseTemplate(template []byte) ([]string, map[string][]byte, []byte) {
 
 	orderedFields := make([]string, 0, len(allIndexes))
 	templateFieldsMap := make(map[string][]byte, len(allIndexes))
+	originalFieldsName := make([]string, 0, len(allIndexes))
 
 	var fieldPrefixBuffer []byte
 	var fieldPrefixPreviousN int
@@ -72,6 +73,9 @@ func parseTemplate(template []byte) ([]string, map[string][]byte, []byte) {
 				}
 			}
 		} else {
+			originalFieldName := string(fieldName[:])
+			originalFieldsName = append(originalFieldsName, originalFieldName)
+			fieldName = fieldNormalizerRegex.ReplaceAll(fieldName, []byte(""))
 			fieldPrefixBuffer = append(fieldPrefixBuffer, fieldPrefix...)
 			trimTrailingTemplateN = loc[5]
 			templateFieldsMap[string(fieldName)] = fieldPrefixBuffer
@@ -82,19 +86,21 @@ func parseTemplate(template []byte) ([]string, map[string][]byte, []byte) {
 		fieldPrefixPreviousN = loc[2]
 	}
 
-	return orderedFields, templateFieldsMap, fieldPrefixBuffer
+	return orderedFields, templateFieldsMap, originalFieldsName, fieldPrefixBuffer
 
 }
 
-func extractObjectKeys(templateFieldMap map[string][]byte, fields Fields) (map[string]struct{}, map[string]Field) {
+func extractObjectKeys(originalFieldsName []string, fields Fields) (map[string]struct{}, map[string]Field) {
 	objectKeys := make(map[string]struct{})
 	objectKeysFields := make(map[string]Field)
-	for fieldName := range templateFieldMap {
+	for _, fieldName := range originalFieldsName {
 		fieldNameTokens := strings.Split(fieldName, ".")
 		possibleRootFieldName := strings.Join(fieldNameTokens[0:len(fieldNameTokens)-1], ".")
 		for _, existingField := range fields {
+			existingField.Name = fieldNormalizerRegex.ReplaceAllString(existingField.Name, "")
 			if strings.HasSuffix(existingField.Name, possibleRootFieldName) {
 				if existingField.Name == possibleRootFieldName || fmt.Sprintf("%s.*", existingField.Name) == possibleRootFieldName {
+					fieldName = fieldNormalizerRegex.ReplaceAllString(fieldName, "")
 					objectKeys[fieldName] = struct{}{}
 					existingField.Name = fieldName
 					objectKeysFields[fieldName] = existingField
@@ -108,15 +114,16 @@ func extractObjectKeys(templateFieldMap map[string][]byte, fields Fields) (map[s
 
 func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) (*GeneratorWithCustomTemplate, error) {
 	// Parse the template and extract relevant information
-	orderedFields, templateFieldsMap, fieldPrefixBuffer := parseTemplate(template)
+	orderedFields, templateFieldsMap, originalFieldsName, fieldPrefixBuffer := parseTemplate(template)
 	trailingTemplate = fieldPrefixBuffer
 
 	// Extract object keys for `field.*`-like support
-	objectKeys, objectKeysFields := extractObjectKeys(templateFieldsMap, fields)
+	objectKeys, objectKeysFields := extractObjectKeys(originalFieldsName, fields)
 
 	// Preprocess the fields, generating appropriate emit functions
-	fieldMap := make(map[string]emitF)
+	fieldMap := make(map[string]EmitF)
 	for _, field := range fields {
+		field.Name = fieldNormalizerRegex.ReplaceAllString(field.Name, "")
 		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
 			return nil, err
 		}
@@ -142,6 +149,10 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) 
 	}
 
 	return &GeneratorWithCustomTemplate{emitFuncs: emitFuncs, templateFieldsMap: templateFieldsMap}, nil
+}
+
+func (GeneratorWithCustomTemplate) Close() error {
+	return nil
 }
 
 func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) error {

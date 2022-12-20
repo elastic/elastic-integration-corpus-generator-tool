@@ -45,12 +45,14 @@ func fieldValueWrapByType(field Field) string {
 	}
 }
 
-func generateTemplateFromField(cfg Config, fields Fields) []byte {
+func generateTemplateFromField(cfg Config, fields Fields) ([]byte, []Field) {
 	if len(fields) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	dupes := make(map[string]struct{})
+	objectKeysField := make([]Field, 0, len(fields))
+
 	templateBuffer := bytes.NewBufferString("{")
 	for i, field := range fields {
 		fieldWrap := fieldValueWrapByType(field)
@@ -98,6 +100,11 @@ func generateTemplateFromField(cfg Config, fields Fields) []byte {
 				fieldNameRoot := replacer.Replace(field.Name)
 				fieldTemplate := fmt.Sprintf(`"%s.%s": %s{{.%s.%s}}%s%s`, fieldNameRoot, rNoun, fieldWrap, fieldNameRoot, rNoun, fieldWrap, fieldTrailer)
 				templateBuffer.WriteString(fieldTemplate)
+
+				originalFieldName := field.Name
+				field.Name = fieldNameRoot + "." + rNoun
+				objectKeysField = append(objectKeysField, field)
+				field.Name = originalFieldName
 			}
 		} else {
 			fieldTemplate := fmt.Sprintf(`"%s": %s{{.%s}}%s%s`, field.Name, fieldWrap, field.Name, fieldWrap, fieldTrailer)
@@ -105,12 +112,13 @@ func generateTemplateFromField(cfg Config, fields Fields) []byte {
 		}
 	}
 
-	return templateBuffer.Bytes()
+	return templateBuffer.Bytes(), objectKeysField
 }
 
-func NewGenerator(cfg Config, fields Fields) (Generator, error) {
-	template := generateTemplateFromField(cfg, fields)
+func NewGenerator(cfg Config, flds Fields) (Generator, error) {
+	template, objectKeysField := generateTemplateFromField(cfg, flds)
+	flds = append(flds, objectKeysField...)
 
-	return NewGeneratorWithTemplate(template, cfg, fields)
+	return NewGeneratorWithTemplate(template, cfg, flds)
 
 }

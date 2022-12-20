@@ -191,6 +191,7 @@ func Test_ParseTemplate(t *testing.T) {
 }
 
 func Test_EmptyCase(t *testing.T) {
+	template, _ := generateTemplateFromField(Config{}, Fields{})
 	testCases := []struct {
 		template []byte
 	}{
@@ -198,7 +199,7 @@ func Test_EmptyCase(t *testing.T) {
 			template: nil,
 		},
 		{
-			template: generateTemplateFromField(Config{}, []Field{}),
+			template: template,
 		},
 	}
 	for _, testCase := range testCases {
@@ -726,7 +727,8 @@ func Benchmark_GeneratorWithTemplate(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	template := generateTemplateFromField(Config{}, flds)
+	template, objectKeysField := generateTemplateFromField(Config{}, flds)
+	flds = append(flds, objectKeysField...)
 	g, err := NewGeneratorWithTemplate(template, Config{}, flds)
 
 	if err != nil {

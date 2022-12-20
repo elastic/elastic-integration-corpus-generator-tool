@@ -18,7 +18,7 @@ type GeneratorWithTemplate struct {
 	emitFuncs []emitF
 }
 
-func parseTemplate(template []byte) ([]string, map[string][]byte, []byte) {
+func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) {
 	if len(template) == 0 {
 		return nil, nil, nil
 	}
@@ -97,7 +97,7 @@ func extractObjectKeys(templateFieldMap map[string][]byte, fields Fields) (map[s
 
 func NewGeneratorWithTemplate(template []byte, cfg Config, fields Fields) (*GeneratorWithTemplate, error) {
 	// Parse the template and extract relevant information
-	orderedFields, templateFieldsMap, fieldPrefixBuffer := parseTemplate(template)
+	orderedFields, templateFieldsMap, fieldPrefixBuffer := parseCustomTemplate(template)
 	trailingTemplate = fieldPrefixBuffer
 
 	// Extract object keys for `field.*`-like support

@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 	"reflect"
-	"strings"
 )
 
 // GeneratorWithJetHTML
@@ -42,30 +41,10 @@ func NewGeneratorWithJetHTML(tpl []byte, cfg Config, fields Fields) (*GeneratorW
 		return nil, err
 	}
 
-	// extracts objects keys
-	// FIXME: this logic works for field.* but what about field.*.*.* (like in gcp package)?
-	objectKeys := make(map[string]struct{})
-	objectKeysFields := make(map[string]Field)
-	for _, field := range fields {
-		if strings.HasSuffix(field.Name, ".*") {
-			objectKeys[field.Name] = struct{}{}
-			objectKeysFields[field.Name] = field
-		}
-	}
-
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]EmitF)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
-			return nil, err
-		}
-	}
-
-	// Preprocess the object keys, generating appropriate emit functions
-	// TODO: is this necessary? Works without and is not clear to me what is the benefit
-	for k := range objectKeysFields {
-		field := objectKeysFields[k]
-		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
+		if err := bindField(cfg, field, fieldMap, nil); err != nil {
 			return nil, err
 		}
 	}
@@ -82,11 +61,11 @@ func NewGeneratorWithJetHTML(tpl []byte, cfg Config, fields Fields) (*GeneratorW
 			return reflect.ValueOf(nil)
 		}
 
-		value, err := bindF(state)
+		b := &bytes.Buffer{}
+		value, err := bindF(state, nil, b)
 		if err != nil {
 			return reflect.ValueOf(nil)
 		}
-
 		return reflect.ValueOf(value)
 	})
 

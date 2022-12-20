@@ -25,7 +25,7 @@ const cardinalityCfg = `
 */
 
 func Test_EmptyCaseWithHero(t *testing.T) {
-	template := generateHeroTemplateFromField(Config{}, []Field{})
+	template, _ := generateHeroTemplateFromField(Config{}, []Field{})
 	t.Logf("with template: %s", string(template))
 	fields := ""
 

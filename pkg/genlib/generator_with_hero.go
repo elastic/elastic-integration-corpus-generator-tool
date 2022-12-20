@@ -70,7 +70,6 @@ import (
 	"hero/genlib/fields"
 	"hero/template"
 	"os"
-	"strings"
 )
 
 func main() {
@@ -101,33 +100,12 @@ func main() {
 		os.Exit(3)
 	}
 
-	// extracts objects keys
-	// FIXME: this logic works for field.* but what about field.*.*.* (like in gcp package)?
-	objectKeys := make(map[string]struct{})
-	objectKeysFields := make(map[string]genlib.Field)
-	for _, field := range fieldsFromYaml {
-		if strings.HasSuffix(field.Name, ".*") {
-			objectKeys[field.Name] = struct{}{}
-			objectKeysFields[field.Name] = field
-		}
-	}
-
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]genlib.EmitF)
 	for _, field := range fieldsFromYaml {
-		if err := genlib.BindField(cfg, field, fieldMap, objectKeys); err != nil {
+		if err := genlib.BindField(cfg, field, fieldMap, nil); err != nil {
 			fmt.Println(err)
 			os.Exit(4)
-		}
-	}
-
-	// Preprocess the object keys, generating appropriate emit functions
-	// TODO: is this necessary? Works without and is not clear to me what is the benefit
-	for k := range objectKeysFields {
-		field := objectKeysFields[k]
-		if err := genlib.BindField(cfg, field, fieldMap, objectKeys); err != nil {
-			fmt.Println(err)
-			os.Exit(5)
 		}
 	}
 

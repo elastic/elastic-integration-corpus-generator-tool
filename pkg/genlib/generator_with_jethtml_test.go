@@ -24,7 +24,7 @@ const cardinalityCfg = `
 */
 
 func Test_EmptyCaseWithJetHTML(t *testing.T) {
-	template := generateJetTemplateFromField(Config{}, []Field{})
+	template, _ := generateJetTemplateFromField(Config{}, []Field{})
 	t.Logf("with template: %s", string(template))
 	g, state := makeGeneratorWithJetHTML(t, Config{}, []Field{}, template)
 

@@ -159,7 +159,7 @@ func Test_ParseTemplate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(fmt.Sprintf("with template: %s", string(testCase.template)), func(t *testing.T) {
-			orderedFields, templateFieldsMap, _, trailingTemplate := parseTemplate(testCase.template)
+			orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(testCase.template)
 			if len(orderedFields) != len(testCase.expectedOrderFields) {
 				t.Errorf("Expected equal orderedFields")
 			}
@@ -188,7 +188,7 @@ func Test_ParseTemplate(t *testing.T) {
 }
 
 func Test_EmptyCaseWithCustomTemplate(t *testing.T) {
-	template := generateCustomTemplateFromField(Config{}, []Field{})
+	template, _ := generateCustomTemplateFromField(Config{}, []Field{})
 	t.Logf("with template: %s", string(template))
 	g, state := makeGeneratorWithCustomTemplate(t, Config{}, []Field{}, template)
 
@@ -214,10 +214,8 @@ func Test_CardinalityWithCustomTemplate(t *testing.T) {
 }
 
 func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
-	template := []byte(`{"alpha":"{{.alpha}}"}`)
-	if ty == "integer" || ty == "float" {
-		template = []byte(`{"alpha":{{.alpha}}}`)
-	}
+	template := []byte(`{"alpha":{{.alpha}}}`)
+
 	fld := Field{
 		Name: "alpha",
 		Type: ty,
@@ -305,7 +303,7 @@ func Test_FieldConstKeywordWithCustomTemplate(t *testing.T) {
 		Value: "constant_keyword",
 	}
 
-	template := []byte(`{"alpha":"{{.alpha}}"}`)
+	template := []byte(`{"alpha":{{.alpha}}}`)
 	t.Logf("with template: %s", string(template))
 	b := testSingleTWithCustomTemplate[string](t, fld, nil, template)
 	if b != fld.Value {
@@ -320,7 +318,7 @@ func Test_FieldStaticOverrideStringWithCustomTemplate(t *testing.T) {
 	}
 
 	yaml := []byte("- name: alpha\n  value: beta")
-	template := []byte(`{"alpha":"{{.alpha}}"}`)
+	template := []byte(`{"alpha":{{.alpha}}}`)
 	t.Logf("with template: %s", string(template))
 	b := testSingleTWithCustomTemplate[string](t, fld, yaml, template)
 	if b != "beta" {

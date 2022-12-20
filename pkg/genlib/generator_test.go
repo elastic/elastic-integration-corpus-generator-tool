@@ -14,7 +14,14 @@ import (
 func Benchmark_GeneratorHeroTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
 	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
-	fieldsContent, err := fields.LoadFieldsContent(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
+
+	template, objectKeysField := generateHeroTemplateFromField(Config{}, flds)
+	flds = append(flds, objectKeysField...)
+
+	fieldsContent, err := yaml.Marshal(flds)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	fieldsYaml, err := os.CreateTemp("", "fields-*")
 	defer os.Remove(fieldsYaml.Name())
@@ -25,7 +32,7 @@ func Benchmark_GeneratorHeroTemplateJSONContent(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	template := generateHeroTemplateFromField(Config{}, flds)
+
 	g, err := NewGeneratorWithHero(template, "", fieldsYaml.Name())
 	if err != nil {
 		b.Fatal(err)
@@ -42,6 +49,7 @@ func Benchmark_GeneratorHeroTemplateJSONContent(b *testing.B) {
 		}
 		buf.Reset()
 	}
+
 	_ = g.Close()
 }
 
@@ -49,7 +57,8 @@ func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
 	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
-	template := generateCustomTemplateFromField(Config{}, flds)
+	template, objectKeysField := generateCustomTemplateFromField(Config{}, flds)
+	flds = append(flds, objectKeysField...)
 	g, err := NewGeneratorWithCustomTemplate(template, Config{}, flds)
 	if err != nil {
 		b.Fatal(err)
@@ -72,7 +81,9 @@ func Benchmark_GeneratorJetHTMLJSONContent(b *testing.B) {
 	ctx := context.Background()
 	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
-	template := generateJetTemplateFromField(Config{}, flds)
+	template, objectKeysField := generateJetTemplateFromField(Config{}, flds)
+	flds = append(flds, objectKeysField...)
+
 	g, err := NewGeneratorWithJetHTML(template, Config{}, flds)
 	if err != nil {
 		b.Fatal(err)
@@ -95,7 +106,9 @@ func Benchmark_GeneratorTextTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
 	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
-	template := generateTextTemplateFromField(Config{}, flds)
+	template, objectKeysField := generateHeroTemplateFromField(Config{}, flds)
+	flds = append(flds, objectKeysField...)
+
 	g, err := NewGeneratorWithTextTemplate(template, Config{}, flds)
 	if err != nil {
 		b.Fatal(err)
@@ -347,6 +360,8 @@ func Benchmark_GeneratorHeroTemplate(b *testing.B) {
 		}
 		buf.Reset()
 	}
+
+	_ = g.Close()
 }
 
 func Benchmark_GeneratorJetHTML(b *testing.B) {

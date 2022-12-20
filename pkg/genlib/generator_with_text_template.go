@@ -6,7 +6,6 @@ package genlib
 
 import (
 	"bytes"
-	"strings"
 	"text/template"
 )
 
@@ -17,30 +16,10 @@ type GeneratorWithTextTemplate struct {
 }
 
 func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*GeneratorWithTextTemplate, error) {
-	// extracts objects keys
-	// FIXME: this logic works for field.* but what about field.*.*.* (like in gcp package)?
-	objectKeys := make(map[string]struct{})
-	objectKeysFields := make(map[string]Field)
-	for _, field := range fields {
-		if strings.HasSuffix(field.Name, ".*") {
-			objectKeys[field.Name] = struct{}{}
-			objectKeysFields[field.Name] = field
-		}
-	}
-
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]EmitF)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
-			return nil, err
-		}
-	}
-
-	// Preprocess the object keys, generating appropriate emit functions
-	// TODO: is this necessary? Works without and is not clear to me what is the benefit
-	for k := range objectKeysFields {
-		field := objectKeysFields[k]
-		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
+		if err := bindField(cfg, field, fieldMap, nil); err != nil {
 			return nil, err
 		}
 	}
@@ -54,14 +33,14 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 	templateFns["generate"] = func(field string) interface{} {
 		bindF, ok := fieldMap[field]
 		if !ok {
-			return nil
+			return ""
 		}
 
-		value, err := bindF(state)
+		b := &bytes.Buffer{}
+		value, err := bindF(state, nil, b)
 		if err != nil {
-			return nil
+			return ""
 		}
-
 		return value
 	}
 	parsedTpl, err := t.Funcs(templateFns).Parse(string(tpl))

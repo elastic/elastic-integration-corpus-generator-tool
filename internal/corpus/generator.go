@@ -152,14 +152,14 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 	}
 
 	ctx := context.Background()
-	fields, err := fields.LoadFields(ctx, packageRegistryBaseURL, integrationPackage, dataStream, packageVersion)
+	flds, err := fields.LoadFields(ctx, packageRegistryBaseURL, integrationPackage, dataStream, packageVersion)
 	if err != nil {
 		return "", err
 	}
 
 	createPayload := []byte(`{ "create" : { "_index": "metrics-` + integrationPackage + `.` + dataStream + `-default" } }` + "\n")
 
-	err = gc.eventsPayloadFromFields(nil, fields, totSizeInBytes, createPayload, f, "", "")
+	err = gc.eventsPayloadFromFields(nil, flds, totSizeInBytes, createPayload, f, "", "")
 	if err != nil {
 		return "", err
 	}
@@ -197,12 +197,12 @@ func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPat
 	}
 
 	ctx := context.Background()
-	fields, err := fields.LoadFieldsWithTemplate(ctx, fieldsDefinitionPath)
+	flds, err := fields.LoadFieldsWithTemplate(ctx, fieldsDefinitionPath)
 	if err != nil {
 		return "", err
 	}
 
-	err = gc.eventsPayloadFromFields(template, fields, totSizeInBytes, nil, f, gc.configPath, gc.fieldYamlPath)
+	err = gc.eventsPayloadFromFields(template, flds, totSizeInBytes, nil, f, gc.configPath, gc.fieldYamlPath)
 	if err != nil {
 		return "", err
 	}

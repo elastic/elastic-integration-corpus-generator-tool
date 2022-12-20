@@ -49,20 +49,6 @@ func LoadFields(ctx context.Context, baseURL, integration, dataStream, version s
 	return normaliseFields(fields)
 }
 
-func LoadFieldsContent(ctx context.Context, baseURL, integration, dataStream, version string) ([]byte, error) {
-
-	fieldsContent, err := getFieldsFiles(ctx, baseURL, integration, dataStream, version)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(fieldsContent) == 0 {
-		return nil, ErrNotFound
-	}
-
-	return fieldsContent, nil
-}
-
 func LoadFieldsWithTemplate(ctx context.Context, fieldYamlPath string) (Fields, error) {
 	fieldsFileContent, err := os.ReadFile(fieldYamlPath)
 	if err != nil {

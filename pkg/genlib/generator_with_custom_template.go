@@ -6,32 +6,19 @@ package genlib
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
-	"reflect"
 	"regexp"
-	"runtime"
-	"strings"
-	"time"
 )
 
 var trailingTemplate []byte
 
-type emitFWithFieldName struct {
-	fieldName string
-	emitF     EmitF
-	emitName  string
-}
-
 // GeneratorWithCustomTemplate is resolved at construction to a slice of emit functions
 type GeneratorWithCustomTemplate struct {
-	emitFuncs         []emitFWithFieldName
-	templateFieldsMap map[string][]byte
+	emitFuncs []EmitF
 }
 
-func parseTemplate(template []byte) ([]string, map[string][]byte, []string, []byte) {
+func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) {
 	if len(template) == 0 {
-		return nil, nil, nil, nil
+		return nil, nil, nil
 	}
 
 	tokenizer := regexp.MustCompile(`([^{]*)({{\.[^}]+}})*`)
@@ -39,7 +26,6 @@ func parseTemplate(template []byte) ([]string, map[string][]byte, []string, []by
 
 	orderedFields := make([]string, 0, len(allIndexes))
 	templateFieldsMap := make(map[string][]byte, len(allIndexes))
-	originalFieldsName := make([]string, 0, len(allIndexes))
 
 	var fieldPrefixBuffer []byte
 	var fieldPrefixPreviousN int
@@ -73,9 +59,6 @@ func parseTemplate(template []byte) ([]string, map[string][]byte, []string, []by
 				}
 			}
 		} else {
-			originalFieldName := string(fieldName[:])
-			originalFieldsName = append(originalFieldsName, originalFieldName)
-			fieldName = fieldNormalizerRegex.ReplaceAll(fieldName, []byte(""))
 			fieldPrefixBuffer = append(fieldPrefixBuffer, fieldPrefix...)
 			trimTrailingTemplateN = loc[5]
 			templateFieldsMap[string(fieldName)] = fieldPrefixBuffer
@@ -86,69 +69,30 @@ func parseTemplate(template []byte) ([]string, map[string][]byte, []string, []by
 		fieldPrefixPreviousN = loc[2]
 	}
 
-	return orderedFields, templateFieldsMap, originalFieldsName, fieldPrefixBuffer
+	return orderedFields, templateFieldsMap, fieldPrefixBuffer
 
-}
-
-func extractObjectKeys(originalFieldsName []string, fields Fields) (map[string]struct{}, map[string]Field) {
-	objectKeys := make(map[string]struct{})
-	objectKeysFields := make(map[string]Field)
-	for _, fieldName := range originalFieldsName {
-		fieldNameTokens := strings.Split(fieldName, ".")
-		possibleRootFieldName := strings.Join(fieldNameTokens[0:len(fieldNameTokens)-1], ".")
-		for _, existingField := range fields {
-			existingField.Name = fieldNormalizerRegex.ReplaceAllString(existingField.Name, "")
-			if strings.HasSuffix(existingField.Name, possibleRootFieldName) {
-				if existingField.Name == possibleRootFieldName || fmt.Sprintf("%s.*", existingField.Name) == possibleRootFieldName {
-					fieldName = fieldNormalizerRegex.ReplaceAllString(fieldName, "")
-					objectKeys[fieldName] = struct{}{}
-					existingField.Name = fieldName
-					objectKeysFields[fieldName] = existingField
-				}
-			}
-		}
-	}
-
-	return objectKeys, objectKeysFields
 }
 
 func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) (*GeneratorWithCustomTemplate, error) {
 	// Parse the template and extract relevant information
-	orderedFields, templateFieldsMap, originalFieldsName, fieldPrefixBuffer := parseTemplate(template)
+	orderedFields, templateFieldsMap, fieldPrefixBuffer := parseCustomTemplate(template)
 	trailingTemplate = fieldPrefixBuffer
-
-	// Extract object keys for `field.*`-like support
-	objectKeys, objectKeysFields := extractObjectKeys(originalFieldsName, fields)
 
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]EmitF)
 	for _, field := range fields {
-		field.Name = fieldNormalizerRegex.ReplaceAllString(field.Name, "")
-		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
-			return nil, err
-		}
-	}
-
-	// Preprocess the object keys, generating appropriate emit functions
-	for k := range objectKeysFields {
-		field := objectKeysFields[k]
-		if err := bindField(cfg, field, fieldMap, objectKeys); err != nil {
+		if err := bindField(cfg, field, fieldMap, templateFieldsMap); err != nil {
 			return nil, err
 		}
 	}
 
 	// Roll into slice of emit functions
-	emitFuncs := make([]emitFWithFieldName, 0, len(fieldMap))
+	emitFuncs := make([]EmitF, 0, len(fieldMap))
 	for _, fieldName := range orderedFields {
-		emitF := fieldMap[fieldName]
-		emitName := runtime.FuncForPC(reflect.ValueOf(emitF).Pointer()).Name()
-		emitName = strings.Replace(emitName, ".func1", "", -1)
-		emitName = strings.Replace(emitName, "github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib.", "", -1)
-		f := emitFWithFieldName{fieldName: fieldName, emitF: fieldMap[fieldName], emitName: emitName}
-		emitFuncs = append(emitFuncs, f)
+		emitFuncs = append(emitFuncs, fieldMap[fieldName])
 	}
 
-	return &GeneratorWithCustomTemplate{emitFuncs: emitFuncs, templateFieldsMap: templateFieldsMap}, nil
+	return &GeneratorWithCustomTemplate{emitFuncs: emitFuncs}, nil
 }
 
 func (GeneratorWithCustomTemplate) Close() error {
@@ -167,35 +111,8 @@ func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) 
 
 func (gen GeneratorWithCustomTemplate) emit(state *GenState, buf *bytes.Buffer) error {
 	for _, f := range gen.emitFuncs {
-		buf.Write(gen.templateFieldsMap[f.fieldName])
-
-		if value, err := f.emitF(state); err != nil {
+		if _, err := f(state, nil, buf); err != nil {
 			return err
-		} else {
-			if f.emitName == "bindStatic" {
-				vstr, err := json.Marshal(value)
-				if err != nil {
-					return err
-				}
-
-				_, err = fmt.Fprintf(buf, "%s", vstr)
-				if err != nil {
-					return err
-				}
-
-			} else if f.emitName == "bindNearTime" {
-				vtime := value.(time.Time)
-				_, err = fmt.Fprintf(buf, "%s", vtime.Format(FieldTypeTimeLayout))
-				if err != nil {
-					return err
-				}
-			} else {
-				_, err = fmt.Fprintf(buf, "%v", value)
-				if err != nil {
-					return err
-				}
-			}
-
 		}
 	}
 

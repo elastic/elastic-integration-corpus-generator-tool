@@ -23,10 +23,10 @@ const cardinalityCfg = `
 `
 */
 
-func Test_EmptyCaseWithTemplate(t *testing.T) {
-	template := generateTextTemplateFromField(Config{}, []Field{})
+func Test_EmptyCaseWithTextTemplate(t *testing.T) {
+	template, _ := generateTextTemplateFromField(Config{}, []Field{})
 	t.Logf("with template: %s", string(template))
-	g, state := makeGeneratorWithTemplate(t, Config{}, []Field{}, template)
+	g, state := makeGeneratorWithTextTemplate(t, Config{}, []Field{}, template)
 
 	var buf bytes.Buffer
 
@@ -39,17 +39,17 @@ func Test_EmptyCaseWithTemplate(t *testing.T) {
 	}
 }
 
-func Test_CardinalityWithTemplate(t *testing.T) {
+func Test_CardinalityWithTextTemplate(t *testing.T) {
 
-	test_CardinalityTWithTemplate[string](t, FieldTypeKeyword)
-	test_CardinalityTWithTemplate[int](t, FieldTypeInteger)
-	test_CardinalityTWithTemplate[float64](t, FieldTypeFloat)
-	test_CardinalityTWithTemplate[string](t, FieldTypeGeoPoint)
-	test_CardinalityTWithTemplate[string](t, FieldTypeIP)
-	test_CardinalityTWithTemplate[string](t, FieldTypeDate)
+	test_CardinalityTWithTextTemplate[string](t, FieldTypeKeyword)
+	test_CardinalityTWithTextTemplate[int](t, FieldTypeInteger)
+	test_CardinalityTWithTextTemplate[float64](t, FieldTypeFloat)
+	test_CardinalityTWithTextTemplate[string](t, FieldTypeGeoPoint)
+	test_CardinalityTWithTextTemplate[string](t, FieldTypeIP)
+	test_CardinalityTWithTextTemplate[string](t, FieldTypeDate)
 }
 
-func test_CardinalityTWithTemplate[T any](t *testing.T, ty string) {
+func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 	template := []byte(`{"alpha":"{{generate "alpha"}}"}`)
 	if ty == "integer" || ty == "float" {
 		template = []byte(`{"alpha":{{generate "alpha"}}}`)
@@ -72,7 +72,7 @@ func test_CardinalityTWithTemplate[T any](t *testing.T, ty string) {
 			t.Fatal(err)
 		}
 
-		g, state := makeGeneratorWithTemplate(t, cfg, []Field{fld}, template)
+		g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template)
 
 		vmap := make(map[any]int)
 
@@ -105,7 +105,7 @@ func test_CardinalityTWithTemplate[T any](t *testing.T, ty string) {
 	}
 }
 
-func Test_FieldBoolWithTemplate(t *testing.T) {
+func Test_FieldBoolWithTextTemplate(t *testing.T) {
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeBool,
@@ -133,7 +133,7 @@ func Test_FieldBoolWithTemplate(t *testing.T) {
 	}
 }
 
-func Test_FieldConstKeywordWithTemplate(t *testing.T) {
+func Test_FieldConstKeywordWithTextTemplate(t *testing.T) {
 
 	fld := Field{
 		Name:  "alpha",
@@ -149,7 +149,7 @@ func Test_FieldConstKeywordWithTemplate(t *testing.T) {
 	}
 }
 
-func Test_FieldStaticOverrideStringWithTemplate(t *testing.T) {
+func Test_FieldStaticOverrideStringWithTextTemplate(t *testing.T) {
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeKeyword,
@@ -164,7 +164,7 @@ func Test_FieldStaticOverrideStringWithTemplate(t *testing.T) {
 	}
 }
 
-func Test_FieldStaticOverrideNumericWithTemplate(t *testing.T) {
+func Test_FieldStaticOverrideNumericWithTextTemplate(t *testing.T) {
 	fld := Field{
 
 		Name: "alpha",
@@ -181,7 +181,7 @@ func Test_FieldStaticOverrideNumericWithTemplate(t *testing.T) {
 	}
 }
 
-func Test_FieldStaticOverrideBoolWithTemplate(t *testing.T) {
+func Test_FieldStaticOverrideBoolWithTextTemplate(t *testing.T) {
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeKeyword,
@@ -197,7 +197,7 @@ func Test_FieldStaticOverrideBoolWithTemplate(t *testing.T) {
 	}
 }
 
-func Test_FieldGeoPointWithTemplate(t *testing.T) {
+func Test_FieldGeoPointWithTextTemplate(t *testing.T) {
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeGeoPoint,
@@ -251,7 +251,7 @@ func Test_FieldGeoPointWithTemplate(t *testing.T) {
 	}
 }
 
-func Test_FieldDateWithTemplate(t *testing.T) {
+func Test_FieldDateWithTextTemplate(t *testing.T) {
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -284,7 +284,7 @@ func Test_FieldDateWithTemplate(t *testing.T) {
 	}
 }
 
-func Test_FieldIPWithTemplate(t *testing.T) {
+func Test_FieldIPWithTextTemplate(t *testing.T) {
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeIP,
@@ -303,7 +303,7 @@ func Test_FieldIPWithTemplate(t *testing.T) {
 	}
 }
 
-func Test_FieldFloatsWithTemplate(t *testing.T) {
+func Test_FieldFloatsWithTextTemplate(t *testing.T) {
 	_testNumericWithTextTemplate[float64](t, FieldTypeDouble)
 	_testNumericWithTextTemplate[float32](t, FieldTypeFloat)
 	_testNumericWithTextTemplate[float32](t, FieldTypeHalfFloat)
@@ -311,7 +311,7 @@ func Test_FieldFloatsWithTemplate(t *testing.T) {
 
 }
 
-func Test_FieldIntegersWithTemplate(t *testing.T) {
+func Test_FieldIntegersWithTextTemplate(t *testing.T) {
 	_testNumericWithTextTemplate[int](t, FieldTypeInteger)
 	_testNumericWithTextTemplate[int64](t, FieldTypeLong)
 	_testNumericWithTextTemplate[uint64](t, FieldTypeUnsignedLong)
@@ -342,7 +342,7 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 		}
 	}
 
-	g, state := makeGeneratorWithTemplate(t, cfg, []Field{fld}, template)
+	g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template)
 
 	var buf bytes.Buffer
 
@@ -367,7 +367,7 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 	return v
 }
 
-func makeGeneratorWithTemplate(t *testing.T, cfg Config, fields Fields, template []byte) (Generator, *GenState) {
+func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte) (Generator, *GenState) {
 	g, err := NewGeneratorWithTextTemplate(template, cfg, fields)
 
 	if err != nil {

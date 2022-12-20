@@ -106,6 +106,7 @@ func (s *GenState) Inc() {
 	s.counter += 1
 }
 
+// BindField is the exported symbol of bindField to be used in hero
 func BindField(cfg Config, field Field, fieldMap map[string]EmitF, templateFieldMap map[string][]byte) error {
 	return bindField(cfg, field, fieldMap, templateFieldMap)
 }

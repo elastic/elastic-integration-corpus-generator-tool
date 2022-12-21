@@ -1,1 +1,0 @@
-{{ generate "gcp.labels.user.*" }}

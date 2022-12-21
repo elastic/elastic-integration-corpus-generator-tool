@@ -225,11 +225,9 @@ func NewGeneratorWithHero(tpl []byte, configPath, fieldsYamlPath string) (*Gener
 	}
 
 	goGet := &exec.Cmd{
-		Dir:    tmpDir,
-		Path:   goExecutable,
-		Args:   []string{goExecutable, "get", "."},
-		Stdout: os.Stdout,
-		Stderr: os.Stdout,
+		Dir:  tmpDir,
+		Path: goExecutable,
+		Args: []string{goExecutable, "get", "."},
 	}
 
 	err = goGet.Run()
@@ -243,11 +241,9 @@ func NewGeneratorWithHero(tpl []byte, configPath, fieldsYamlPath string) (*Gener
 	}
 
 	heroCompile := &exec.Cmd{
-		Dir:    tmpDir,
-		Path:   heroExecutable,
-		Args:   []string{heroExecutable, "-source", fmt.Sprintf("%s/template", tmpDir), "-extensions", ".html", "-pkgname", "template"},
-		Stdout: os.Stdout,
-		Stderr: os.Stdout,
+		Dir:  tmpDir,
+		Path: heroExecutable,
+		Args: []string{heroExecutable, "-source", fmt.Sprintf("%s/template", tmpDir), "-extensions", ".html", "-pkgname", "template"},
 	}
 
 	// Ignore error: hero runs go vet and it fails
@@ -260,11 +256,9 @@ func NewGeneratorWithHero(tpl []byte, configPath, fieldsYamlPath string) (*Gener
 
 	// RUN TWICE: go get hero/*
 	goGet = &exec.Cmd{
-		Dir:    tmpDir,
-		Path:   goExecutable,
-		Args:   []string{goExecutable, "get", "."},
-		Stdout: os.Stdout,
-		Stderr: os.Stdout,
+		Dir:  tmpDir,
+		Path: goExecutable,
+		Args: []string{goExecutable, "get", "."},
 	}
 
 	err = goGet.Run()
@@ -274,11 +268,9 @@ func NewGeneratorWithHero(tpl []byte, configPath, fieldsYamlPath string) (*Gener
 
 	heroCommandName := path.Base(tmpDir)
 	goBuild := &exec.Cmd{
-		Dir:    tmpDir,
-		Path:   goExecutable,
-		Args:   []string{goExecutable, "build", "-o", heroCommandName, "main.go"},
-		Stdout: os.Stdout,
-		Stderr: os.Stdout,
+		Dir:  tmpDir,
+		Path: goExecutable,
+		Args: []string{goExecutable, "build", "-o", heroCommandName, "main.go"},
 	}
 
 	err = goBuild.Run()
@@ -287,10 +279,9 @@ func NewGeneratorWithHero(tpl []byte, configPath, fieldsYamlPath string) (*Gener
 	}
 
 	heroCommand := &exec.Cmd{
-		Dir:    tmpDir,
-		Path:   heroCommandName,
-		Args:   []string{heroCommandName, fieldsYamlPath, configPath},
-		Stderr: os.Stdout,
+		Dir:  tmpDir,
+		Path: heroCommandName,
+		Args: []string{heroCommandName, fieldsYamlPath, configPath},
 	}
 
 	stdoutPipe, err := heroCommand.StdoutPipe()

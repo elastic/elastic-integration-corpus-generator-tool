@@ -67,6 +67,8 @@ pipeline {
           unstash 'source'
           dir("${BASE_DIR}"){
             withGoEnv(){
+              cmd(label: 'Install hero', script: 'go install github.com/shiyanhui/hero/hero@latest')
+              cmd(label: 'Install goimports', script: 'go get golang.org/x/tools/cmd/goimports')
               goTestJUnit(options: '-v ./...', output: 'junit-report.xml')
             }
           }

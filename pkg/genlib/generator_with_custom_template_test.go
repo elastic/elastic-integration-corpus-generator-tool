@@ -214,7 +214,10 @@ func Test_CardinalityWithCustomTemplate(t *testing.T) {
 }
 
 func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
-	template := []byte(`{"alpha":{{.alpha}}}`)
+	template := []byte(`{"alpha":"{{.alpha}}"}`)
+	if ty == FieldTypeInteger || ty == FieldTypeFloat {
+		template = []byte(`{"alpha":{{.alpha}}}`)
+	}
 
 	fld := Field{
 		Name: "alpha",

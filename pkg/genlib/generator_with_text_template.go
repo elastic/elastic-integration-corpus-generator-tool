@@ -19,7 +19,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]EmitF)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, nil); err != nil {
+		if err := bindField(cfg, field, fieldMap, nil, nil, true); err != nil {
 			return nil, err
 		}
 	}
@@ -36,8 +36,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 			return ""
 		}
 
-		b := &bytes.Buffer{}
-		value, err := bindF(state, nil, b)
+		value, err := bindF(state, nil)
 		if err != nil {
 			return ""
 		}

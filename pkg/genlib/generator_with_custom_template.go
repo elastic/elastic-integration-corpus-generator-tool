@@ -13,7 +13,7 @@ var trailingTemplate []byte
 
 // GeneratorWithCustomTemplate is resolved at construction to a slice of emit functions
 type GeneratorWithCustomTemplate struct {
-	emitFuncs []EmitF
+	emitFuncs []emitFNotReturn
 }
 
 func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) {
@@ -79,15 +79,15 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) 
 	trailingTemplate = fieldPrefixBuffer
 
 	// Preprocess the fields, generating appropriate emit functions
-	fieldMap := make(map[string]EmitF)
+	fieldMap := make(map[string]emitFNotReturn)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, templateFieldsMap); err != nil {
+		if err := bindField(cfg, field, nil, fieldMap, templateFieldsMap, false); err != nil {
 			return nil, err
 		}
 	}
 
 	// Roll into slice of emit functions
-	emitFuncs := make([]EmitF, 0, len(fieldMap))
+	emitFuncs := make([]emitFNotReturn, 0, len(fieldMap))
 	for _, fieldName := range orderedFields {
 		emitFuncs = append(emitFuncs, fieldMap[fieldName])
 	}
@@ -111,7 +111,7 @@ func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) 
 
 func (gen GeneratorWithCustomTemplate) emit(state *GenState, buf *bytes.Buffer) error {
 	for _, f := range gen.emitFuncs {
-		if _, err := f(state, nil, buf); err != nil {
+		if err := f(state, buf); err != nil {
 			return err
 		}
 	}

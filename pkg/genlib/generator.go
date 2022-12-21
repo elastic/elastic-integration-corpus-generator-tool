@@ -7,14 +7,10 @@ package genlib
 import (
 	"bytes"
 	"fmt"
-	"math/rand"
-	"os"
-	"strings"
-	"time"
-
 	"github.com/Pallinder/go-randomdata"
 	"github.com/lithammer/shortuuid/v3"
-	"gopkg.in/yaml.v2"
+	"math/rand"
+	"strings"
 )
 
 const (
@@ -200,27 +196,9 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 	return templateBuffer.Bytes(), objectKeysField
 }
 
-func NewGenerator(cfg Config, fields Fields) (Generator, error) {
-	template, objectKeysField := generateHeroTemplateFromField(Config{}, fields)
-	fields = append(fields, objectKeysField...)
+func NewGenerator(cfg Config, flds Fields) (Generator, error) {
+	template, objectKeysField := generateJetTemplateFromField(Config{}, flds)
+	flds = append(flds, objectKeysField...)
 
-	fieldsContent, err := yaml.Marshal(fields)
-	if err != nil {
-		return nil, err
-	}
-
-	fieldsYaml, err := os.CreateTemp("", "fields-*")
-	// defer os.Remove(fieldsYaml.Name())
-	if err != nil {
-		return nil, err
-	}
-	_, err = fieldsYaml.Write(fieldsContent)
-	if err != nil {
-		return nil, err
-	}
-
-	now := time.Now()
-	gen, err := NewGeneratorWithHero(template, "", fieldsYaml.Name())
-	fmt.Printf("build time: %s", time.Now().Sub(now))
-	return gen, err
+	return NewGeneratorWithJetHTML(template, cfg, flds)
 }

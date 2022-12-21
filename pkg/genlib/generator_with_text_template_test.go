@@ -51,7 +51,7 @@ func Test_CardinalityWithTextTemplate(t *testing.T) {
 
 func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 	template := []byte(`{"alpha":"{{generate "alpha"}}"}`)
-	if ty == "integer" || ty == "float" {
+	if ty == FieldTypeInteger || ty == FieldTypeFloat {
 		template = []byte(`{"alpha":{{generate "alpha"}}}`)
 	}
 	fld := Field{

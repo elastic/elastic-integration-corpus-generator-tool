@@ -51,7 +51,7 @@ func Test_CardinalityWithJetHTML(t *testing.T) {
 
 func test_CardinalityT[T any](t *testing.T, ty string) {
 	template := []byte(`{"alpha":"{{ "alpha"|generate }}"}`)
-	if ty == "integer" || ty == "float" {
+	if ty == FieldTypeInteger || ty == FieldTypeFloat {
 		template = []byte(`{"alpha":{{ "alpha"|generate }}}`)
 	}
 	fld := Field{

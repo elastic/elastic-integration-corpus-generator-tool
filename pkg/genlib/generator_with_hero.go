@@ -14,13 +14,12 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
-var cleanEmitValueRegex = regexp.MustCompile("[[:cntrl:]]")
 var heroTemplate = []byte(`
 <%!
 import "hero/genlib"
@@ -103,7 +102,7 @@ func main() {
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]genlib.EmitF)
 	for _, field := range fieldsFromYaml {
-		if err := genlib.BindField(cfg, field, fieldMap, nil); err != nil {
+		if err := genlib.BindField(cfg, field, fieldMap); err != nil {
 			fmt.Println(err)
 			os.Exit(4)
 		}
@@ -131,7 +130,8 @@ func main() {
 
 // GeneratorWithHero
 type GeneratorWithHero struct {
-	emitBuff    [][]byte
+	closed      bool
+	closedLock  *sync.Mutex
 	heroCommand *exec.Cmd
 	heroStdout  chan string
 }
@@ -291,23 +291,33 @@ func NewGeneratorWithHero(tpl []byte, configPath, fieldsYamlPath string) (*Gener
 
 	stdoutScanner := bufio.NewScanner(stdoutPipe)
 
-	stdout := make(chan string)
-
-	go func() {
-		for stdoutScanner.Scan() {
-			stdout <- stdoutScanner.Text()
-		}
-	}()
-
 	err = heroCommand.Start()
 	if err != nil {
 		return nil, err
 	}
 
-	return &GeneratorWithHero{heroCommand: heroCommand, heroStdout: stdout}, nil
+	gen := &GeneratorWithHero{heroCommand: heroCommand, heroStdout: make(chan string), closed: false, closedLock: new(sync.Mutex)}
+
+	go func() {
+		for stdoutScanner.Scan() {
+			gen.closedLock.Lock()
+			if gen.closed {
+				close(gen.heroStdout)
+				gen.closedLock.Unlock()
+				return
+			}
+			gen.closedLock.Unlock()
+			gen.heroStdout <- stdoutScanner.Text()
+		}
+	}()
+
+	return gen, nil
 }
 
 func (gen *GeneratorWithHero) Close() error {
+	gen.closedLock.Lock()
+	defer gen.closedLock.Unlock()
+	gen.closed = true
 	return gen.heroCommand.Process.Kill()
 }
 
@@ -328,8 +338,8 @@ func (gen *GeneratorWithHero) emit(buf *bytes.Buffer) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case line := <-gen.heroStdout:
-			_, err := fmt.Fprint(buf, line)
+		default:
+			_, err := fmt.Fprint(buf, <-gen.heroStdout)
 			return err
 		}
 	}

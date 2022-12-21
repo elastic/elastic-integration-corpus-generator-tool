@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func Benchmark_GeneratorHeroTemplateJSONContent(b *testing.B) {
+func Benchmark_GeneratorHeroJSONContent(b *testing.B) {
 	ctx := context.Background()
 	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
@@ -106,7 +106,7 @@ func Benchmark_GeneratorTextTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
 	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
-	template, objectKeysField := generateHeroTemplateFromField(Config{}, flds)
+	template, objectKeysField := generateTextTemplateFromField(Config{}, flds)
 	flds = append(flds, objectKeysField...)
 
 	g, err := NewGeneratorWithTextTemplate(template, Config{}, flds)
@@ -127,7 +127,7 @@ func Benchmark_GeneratorTextTemplateJSONContent(b *testing.B) {
 	}
 }
 
-func Benchmark_GeneratorCustomTemplate(b *testing.B) {
+func Benchmark_GeneratorCustomTemplateVPCFlowLogs(b *testing.B) {
 	flds := Fields{
 		{
 			Name: "Version",
@@ -239,7 +239,7 @@ func Benchmark_GeneratorCustomTemplate(b *testing.B) {
 	}
 }
 
-func Benchmark_GeneratorHeroTemplate(b *testing.B) {
+func Benchmark_GeneratorHeroVPCFlowLogs(b *testing.B) {
 	flds := Fields{
 		{
 			Name: "Version",
@@ -364,7 +364,7 @@ func Benchmark_GeneratorHeroTemplate(b *testing.B) {
 	_ = g.Close()
 }
 
-func Benchmark_GeneratorJetHTML(b *testing.B) {
+func Benchmark_GeneratorJetHTMLVPCFlowLogs(b *testing.B) {
 	flds := Fields{
 		{
 			Name: "Version",
@@ -472,7 +472,7 @@ func Benchmark_GeneratorJetHTML(b *testing.B) {
 	}
 }
 
-func Benchmark_GeneratorTextTemplate(b *testing.B) {
+func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
 	flds := Fields{
 		{
 			Name: "Version",

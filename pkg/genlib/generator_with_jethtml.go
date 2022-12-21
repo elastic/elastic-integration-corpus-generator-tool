@@ -6,10 +6,7 @@ package genlib
 
 import (
 	"bytes"
-	"github.com/CloudyKit/jet"
-	"io/ioutil"
-	"os"
-	"path"
+	"github.com/CloudyKit/jet/v6"
 	"reflect"
 )
 
@@ -23,20 +20,10 @@ func NewGeneratorWithJetHTML(tpl []byte, cfg Config, fields Fields) (*GeneratorW
 	if len(tpl) == 0 {
 		tpl = []byte("")
 	}
-	tmpDir, err := os.MkdirTemp("", "jethtml-*")
-	if err != nil {
-		return nil, err
-	}
-
-	randomFilename := path.Base(tmpDir)
-	fullPath := path.Join(tmpDir, randomFilename)
-	err = ioutil.WriteFile(fullPath, tpl, 0660)
-	if err != nil {
-		return nil, err
-	}
-
-	var view = jet.NewHTMLSet(tmpDir)
-	t, err := view.GetTemplate(randomFilename)
+	loader := jet.NewInMemLoader()
+	loader.Set("template", string(tpl))
+	view := jet.NewSet(loader)
+	t, err := view.GetTemplate("template")
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +31,7 @@ func NewGeneratorWithJetHTML(tpl []byte, cfg Config, fields Fields) (*GeneratorW
 	// Preprocess the fields, generating appropriate emit functions
 	fieldMap := make(map[string]EmitF)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, nil); err != nil {
+		if err := bindField(cfg, field, fieldMap, nil, nil, true); err != nil {
 			return nil, err
 		}
 	}
@@ -61,8 +48,7 @@ func NewGeneratorWithJetHTML(tpl []byte, cfg Config, fields Fields) (*GeneratorW
 			return reflect.ValueOf(nil)
 		}
 
-		b := &bytes.Buffer{}
-		value, err := bindF(state, nil, b)
+		value, err := bindF(state, nil)
 		if err != nil {
 			return reflect.ValueOf(nil)
 		}

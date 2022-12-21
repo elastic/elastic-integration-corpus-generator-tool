@@ -54,7 +54,7 @@ func Test_CardinalityWithHero(t *testing.T) {
 
 func test_CardinalityTWithHero[T any](t *testing.T, ty string) {
 	template := []byte(`<%==s "{\"alpha\": \"" %><%==v generate("alpha") %><%==s "\"}" %>`)
-	if ty == "integer" || ty == "float" {
+	if ty == FieldTypeInteger || ty == FieldTypeFloat {
 		template = []byte(`<%==s "{\"alpha\": " %><%==v generate("alpha") %><%==s "}" %>`)
 	}
 

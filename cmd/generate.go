@@ -15,10 +15,6 @@ import (
 	"go.uber.org/multierr"
 )
 
-var packageRegistryBaseURL string
-var configFile string
-var totSize string
-
 var integrationPackage string
 var dataStream string
 var packageVersion string

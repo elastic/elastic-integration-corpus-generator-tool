@@ -21,6 +21,13 @@ import (
 	"github.com/spf13/afero"
 )
 
+const (
+	templateTypeCustom = iota
+	templateTypeGoText
+)
+
+var ErrNotValidTemplate = errors.New("please, pass --template-type as one of `placeholder` or `gotext`")
+
 type Config = config.Config
 type Fields = fields.Fields
 
@@ -29,24 +36,32 @@ type Fields = fields.Fields
 type timestamp func() int64
 
 func NewGenerator(config Config, fs afero.Fs, location string) (GeneratorCorpus, error) {
-
 	return GeneratorCorpus{
-		config:    config,
-		fs:        fs,
-		location:  location,
-		timestamp: time.Now().Unix,
+		config:       config,
+		fs:           fs,
+		templateType: templateTypeCustom,
+		location:     location,
+		timestamp:    time.Now().Unix,
 	}, nil
 }
 
-func NewGeneratorWithTemplate(config Config, fs afero.Fs, location, configPath, fieldsYamlPath string) (GeneratorCorpus, error) {
+func NewGeneratorWithTemplate(config Config, fs afero.Fs, location, templateType string) (GeneratorCorpus, error) {
+
+	var templateTypeValue int
+	if templateType == "placeholder" {
+		templateTypeValue = templateTypeCustom
+	} else if templateType == "gotext" {
+		templateTypeValue = templateTypeGoText
+	} else {
+		return GeneratorCorpus{}, ErrNotValidTemplate
+	}
 
 	return GeneratorCorpus{
-		config:        config,
-		fs:            fs,
-		location:      location,
-		configPath:    configPath,
-		fieldYamlPath: fieldsYamlPath,
-		timestamp:     time.Now().Unix,
+		config:       config,
+		fs:           fs,
+		templateType: templateTypeValue,
+		location:     location,
+		timestamp:    time.Now().Unix,
 	}, nil
 }
 
@@ -58,11 +73,10 @@ func TestNewGenerator() GeneratorCorpus {
 }
 
 type GeneratorCorpus struct {
-	config        Config
-	fs            afero.Fs
-	location      string
-	configPath    string
-	fieldYamlPath string
+	config       Config
+	fs           afero.Fs
+	location     string
+	templateType int
 	// timestamp allow overriding value in tests
 	timestamp timestamp
 }
@@ -92,14 +106,21 @@ func (gc GeneratorCorpus) bulkPayloadFilenameWithTemplate(templatePath string) s
 var corpusLocPerm = os.FileMode(0770)
 var corpusPerm = os.FileMode(0660)
 
-func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totSize uint64, createPayload []byte, f afero.File, configPath, fieldsYamlPath string) error {
+func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totSize uint64, createPayload []byte, f afero.File) error {
 
 	var evgen genlib.Generator
 	var err error
 	if len(template) == 0 {
 		evgen, err = genlib.NewGenerator(gc.config, fields)
 	} else {
-		evgen, err = genlib.NewGeneratorWithHero(template, gc.configPath, gc.fieldYamlPath)
+		if gc.templateType == templateTypeCustom {
+			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields)
+		} else if gc.templateType == templateTypeGoText {
+			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields)
+		} else {
+			return ErrNotValidTemplate
+		}
+
 	}
 
 	if err != nil {
@@ -159,7 +180,7 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 
 	createPayload := []byte(`{ "create" : { "_index": "metrics-` + integrationPackage + `.` + dataStream + `-default" } }` + "\n")
 
-	err = gc.eventsPayloadFromFields(nil, flds, totSizeInBytes, createPayload, f, "", "")
+	err = gc.eventsPayloadFromFields(nil, flds, totSizeInBytes, createPayload, f)
 	if err != nil {
 		return "", err
 	}
@@ -202,7 +223,7 @@ func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPat
 		return "", err
 	}
 
-	err = gc.eventsPayloadFromFields(template, flds, totSizeInBytes, nil, f, gc.configPath, gc.fieldYamlPath)
+	err = gc.eventsPayloadFromFields(template, flds, totSizeInBytes, nil, f)
 	if err != nil {
 		return "", err
 	}

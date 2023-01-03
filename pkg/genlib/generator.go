@@ -14,10 +14,8 @@ import (
 )
 
 const (
-	jetHTMLEngine = iota
-	textTemplateEngine
+	textTemplateEngine = iota
 	customTemplateEngine
-	heroTemplateEngine
 )
 
 func fieldValueWrapByType(field Field) string {
@@ -52,20 +50,12 @@ func fieldValueWrapByType(field Field) string {
 	}
 }
 
-func generateJetTemplateFromField(cfg Config, fields Fields) ([]byte, []Field) {
-	return generateTemplateFromField(cfg, fields, jetHTMLEngine)
-}
-
 func generateCustomTemplateFromField(cfg Config, fields Fields) ([]byte, []Field) {
 	return generateTemplateFromField(cfg, fields, customTemplateEngine)
 }
 
 func generateTextTemplateFromField(cfg Config, fields Fields) ([]byte, []Field) {
 	return generateTemplateFromField(cfg, fields, textTemplateEngine)
-}
-
-func generateHeroTemplateFromField(cfg Config, fields Fields) ([]byte, []Field) {
-	return generateTemplateFromField(cfg, fields, heroTemplateEngine)
 }
 
 func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([]byte, []Field) {
@@ -77,10 +67,6 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 	objectKeysField := make([]Field, 0, len(fields))
 
 	templatePrefix := "{ "
-	if templateEngine == heroTemplateEngine {
-		templatePrefix = `<%= "{ " %>`
-	}
-
 	templateBuffer := bytes.NewBufferString(templatePrefix)
 	for i, field := range fields {
 		fieldWrap := fieldValueWrapByType(field)
@@ -88,10 +74,6 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 			if fieldCfg.Value != nil {
 				fieldWrap = ""
 			}
-		}
-
-		if templateEngine == heroTemplateEngine && len(fieldWrap) > 0 {
-			fieldWrap = "\\\""
 		}
 
 		fieldTrailer := []byte(",")
@@ -135,24 +117,16 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 				fieldVariableName := fieldNormalizerRegex.ReplaceAllString(fmt.Sprintf("%s%s", fieldNameRoot, rNoun), "")
 				fieldVariableName += "Var"
 				if field.Type == FieldTypeDate {
-					if templateEngine == jetHTMLEngine {
-						fieldTemplate = fmt.Sprintf(`{{ %s := generate("%s.%s") }}"%s.%s": %s{{%s.Format:"2006-01-02T15:04:05.999999Z07:00"}}%s%s`, fieldVariableName, fieldNameRoot, rNoun, fieldNameRoot, rNoun, fieldWrap, fieldVariableName, fieldWrap, fieldTrailer)
-					} else if templateEngine == textTemplateEngine {
+					if templateEngine == textTemplateEngine {
 						fieldTemplate = fmt.Sprintf(`{{ $%s := generate "%s.%s" }}"%s.%s": %s{{$%s.Format "2006-01-02T15:04:05.999999Z07:00"}}%s%s`, fieldVariableName, fieldNameRoot, rNoun, fieldNameRoot, rNoun, fieldWrap, fieldVariableName, fieldWrap, fieldTrailer)
 					} else if templateEngine == customTemplateEngine {
 						fieldTemplate = fmt.Sprintf(`"%s.%s": %s{{.%s.%s}}%s%s`, fieldNameRoot, rNoun, fieldWrap, fieldNameRoot, rNoun, fieldWrap, fieldTrailer)
-					} else if templateEngine == heroTemplateEngine {
-						fieldTemplate = fmt.Sprintf(`<%% %s := generate("%s.%s").(time.Time) %%><%%== "\"%s.%s\": %s" %%><%%== %s.Format("2006-01-02T15:04:05.999999Z07:00") %%><%%== "%s%s" %%>`, fieldVariableName, fieldNameRoot, rNoun, fieldNameRoot, rNoun, fieldWrap, fieldVariableName, fieldWrap, fieldTrailer)
 					}
 				} else {
-					if templateEngine == jetHTMLEngine {
-						fieldTemplate = fmt.Sprintf(`"%s.%s": %s{{generate: "%s.%s"}}%s%s`, fieldNameRoot, rNoun, fieldWrap, fieldNameRoot, rNoun, fieldWrap, fieldTrailer)
-					} else if templateEngine == textTemplateEngine {
+					if templateEngine == textTemplateEngine {
 						fieldTemplate = fmt.Sprintf(`"%s.%s": %s{{generate "%s.%s"}}%s%s`, fieldNameRoot, rNoun, fieldWrap, fieldNameRoot, rNoun, fieldWrap, fieldTrailer)
 					} else if templateEngine == customTemplateEngine {
 						fieldTemplate = fmt.Sprintf(`"%s.%s": %s{{.%s.%s}}%s%s`, fieldNameRoot, rNoun, fieldWrap, fieldNameRoot, rNoun, fieldWrap, fieldTrailer)
-					} else if templateEngine == heroTemplateEngine {
-						fieldTemplate = fmt.Sprintf(`<%%== "\"%s.%s\": %s" %%><%%==v generate("%s.%s") %%><%%== "%s%s" %%>`, fieldNameRoot, rNoun, fieldWrap, fieldNameRoot, rNoun, fieldWrap, fieldTrailer)
 					}
 				}
 
@@ -168,24 +142,16 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 			fieldVariableName := fieldNormalizerRegex.ReplaceAllString(field.Name, "")
 			fieldVariableName += "Var"
 			if field.Type == FieldTypeDate {
-				if templateEngine == jetHTMLEngine {
-					fieldTemplate = fmt.Sprintf(`{{ %s := generate("%s") }}"%s": %s{{%s.Format:"2006-01-02T15:04:05.999999Z07:00"}}%s%s`, fieldVariableName, field.Name, field.Name, fieldWrap, fieldVariableName, fieldWrap, fieldTrailer)
-				} else if templateEngine == textTemplateEngine {
+				if templateEngine == textTemplateEngine {
 					fieldTemplate = fmt.Sprintf(`{{ $%s := generate "%s" }}"%s": %s{{$%s.Format "2006-01-02T15:04:05.999999Z07:00"}}%s%s`, fieldVariableName, field.Name, field.Name, fieldWrap, fieldVariableName, fieldWrap, fieldTrailer)
 				} else if templateEngine == customTemplateEngine {
 					fieldTemplate = fmt.Sprintf(`"%s": %s{{.%s}}%s%s`, field.Name, fieldWrap, field.Name, fieldWrap, fieldTrailer)
-				} else if templateEngine == heroTemplateEngine {
-					fieldTemplate = fmt.Sprintf(`<%% %s := generate("%s").(time.Time) %%><%%== "\"%s\": %s" %%><%%==v %s.Format("2006-01-02T15:04:05.999999Z07:00") %%><%%== "%s%s" %%>`, fieldVariableName, field.Name, field.Name, fieldWrap, fieldVariableName, fieldWrap, fieldTrailer)
 				}
 			} else {
-				if templateEngine == jetHTMLEngine {
-					fieldTemplate = fmt.Sprintf(`"%s": %s{{generate: "%s"}}%s%s`, field.Name, fieldWrap, field.Name, fieldWrap, fieldTrailer)
-				} else if templateEngine == textTemplateEngine {
+				if templateEngine == textTemplateEngine {
 					fieldTemplate = fmt.Sprintf(`"%s": %s{{generate "%s"}}%s%s`, field.Name, fieldWrap, field.Name, fieldWrap, fieldTrailer)
 				} else if templateEngine == customTemplateEngine {
 					fieldTemplate = fmt.Sprintf(`"%s": %s{{.%s}}%s%s`, field.Name, fieldWrap, field.Name, fieldWrap, fieldTrailer)
-				} else if templateEngine == heroTemplateEngine {
-					fieldTemplate = fmt.Sprintf(`<%%== "\"%s\": %s" %%><%%==v generate("%s") %%><%%== "%s%s" %%>`, field.Name, fieldWrap, field.Name, fieldWrap, fieldTrailer)
 				}
 			}
 
@@ -197,8 +163,8 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 }
 
 func NewGenerator(cfg Config, flds Fields) (Generator, error) {
-	template, objectKeysField := generateJetTemplateFromField(Config{}, flds)
+	template, objectKeysField := generateCustomTemplateFromField(cfg, flds)
 	flds = append(flds, objectKeysField...)
 
-	return NewGeneratorWithJetHTML(template, cfg, flds)
+	return NewGeneratorWithCustomTemplate(template, cfg, flds)
 }

@@ -15,6 +15,8 @@ import (
 	"go.uber.org/multierr"
 )
 
+var templateType string
+
 var templatePath string
 var fieldsDefinitionPath string
 
@@ -52,12 +54,12 @@ func GenerateWithTemplateCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			location := viper.GetString("corpora_location")
-			config, err := config.LoadConfig(configFile)
+			cfg, err := config.LoadConfig(configFile)
 			if err != nil {
 				return err
 			}
 
-			fc, err := corpus.NewGeneratorWithTemplate(config, afero.NewOsFs(), location, configFile, fieldsDefinitionPath)
+			fc, err := corpus.NewGeneratorWithTemplate(cfg, afero.NewOsFs(), location, templateType)
 			if err != nil {
 				return err
 			}
@@ -74,6 +76,7 @@ func GenerateWithTemplateCmd() *cobra.Command {
 	}
 
 	generateWithTemplateCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
+	generateWithTemplateCmd.Flags().StringVarP(&templateType, "template-type", "y", "placeholder", "either `placeholder` only or full `gotext` template")
 	generateWithTemplateCmd.Flags().StringVarP(&totSize, "tot-size", "t", "", "total size of the corpus to generate")
 	return generateWithTemplateCmd
 }

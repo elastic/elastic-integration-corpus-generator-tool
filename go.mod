@@ -3,7 +3,6 @@ module github.com/elastic/elastic-integration-corpus-generator-tool
 go 1.18
 
 require (
-	github.com/CloudyKit/jet/v6 v6.2.0
 	github.com/OpenPeeDeeP/xdg v1.0.0
 	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/dustin/go-humanize v1.0.0
@@ -16,11 +15,9 @@ require (
 	go.uber.org/multierr v1.8.0
 	golang.org/x/mod v0.7.0
 	golang.org/x/sync v0.1.0
-	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
-	github.com/CloudyKit/fastprinter v0.0.0-20200109182630-33d98a066a53 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/google/uuid v1.2.0 // indirect
@@ -41,5 +38,6 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

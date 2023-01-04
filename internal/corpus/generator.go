@@ -26,7 +26,7 @@ const (
 	templateTypeGoText
 )
 
-var ErrNotValidTemplate = errors.New("please, pass --template-type as one of `placeholder` or `gotext`")
+var ErrNotValidTemplate = errors.New("please, pass --template-type as one of 'placeholder' or 'gotext'")
 
 type Config = config.Config
 type Fields = fields.Fields

@@ -3,6 +3,7 @@ module github.com/elastic/elastic-integration-corpus-generator-tool
 go 1.18
 
 require (
+	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/OpenPeeDeeP/xdg v1.0.0
 	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/dustin/go-humanize v1.0.0
@@ -20,7 +21,6 @@ require (
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
-	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/google/uuid v1.2.0 // indirect

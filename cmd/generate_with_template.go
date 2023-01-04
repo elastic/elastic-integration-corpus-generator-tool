@@ -76,7 +76,7 @@ func GenerateWithTemplateCmd() *cobra.Command {
 	}
 
 	generateWithTemplateCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
-	generateWithTemplateCmd.Flags().StringVarP(&templateType, "template-type", "y", "placeholder", "either `placeholder` only or full `gotext` template")
+	generateWithTemplateCmd.Flags().StringVarP(&templateType, "template-type", "y", "placeholder", "either 'placeholder' or 'gotext'")
 	generateWithTemplateCmd.Flags().StringVarP(&totSize, "tot-size", "t", "", "total size of the corpus to generate")
 	return generateWithTemplateCmd
 }

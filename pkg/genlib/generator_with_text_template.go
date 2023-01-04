@@ -6,7 +6,9 @@ package genlib
 
 import (
 	"bytes"
+	"github.com/Masterminds/sprig/v3"
 	"text/template"
+	"time"
 )
 
 // GeneratorWithTextTemplate
@@ -29,7 +31,12 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 
 	state := NewGenState()
 
-	templateFns := template.FuncMap{}
+	templateFns := sprig.HermeticTxtFuncMap()
+
+	templateFns["timeDuration"] = func(duration int64) time.Duration {
+		return time.Duration(duration)
+	}
+
 	templateFns["generate"] = func(field string) interface{} {
 		bindF, ok := fieldMap[field]
 		if !ok {
@@ -42,6 +49,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 		}
 		return value
 	}
+
 	parsedTpl, err := t.Funcs(templateFns).Parse(string(tpl))
 	if err != nil {
 		return nil, err

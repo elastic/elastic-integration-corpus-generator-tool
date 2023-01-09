@@ -192,7 +192,7 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 	return payloadFilename, err
 }
 
-// GenerateWithTemplate generates a bulk request corpus and persist it to file.
+// GenerateWithTemplate generates a template based corpus and persist it to file.
 func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPath, totSize string) (string, error) {
 	totSizeInBytes, err := humanize.ParseBytes(totSize)
 	if err != nil {

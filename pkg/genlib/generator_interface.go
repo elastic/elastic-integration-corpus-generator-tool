@@ -56,21 +56,6 @@ var (
 	keywordRegex         = regexp.MustCompile("(\\.|-|_|\\s){1,1}")
 )
 
-// GenerateFromHero is the helper for hero
-func GenerateFromHero(field string, fieldMap map[string]EmitF, state *GenState) interface{} {
-	bindF, ok := fieldMap[field]
-	if !ok {
-		return ""
-	}
-
-	value, err := bindF(state, nil)
-	if err != nil {
-		return ""
-	}
-
-	return value
-}
-
 // Typedef of the internal emit function
 type EmitF func(state *GenState, buf *bytes.Buffer) (interface{}, error)
 
@@ -106,11 +91,6 @@ func NewGenState() *GenState {
 
 func (s *GenState) Inc() {
 	s.counter += 1
-}
-
-// BindField is the wrapping function of bindField to be used in hero
-func BindField(cfg Config, field Field, fieldMap map[string]EmitF) error {
-	return bindField(cfg, field, fieldMap, nil, nil, true)
 }
 
 func bindField(cfg Config, field Field, fieldMapWithReturn map[string]EmitF, fieldMap map[string]emitFNotReturn, templateFieldMap map[string][]byte, withReturn bool) error {

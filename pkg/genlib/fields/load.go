@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -39,6 +40,35 @@ func LoadFields(ctx context.Context, baseURL, integration, dataStream, version s
 	}
 
 	fieldsFromYaml, err := loadFieldsFromYaml(fieldsContent)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := collectFields(fieldsFromYaml, "")
+
+	return normaliseFields(fields)
+}
+
+func LoadFieldsWithTemplate(ctx context.Context, fieldYamlPath string) (Fields, error) {
+	fieldsFileContent, err := os.ReadFile(fieldYamlPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var fieldsContent string
+
+	key := strings.TrimSuffix(filepath.Base(fieldYamlPath), filepath.Ext(fieldYamlPath))
+	keyEntry := fmt.Sprintf("- key: %s\n  fields:\n", key)
+	for _, line := range strings.Split(string(fieldsFileContent), "\n") {
+		keyEntry += `    ` + line + "\n"
+	}
+
+	fieldsContent += keyEntry
+	if len(fieldsContent) == 0 {
+		return nil, ErrNotFound
+	}
+
+	fieldsFromYaml, err := loadFieldsFromYaml([]byte(fieldsContent))
 	if err != nil {
 		return nil, err
 	}

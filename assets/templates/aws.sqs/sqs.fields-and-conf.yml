@@ -1,39 +1,49 @@
 - name: Region
+  type: keyword
   enum: ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "ap-south-1", "ap-northeast-3", "ap-northeast-2", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "ca-central-1", "eu-central-1", "eu-west-1", "eu-west-2", "eu-west-3", "eu-north-1", "sa-east-1", "af-south-1", "ap-east-1", "ap-south-2", "ap-southeast-3", "eu-south-2", "eu-central-2", "me-south-1", "me-central-1"]
   cardinality: 40
 - name: Visible
+  type: double
   range: 1000
   fuzziness: 5
   cardinality: 10
 - name: Deleted
+  type: double
   range: 1000
   fuzziness: 5
   cardinality: 10
 - name: NotVisible
+  type: double
   range: 1000
   fuzziness: 5
   cardinality: 10
 - name: Delayed
+  type: double
   range: 1000
   fuzziness: 5
   cardinality: 10
 - name: Received
+  type: double
   range: 1000
   fuzziness: 5
   cardinality: 10
 - name: Sent
+  type: double
   range: 1000
   fuzziness: 5
   cardinality: 10
 - name: EmptyReceives
+  type: double
   range: 10
   fuzziness: 10
   cardinality: 10
 - name: SentMessageSize
+  type: double
   range: 262144
   fuzziness: 50
   cardinality: 10
 - name: OldestMessageAge
+  type: double
   range: 7200
   fuzziness: 5
   cardinality: 10
@@ -42,8 +52,10 @@
   example: a-queue-name
   cardinality: 5
 - name: EventDuration
+  type: long
   range: 1000
 - name: EventIngested
+  type: date
 - name: TagsCreatedBy
   type: keyword
   example: First Last

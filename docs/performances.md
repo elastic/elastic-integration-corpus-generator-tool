@@ -13,7 +13,17 @@ This tool comes with a benchmark testsuite that can be run to evaluate new featu
 
 ## Benchmarks
 
-These are the resulting benchmar from PR #40, where current template support has been added:
+In PR #40, where multiple templates support has been added, we run two different benchmark for each template engine:
+
+    JSONContent: producing Schema C data for "endpoint process 8.2.0" integration
+    VPCFlowLogs: producing Schema A data for aws vpc flow logs
+    (beware the memory benchmark for Hero are misleading since they "happens" in a forked process)
+
+We tested 3 different engines:
+- `legacy`: the only generator available before #40
+- `CustomTemplate`: what we refer now as `placeholder` template engine
+- `TextTemplate`: what we refer now as `gotext` template engine
+
 ```
 _GeneratorLegacyJSONContent: the original generator, generating from fields definitions for endpoint package v8.2.0 data stream "process"
 _GeneratorCustomTemplateJSONContent-16: placeholder template with arbitrary JSON content
@@ -46,7 +56,9 @@ _GeneratorTextTemplateVPCFlowLogs-16      95.0 ± 0%
 
 ```
 
-If you are curios how those benchmarks translate to time needed for generating dataset, we ran some test runs monitoring the execution times:
+If you are curios how those benchmarks translate to time needed for generating dataset, we ran some test runs monitoring the execution times.
+We generated directly from the built binaries 20GB of "aws dynamodb 1.28.3" Schema C data.
+
 ```
 $ time ./gen-legacy generate aws dynamodb 1.28.3 -t 20GB
 File generated: [...]/elastic-integration-corpus-generator-tool/corpora/1671594228-aws-dynamodb-1.28.3.ndjson

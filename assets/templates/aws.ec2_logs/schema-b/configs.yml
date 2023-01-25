@@ -1,0 +1,14 @@
+- name: cloud.region
+  value: "us-east-1"
+- name: cloud.account.id
+  value: 123456789
+- name: cloud.account.name
+  value: sample-account
+- name: aws.billing.currency
+  value: "USD"
+- name: aws.billing.ServiceName
+  enum: ["AmazonEKS"]
+- name: agent.id
+  value: "12f376ef-5186-4e8b-a175-70f1140a8f30"
+- name: agent.name
+  value: "host.local"

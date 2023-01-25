@@ -220,11 +220,19 @@ func makeFloatFunc(fieldCfg ConfigField, field Field) func() float64 {
 	switch fieldCfg.Range.Min.(type) {
 	case float64:
 		minValue = fieldCfg.Range.Min.(float64)
+	case uint64:
+		minValue = float64(fieldCfg.Range.Min.(uint64))
+	case int64:
+		minValue = float64(fieldCfg.Range.Min.(int64))
 	}
 
 	switch fieldCfg.Range.Max.(type) {
 	case float64:
 		maxValue = fieldCfg.Range.Max.(float64)
+	case uint64:
+		maxValue = float64(fieldCfg.Range.Max.(uint64))
+	case int64:
+		maxValue = float64(fieldCfg.Range.Max.(int64))
 	}
 
 	var dummyFunc func() float64

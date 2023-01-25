@@ -6,15 +6,25 @@ import (
 	"os"
 )
 
+type Ratio struct {
+	Numerator   int `config:"numerator"`
+	Denominator int `config:"denominator"`
+}
+
+type Range struct {
+	Min interface{} `config:"min"`
+	Max interface{} `config:"max"`
+}
+
 type Config struct {
 	m map[string]ConfigField
 }
 
 type ConfigField struct {
 	Name        string      `config:"name"`
-	Fuzziness   int         `config:"fuzziness"`
-	Range       int         `config:"range"`
-	Cardinality int         `config:"cardinality"`
+	Fuzziness   Ratio       `config:"fuzziness"`
+	Range       Range       `config:"range"`
+	Cardinality Ratio       `config:"cardinality"`
 	Enum        []string    `config:"enum"`
 	ObjectKeys  []string    `config:"object_keys"`
 	Value       interface{} `config:"value"`

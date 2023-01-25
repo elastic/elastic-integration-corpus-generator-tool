@@ -13,16 +13,6 @@ import (
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 )
 
-/*
-const cardinalityCfg = `
-- name: event.id
-  cardinality: 250
-- name: process.pid
-  fuzziness: 10
-  range: 100
-`
-*/
-
 func Test_EmptyCaseWithTextTemplate(t *testing.T) {
 	template, _ := generateTextTemplateFromField(Config{}, []Field{})
 	t.Logf("with template: %s", string(template))
@@ -63,9 +53,26 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 	// It's cardinality per mille, so a bit confusing :shrug:
 	for cardinality := 1000; cardinality >= 10; cardinality /= 10 {
 
+		cardinalityDenominator := 1000
+		cardinalityNumerator := cardinality
+		cardinalityModule := cardinalityDenominator % cardinality
+		if cardinalityModule == 0 {
+			cardinalityNumerator = 1
+			cardinalityDenominator /= cardinality
+		}
+
+		rangeTrailing := ""
+		if ty == FieldTypeFloat {
+			rangeTrailing = "."
+		}
+
+		rangeMin := rand.Intn(100)
+		rangeMax := rand.Intn(10000-rangeMin) + rangeMin
+
 		// Add the range to get some variety in integers
-		tmpl := "- name: alpha\n  cardinality: %d\n  range: 10000"
-		yaml := []byte(fmt.Sprintf(tmpl, cardinality))
+		tmpl := "- name: alpha\n  cardinality:\n    numerator: %d\n    denominator: %d\n  range:\n    min: %d%s\n    max: %d%s"
+
+		yaml := []byte(fmt.Sprintf(tmpl, cardinalityNumerator, cardinalityDenominator, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
 
 		cfg, err := config.LoadConfigFromYaml(yaml)
 		if err != nil {

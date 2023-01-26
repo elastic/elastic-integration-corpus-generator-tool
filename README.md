@@ -88,7 +88,9 @@ Given the above template, in the fields definition file you'll have to define an
 In the config file you can define all of only a subset of the fields used in the template, according to how you need to customise their behaviour, example:
 ```yaml
 - name: Field1
-  cardinality: 10
+  cardinality:
+    numerator: 1
+    denominator: 100
 - name: Field3
   enum: ["value1", "value2"]
 ```
@@ -159,22 +161,40 @@ And the following config file content:
 - name: AccountID
   value: 123456789012
 - name: InterfaceID
-  cardinality: 10
+  cardinality:
+    numerator: 1
+    denominator: 100
 - name: SrcAddr
-  cardinality: 1
+  cardinality:
+    numerator: 1
+    denominator: 1000
 - name: DstAddr
-  cardinality: 100
+  cardinality:
+    numerator: 1
+    denominator: 10
 - name: SrcPort
-  range: 65535
+  range:
+    min: 0
+    max: 65535
 - name: DstPort
-  range: 65535
-  cardinality: 100
+  range:
+    min: 0
+    max: 65535
+  cardinality:
+    numerator: 1
+    denominator: 10
 - name: Protocol
-  range: 256
+  range:
+    min: 1
+    max: 256
 - name: Packets
-  range: 1048576
+  range:
+    min: 1
+    max: 1048576
 - name: StartOffset
-  range: 60
+  range:
+    min: 1
+    max: 60
 - name: Action
   enum: ["ACCEPT", "REJECT"]
 - name: LogStatus
@@ -188,16 +208,30 @@ It is possible to tweak the randomness of the generated data through a config fi
 ##### Sample config
 ```yaml
 - name: aws.dynamodb.metrics.AccountMaxReads.max
-  fuzziness: 10
-  range: 100
+  fuzziness:
+    numerator: 1
+    denominator: 10
+  range:
+    min: 0
+    max: 100
 - name: aws.dynamodb.metrics.AccountMaxTableLevelReads.max
-  fuzziness: 5
-  range: 50
-  cardinality: 50
+  fuzziness:
+    numerator: 1
+    denominator: 20
+  range:
+    min: 0
+    max: 50
+  cardinality:
+    numerator: 1
+    denominator: 20
 - name: aws.dynamodb.metrics.AccountProvisionedReadCapacityUtilization.avg
-  fuzziness: 10
+  fuzziness:
+    numerator: 1
+    denominator: 10
 - name: aws.cloudwatch.namespace
-  cardinality: 1
+  cardinality:
+    numerator: 1
+    denominator: 1000
 - name: aws.dimensions.*
   object_keys:
     - TableName
@@ -211,16 +245,18 @@ It is possible to tweak the randomness of the generated data through a config fi
 - name: aws.dimensions.TableName
   enum: ["table1", "table2"]
 - name: aws.dimensions.Operation
-  cardinality: 500
+  cardinality:
+    numerator: 1
+    denominator: 2
 ```
 
 #### Config entries definition
 The config file is a yaml file consisting of an array of config entry.
 For each config entry the following fields are available
 - `name` *mandatory*: dotted path field
-- `fuzziness` *optional (`long` and `double` type only)*: delta from the previous generated value for the same field
-- `range` *optional (`long` and `double` type only)*: value will be generated between 0 and range
-- `cardinality` *optional*: per-mille distribution of different values for the field
+- `fuzziness` *optional (`long` and `double` type only)*: delta from the previous generated value for the same field, expressed as a ratio between a `numerator` and a `denominator`
+- `range` *optional (`long` and `double` type only)*: value will be generated between `min` and `max`
+- `cardinality` *optional*: distribution of different values for the field, expressed as a ratio between a `numerator` and a `denominator`
 - `object_keys` *optional (`object` type only)*: list of field names to generate in a object field type. if not specified a random number of field names will be generated in the object filed type.
 - `value` *optional*: hardcoded value to set for the field (any `cardinality` will be ignored)
 - `enum` *optional* (`keyword` type only)*: list of strings to randomly chose from a value to set for the field (any `cardinality` will be ignored)

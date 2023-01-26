@@ -10,9 +10,6 @@
   fuzziness:
     numerator: 1
     denominator: 20
-  cardinality:
-    numerator: 1
-    denominator: 100
 - name: Deleted
   range:
     min: 0
@@ -20,9 +17,6 @@
   fuzziness:
     numerator: 1
     denominator: 20
-  cardinality:
-    numerator: 1
-    denominator: 100
 - name: NotVisible
   range:
     min: 0
@@ -30,9 +24,6 @@
   fuzziness:
     numerator: 1
     denominator: 20
-  cardinality:
-    numerator: 1
-    denominator: 100
 - name: Delayed
   range:
     min: 0
@@ -40,9 +31,6 @@
   fuzziness:
     numerator: 1
     denominator: 20
-  cardinality:
-    numerator: 1
-    denominator: 100
 - name: Received
   range:
     min: 0
@@ -50,9 +38,6 @@
   fuzziness:
     numerator: 1
     denominator: 20
-  cardinality:
-    numerator: 1
-    denominator: 100
 - name: Sent
   range:
     min: 0
@@ -60,9 +45,6 @@
   fuzziness:
     numerator: 1
     denominator: 20
-  cardinality:
-    numerator: 1
-    denominator: 100
 - name: EmptyReceives
   range:
     min: 0
@@ -70,9 +52,6 @@
   fuzziness:
     numerator: 1
     denominator: 10
-  cardinality:
-    numerator: 1
-    denominator: 100
 - name: SentMessageSize
   range:
     min: 1024
@@ -80,9 +59,6 @@
   fuzziness:
     numerator: 1
     denominator: 2
-  cardinality:
-    numerator: 1
-    denominator: 100
 - name: OldestMessageAge
   range:
     min: 1
@@ -90,9 +66,6 @@
   fuzziness:
     numerator: 1
     denominator: 20
-  cardinality:
-    numerator: 1
-    denominator: 100
 - name: QueueName
   cardinality:
     numerator: 1

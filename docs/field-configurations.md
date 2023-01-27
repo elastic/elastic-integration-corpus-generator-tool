@@ -10,9 +10,9 @@ The config file is a yaml file consisting of an array of config entry.
 
 For each config entry the following fields are available:
 - `name` *mandatory*: dotted path field, as in `fields.yml`
-- `fuzziness` *optional (`long` and `double` type only)*: delta from the previous generated value for the same field
-- `range` *optional (`long` and `double` type only)*: value will be generated between 0 and range
-- `cardinality` *optional*: per-mille distribution of different values for the field
+- `fuzziness` *optional (`long` and `double` type only)*: delta from the previous generated value for the same field, expressed as a ratio between a `numerator` and a `denominator`
+- `range` *optional (`long` and `double` type only)*: value will be generated between `min` and `max`
+- `cardinality` *optional*: distribution of different values for the field, expressed as a ratio between a `numerator` and a `denominator`
 - `object_keys` *optional (`object` type only)*: list of field names to generate in a object field type. if not specified a random number of field names will be generated in the object filed type.
 - `value` *optional*: hardcoded value to set for the field (any `cardinality` will be ignored)
 - `enum` *optional (`keyword` type only)*: list of strings to randomly chose from a value to set for the field (any `cardinality` will be ignored)

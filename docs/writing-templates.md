@@ -24,17 +24,19 @@ This operation has some caveats:
 
 All templates are contained in `/assets/templates` folder. Within it there should be a folder for each Integration data stream templates are available from.
 
-Within these folder templates files should be added:
+The folder MUST be named as: `<package name>.<data stream>`. For example: `apache.access`, `apache.error`, `aws.billin`, `aws.vpcflow`.
+
+As this tool aims to support different [schemas](./data-schemas.md) for generated data, files related to a schema should be put within a folder named after the schema they relate to: `schema-a`, `schema-b`, `schema-c`, `schema-d`.
+
+Within these folder, these files should be added:
 - (_mandatory_) `fields.yml`: a field definition file
 - (_optional_) `configs.yml`: a field generation configuration file
 - (_mandatory_) `gotext.tpl`: a `gotext` template file
 - (_optional_) `placeholder.tpl`: a `placeholder` template file
 
-## `fields.uyml` - Field definitions
+## `fields.yml` - Field definitions
 
 A `YAML` file containing field mapping definitions. Ideally this file is extracted from Integration packages, but there is no automation for doing so at the moment.
-
-_NOTE_: how do we manage schema differences between various generation schemas (A, B, C, D)?
 
 ## `configs.yml` - Field generation configurations
 

@@ -19,7 +19,7 @@
         "period": {{generate "metricset.period"}}
     },
     "ecs": {
-        "version": "1.5.0"
+        "version": "8.2.0"
     },
     "aws": {
         "billing": {

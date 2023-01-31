@@ -24,7 +24,7 @@ This operation has some caveats:
 
 All templates are contained in `/assets/templates` folder. Within it there should be a folder for each Integration data stream templates are available from.
 
-The folder MUST be named as: `<package name>.<data stream>`. For example: `apache.access`, `apache.error`, `aws.billin`, `aws.vpcflow`.
+The folder MUST be named as: `<package name>.<data stream>`. For example: `apache.access`, `apache.error`, `aws.billing`, `aws.vpcflow`. For example the final folder where to place the files listed below will be `/assets/templates/apache.error/schema-a`.
 
 As this tool aims to support different [schemas](./data-schemas.md) for generated data, files related to a schema should be put within a folder named after the schema they relate to: `schema-a`, `schema-b`, `schema-c`, `schema-d`.
 

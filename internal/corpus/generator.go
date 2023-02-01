@@ -136,6 +136,10 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 		buf = bytes.NewBufferString("")
 	}
 
+	defer func() {
+		_ = evgen.Close()
+	}()
+
 	var currentSize uint64
 	for currentSize < totSize {
 		buf.Truncate(len(createPayload))
@@ -153,7 +157,7 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 		currentSize += uint64(buf.Len())
 	}
 
-	return evgen.Close()
+	return nil
 }
 
 // Generate generates a bulk request corpus and persist it to file.

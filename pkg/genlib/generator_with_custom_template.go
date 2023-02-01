@@ -6,14 +6,23 @@ package genlib
 
 import (
 	"bytes"
+	"fmt"
 	"regexp"
+	"time"
 )
 
-var trailingTemplate []byte
+type emitter struct {
+	fieldName string
+	fieldType string
+	emitFunc  EmitF
+}
 
 // GeneratorWithCustomTemplate is resolved at construction to a slice of emit functions
 type GeneratorWithCustomTemplate struct {
-	emitFuncs []emitFNotReturn
+	templatePrefixes map[string][]byte
+	trailingTemplate []byte
+	emitters         []emitter
+	state            *GenState
 }
 
 func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) {
@@ -75,47 +84,63 @@ func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) 
 
 func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) (*GeneratorWithCustomTemplate, error) {
 	// Parse the template and extract relevant information
-	orderedFields, templateFieldsMap, fieldPrefixBuffer := parseCustomTemplate(template)
-	trailingTemplate = fieldPrefixBuffer
+	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
+
+	state := NewGenState()
 
 	// Preprocess the fields, generating appropriate emit functions
-	fieldMap := make(map[string]emitFNotReturn)
+	fieldMap := make(map[string]EmitF)
+	fieldTypes := make(map[string]string)
 	for _, field := range fields {
-		if err := bindField(cfg, field, nil, fieldMap, templateFieldsMap, false); err != nil {
+		if err := bindField(cfg, field, fieldMap); err != nil {
 			return nil, err
 		}
+
+		fieldTypes[field.Name] = field.Type
 	}
 
 	// Roll into slice of emit functions
-	emitFuncs := make([]emitFNotReturn, 0, len(fieldMap))
+	emitters := make([]emitter, 0, len(fieldMap))
 	for _, fieldName := range orderedFields {
-		emitFuncs = append(emitFuncs, fieldMap[fieldName])
+		emitters = append(emitters, emitter{fieldName: fieldName, fieldType: fieldTypes[fieldName], emitFunc: fieldMap[fieldName]})
 	}
 
-	return &GeneratorWithCustomTemplate{emitFuncs: emitFuncs}, nil
+	return &GeneratorWithCustomTemplate{emitters: emitters, templatePrefixes: templateFieldsMap, trailingTemplate: trailingTemplate, state: state}, nil
 }
 
-func (GeneratorWithCustomTemplate) Close() error {
+func (gen GeneratorWithCustomTemplate) Close() error {
 	return nil
 }
 
 func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
-	if err := gen.emit(state, buf); err != nil {
+	state = gen.state
+	if err := gen.emit(buf); err != nil {
 		return err
 	}
-
-	state.counter += 1
 
 	return nil
 }
 
-func (gen GeneratorWithCustomTemplate) emit(state *GenState, buf *bytes.Buffer) error {
-	for _, f := range gen.emitFuncs {
-		if err := f(state, buf); err != nil {
+func (gen GeneratorWithCustomTemplate) emit(buf *bytes.Buffer) error {
+	for _, e := range gen.emitters {
+		value, err := e.emitFunc(gen.state, buf)
+		if err != nil {
 			return err
 		}
+
+		prefix, ok := gen.templatePrefixes[e.fieldName]
+		if ok {
+			buf.Write(prefix)
+		}
+		if e.fieldType != FieldTypeDate {
+			buf.Write([]byte(fmt.Sprintf("%v", value)))
+		} else {
+			vdate := value.(time.Time)
+			buf.Write([]byte(vdate.Format(FieldTypeTimeLayout)))
+		}
+
 	}
 
-	buf.Write(trailingTemplate)
+	buf.Write(gen.trailingTemplate)
 	return nil
 }

@@ -7,29 +7,57 @@ package genlib
 import (
 	"bytes"
 	"github.com/Masterminds/sprig/v3"
+	"runtime"
 	"text/template"
 	"time"
 )
 
 // GeneratorWithTextTemplate
 type GeneratorWithTextTemplate struct {
-	tpl   *template.Template
-	state *GenState
+	closed  chan struct{}
+	bindMap map[string]chan interface{}
+	tpl     *template.Template
+	state   *GenState
 }
 
 func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*GeneratorWithTextTemplate, error) {
-	// Preprocess the fields, generating appropriate emit functions
+	state := NewGenState()
+
+	// Preprocess the fields, generating appropriate emit channels
+	closedChan := make(chan struct{})
 	fieldMap := make(map[string]EmitF)
+	bindMap := make(map[string]chan interface{})
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, nil, nil, true); err != nil {
+		if err := bindField(cfg, field, fieldMap); err != nil {
 			return nil, err
 		}
+
+		chanSize := runtime.GOMAXPROCS(0) / 2
+		if chanSize < 1 {
+			chanSize = 1
+		}
+
+		bindChan := make(chan interface{}, chanSize)
+		bindMap[field.Name] = bindChan
+		go func(bindChan chan interface{}, closedChan chan struct{}, bindF EmitF) {
+			for {
+				select {
+				case <-closedChan:
+					return
+				default:
+					value, err := bindF(state, nil)
+					if err != nil {
+						bindChan <- ""
+						continue
+					}
+					bindChan <- value
+				}
+			}
+		}(bindChan, closedChan, fieldMap[field.Name])
 	}
 
 	t := template.New("generator")
 	t = t.Option("missingkey=error")
-
-	state := NewGenState()
 
 	templateFns := sprig.HermeticTxtFuncMap()
 
@@ -38,16 +66,12 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 	}
 
 	templateFns["generate"] = func(field string) interface{} {
-		bindF, ok := fieldMap[field]
+		bindChan, ok := bindMap[field]
 		if !ok {
 			return ""
 		}
 
-		value, err := bindF(state, nil)
-		if err != nil {
-			return ""
-		}
-		return value
+		return <-bindChan
 	}
 
 	parsedTpl, err := t.Funcs(templateFns).Parse(string(tpl))
@@ -55,25 +79,25 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 		return nil, err
 	}
 
-	return &GeneratorWithTextTemplate{tpl: parsedTpl, state: state}, nil
+	return &GeneratorWithTextTemplate{tpl: parsedTpl, state: state, bindMap: bindMap, closed: closedChan}, nil
 }
 
-func (GeneratorWithTextTemplate) Close() error {
+func (gen GeneratorWithTextTemplate) Close() error {
+	close(gen.closed)
+
 	return nil
 }
 
 func (gen GeneratorWithTextTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
 	state = gen.state
-	if err := gen.emit(state, buf); err != nil {
+	if err := gen.emit(buf); err != nil {
 		return err
 	}
-
-	state.counter += 1
 
 	return nil
 }
 
-func (gen GeneratorWithTextTemplate) emit(state *GenState, buf *bytes.Buffer) error {
+func (gen GeneratorWithTextTemplate) emit(buf *bytes.Buffer) error {
 	err := gen.tpl.Execute(buf, nil)
 	if err != nil {
 		return err

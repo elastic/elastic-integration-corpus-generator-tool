@@ -31,7 +31,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 		bindChan := make(chan interface{})
 		bindMap[field.Name] = bindChan
 		go func(bindChan chan interface{}, closedChan chan struct{}, bindF EmitF) {
-			state := NewGenState()
+			state := newGenState()
 
 			for {
 				select {

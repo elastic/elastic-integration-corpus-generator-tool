@@ -13,7 +13,7 @@ type emitter struct {
 	fieldName string
 	fieldType string
 	emitFunc  emitFNotReturn
-	state     *GenState
+	state     *genState
 	prefix    []byte
 }
 
@@ -102,7 +102,7 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) 
 			fieldName: fieldName,
 			fieldType: fieldTypes[fieldName],
 			emitFunc:  fieldMap[fieldName].(emitFNotReturn),
-			state:     NewGenState(),
+			state:     newGenState(),
 			prefix:    templateFieldsMap[fieldName],
 		})
 	}

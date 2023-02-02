@@ -114,7 +114,7 @@ func (gen GeneratorWithCustomTemplate) Close() error {
 	return nil
 }
 
-func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
+func (gen GeneratorWithCustomTemplate) Emit(buf *bytes.Buffer) error {
 	if err := gen.emit(buf); err != nil {
 		return err
 	}

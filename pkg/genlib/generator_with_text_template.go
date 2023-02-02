@@ -81,7 +81,7 @@ func (gen GeneratorWithTextTemplate) Close() error {
 	return nil
 }
 
-func (gen GeneratorWithTextTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
+func (gen GeneratorWithTextTemplate) Emit(buf *bytes.Buffer) error {
 	if err := gen.emit(buf); err != nil {
 		return err
 	}

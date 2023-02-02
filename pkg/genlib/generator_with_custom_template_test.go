@@ -180,11 +180,11 @@ func Test_ParseTemplate(t *testing.T) {
 func Test_EmptyCaseWithCustomTemplate(t *testing.T) {
 	template, _ := generateCustomTemplateFromField(Config{}, []Field{})
 	t.Logf("with template: %s", string(template))
-	g, state := makeGeneratorWithCustomTemplate(t, Config{}, []Field{}, template)
+	g := makeGeneratorWithCustomTemplate(t, Config{}, []Field{}, template)
 
 	var buf bytes.Buffer
 
-	if err := g.Emit(state, &buf); err != nil {
+	if err := g.Emit(&buf); err != nil {
 		t.Fatal(err)
 	}
 
@@ -248,7 +248,7 @@ func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
 			t.Fatal(err)
 		}
 
-		g, state := makeGeneratorWithCustomTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template)
+		g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template)
 
 		vmapAlpha := make(map[any]int)
 		vmapBeta := make(map[any]int)
@@ -257,7 +257,7 @@ func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
 		for i := 0; i < nSpins; i++ {
 
 			var buf bytes.Buffer
-			if err := g.Emit(state, &buf); err != nil {
+			if err := g.Emit(&buf); err != nil {
 				t.Fatal(err)
 			}
 
@@ -530,11 +530,11 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 		}
 	}
 
-	g, state := makeGeneratorWithCustomTemplate(t, cfg, []Field{fld}, template)
+	g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fld}, template)
 
 	var buf bytes.Buffer
 
-	if err := g.Emit(state, &buf); err != nil {
+	if err := g.Emit(&buf); err != nil {
 		t.Fatal(err)
 	}
 
@@ -555,12 +555,12 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 	return v
 }
 
-func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte) (Generator, *GenState) {
+func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte) Generator {
 	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return g, NewGenState()
+	return g
 }

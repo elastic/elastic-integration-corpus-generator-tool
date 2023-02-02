@@ -26,10 +26,9 @@ func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
 
 	var buf bytes.Buffer
 
-	state := NewGenState()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := g.Emit(state, &buf)
+		err := g.Emit(&buf)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -55,10 +54,9 @@ func Benchmark_GeneratorTextTemplateJSONContent(b *testing.B) {
 
 	var buf bytes.Buffer
 
-	state := NewGenState()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := g.Emit(state, &buf)
+		err := g.Emit(&buf)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -189,10 +187,9 @@ func Benchmark_GeneratorCustomTemplateVPCFlowLogs(b *testing.B) {
 
 	var buf bytes.Buffer
 
-	state := NewGenState()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := g.Emit(state, &buf)
+		err := g.Emit(&buf)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -323,10 +320,9 @@ func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
 
 	var buf bytes.Buffer
 
-	state := NewGenState()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := g.Emit(state, &buf)
+		err := g.Emit(&buf)
 		if err != nil {
 			b.Fatal(err)
 		}

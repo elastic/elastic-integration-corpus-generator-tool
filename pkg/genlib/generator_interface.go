@@ -64,7 +64,7 @@ type emitFNotReturn func(state *GenState, buf *bytes.Buffer) error
 type EmitF func(state *GenState, buf *bytes.Buffer) (interface{}, error)
 
 type Generator interface {
-	Emit(state *GenState, buf *bytes.Buffer) error
+	Emit(buf *bytes.Buffer) error
 	Close() error
 }
 

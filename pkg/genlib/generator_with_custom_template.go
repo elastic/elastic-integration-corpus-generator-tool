@@ -11,8 +11,8 @@ import (
 
 type emitter struct {
 	fieldName string
-	fieldType string
 	emitFunc  emitFNotReturn
+	fieldType string
 	state     *genState
 	prefix    []byte
 }
@@ -100,8 +100,8 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) 
 	for _, fieldName := range orderedFields {
 		emitters = append(emitters, emitter{
 			fieldName: fieldName,
-			fieldType: fieldTypes[fieldName],
 			emitFunc:  fieldMap[fieldName].(emitFNotReturn),
+			fieldType: fieldTypes[fieldName],
 			state:     newGenState(),
 			prefix:    templateFieldsMap[fieldName],
 		})

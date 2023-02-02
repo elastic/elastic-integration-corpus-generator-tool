@@ -312,7 +312,7 @@ func Test_FieldConstKeywordWithCustomTemplate(t *testing.T) {
 		Value: "constant_keyword",
 	}
 
-	template := []byte(`{"alpha":"{{.alpha}}"}`)
+	template := []byte(`{"alpha":{{.alpha}}}`)
 	t.Logf("with template: %s", string(template))
 	b := testSingleTWithCustomTemplate[string](t, fld, nil, template)
 	if b != fld.Value {
@@ -327,7 +327,7 @@ func Test_FieldStaticOverrideStringWithCustomTemplate(t *testing.T) {
 	}
 
 	yaml := []byte("- name: alpha\n  value: beta")
-	template := []byte(`{"alpha":"{{.alpha}}"}`)
+	template := []byte(`{"alpha":{{.alpha}}}`)
 	t.Logf("with template: %s", string(template))
 	b := testSingleTWithCustomTemplate[string](t, fld, yaml, template)
 	if b != "beta" {

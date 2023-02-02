@@ -6,23 +6,20 @@ package genlib
 
 import (
 	"bytes"
-	"fmt"
 	"regexp"
-	"time"
 )
 
 type emitter struct {
 	fieldName string
 	fieldType string
-	emitFunc  EmitF
+	emitFunc  emitFNotReturn
+	state     *GenState
 }
 
 // GeneratorWithCustomTemplate is resolved at construction to a slice of emit functions
 type GeneratorWithCustomTemplate struct {
-	templatePrefixes map[string][]byte
-	trailingTemplate []byte
 	emitters         []emitter
-	state            *GenState
+	trailingTemplate []byte
 }
 
 func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) {
@@ -86,13 +83,11 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) 
 	// Parse the template and extract relevant information
 	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
 
-	state := NewGenState()
-
 	// Preprocess the fields, generating appropriate emit functions
-	fieldMap := make(map[string]EmitF)
+	fieldMap := make(map[string]emitFNotReturn)
 	fieldTypes := make(map[string]string)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap); err != nil {
+		if err := bindField(cfg, field, nil, fieldMap, templateFieldsMap, false); err != nil {
 			return nil, err
 		}
 
@@ -102,10 +97,15 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) 
 	// Roll into slice of emit functions
 	emitters := make([]emitter, 0, len(fieldMap))
 	for _, fieldName := range orderedFields {
-		emitters = append(emitters, emitter{fieldName: fieldName, fieldType: fieldTypes[fieldName], emitFunc: fieldMap[fieldName]})
+		emitters = append(emitters, emitter{
+			fieldName: fieldName,
+			fieldType: fieldTypes[fieldName],
+			emitFunc:  fieldMap[fieldName],
+			state:     NewGenState(),
+		})
 	}
 
-	return &GeneratorWithCustomTemplate{emitters: emitters, templatePrefixes: templateFieldsMap, trailingTemplate: trailingTemplate, state: state}, nil
+	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate}, nil
 }
 
 func (gen GeneratorWithCustomTemplate) Close() error {
@@ -113,7 +113,6 @@ func (gen GeneratorWithCustomTemplate) Close() error {
 }
 
 func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
-	state = gen.state
 	if err := gen.emit(buf); err != nil {
 		return err
 	}
@@ -123,22 +122,9 @@ func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) 
 
 func (gen GeneratorWithCustomTemplate) emit(buf *bytes.Buffer) error {
 	for _, e := range gen.emitters {
-		value, err := e.emitFunc(gen.state, buf)
-		if err != nil {
+		if err := e.emitFunc(e.state, buf); err != nil {
 			return err
 		}
-
-		prefix, ok := gen.templatePrefixes[e.fieldName]
-		if ok {
-			buf.Write(prefix)
-		}
-		if e.fieldType != FieldTypeDate {
-			buf.Write([]byte(fmt.Sprintf("%v", value)))
-		} else {
-			vdate := value.(time.Time)
-			buf.Write([]byte(vdate.Format(FieldTypeTimeLayout)))
-		}
-
 	}
 
 	buf.Write(gen.trailingTemplate)

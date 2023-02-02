@@ -14,17 +14,17 @@ import (
 // GeneratorWithTextTemplate
 type GeneratorWithTextTemplate struct {
 	closed  chan struct{}
-	bindMap map[string]chan interface{}
+	bindMap map[string]chan any
 	tpl     *template.Template
 }
 
 func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*GeneratorWithTextTemplate, error) {
 	// Preprocess the fields, generating appropriate emit channels
 	closedChan := make(chan struct{})
-	fieldMap := make(map[string]EmitF)
+	fieldMap := make(map[string]any)
 	bindMap := make(map[string]chan interface{})
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, nil, nil, true); err != nil {
+		if err := bindField(cfg, field, fieldMap, true); err != nil {
 			return nil, err
 		}
 
@@ -46,7 +46,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 					bindChan <- value
 				}
 			}
-		}(bindChan, closedChan, fieldMap[field.Name])
+		}(bindChan, closedChan, fieldMap[field.Name].(EmitF))
 	}
 
 	t := template.New("generator")

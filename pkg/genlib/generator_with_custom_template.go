@@ -14,6 +14,7 @@ type emitter struct {
 	fieldType string
 	emitFunc  emitFNotReturn
 	state     *GenState
+	prefix    []byte
 }
 
 // GeneratorWithCustomTemplate is resolved at construction to a slice of emit functions
@@ -84,10 +85,10 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) 
 	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
 
 	// Preprocess the fields, generating appropriate emit functions
-	fieldMap := make(map[string]emitFNotReturn)
+	fieldMap := make(map[string]any)
 	fieldTypes := make(map[string]string)
 	for _, field := range fields {
-		if err := bindField(cfg, field, nil, fieldMap, templateFieldsMap, false); err != nil {
+		if err := bindField(cfg, field, fieldMap, false); err != nil {
 			return nil, err
 		}
 
@@ -100,8 +101,9 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) 
 		emitters = append(emitters, emitter{
 			fieldName: fieldName,
 			fieldType: fieldTypes[fieldName],
-			emitFunc:  fieldMap[fieldName],
+			emitFunc:  fieldMap[fieldName].(emitFNotReturn),
 			state:     NewGenState(),
+			prefix:    templateFieldsMap[fieldName],
 		})
 	}
 
@@ -122,6 +124,7 @@ func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) 
 
 func (gen GeneratorWithCustomTemplate) emit(buf *bytes.Buffer) error {
 	for _, e := range gen.emitters {
+		buf.Write(e.prefix)
 		if err := e.emitFunc(e.state, buf); err != nil {
 			return err
 		}

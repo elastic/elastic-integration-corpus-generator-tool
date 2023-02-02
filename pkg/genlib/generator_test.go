@@ -124,22 +124,40 @@ func Benchmark_GeneratorCustomTemplateVPCFlowLogs(b *testing.B) {
 - name: AccountID
   value: 627286350134
 - name: InterfaceID
-  cardinality: 10
+  cardinality:
+    numerator: 1
+    denominator: 100
 - name: SrcAddr
-  cardinality: 1
+  cardinality:
+    numerator: 1
+    denominator: 1000
 - name: DstAddr
-  cardinality: 100
+  cardinality:
+    numerator: 1
+    denominator: 10
 - name: SrcPort
-  range: 65535
+  range:
+    min: 0
+    max: 65535
 - name: DstPort
-  range: 65535
-  cardinality: 100
+  range:
+    min: 0
+    max: 65535
+  cardinality:
+    numerator: 1
+    denominator: 10
 - name: Protocol
-  range: 256
+  range:
+    min: 1
+    max: 256
 - name: Packets
-  range: 1048576
+  range:
+    min: 1 
+    max: 1048576
 - name: Bytes
-  range: 15728640
+  range:
+    min: 1
+    max: 15728640
 - name: Action
   enum: ["ACCEPT", "REJECT"]
 - name: LogStatus
@@ -236,22 +254,40 @@ func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
 - name: AccountID
   value: 627286350134
 - name: InterfaceID
-  cardinality: 10
+  cardinality:
+    numerator: 1
+    denominator: 100
 - name: SrcAddr
-  cardinality: 1
+  cardinality:
+    numerator: 1
+    denominator: 1000
 - name: DstAddr
-  cardinality: 100
+  cardinality:
+    numerator: 1
+    denominator: 10
 - name: SrcPort
-  range: 65535
+  range:
+    min: 0
+    max: 65535
 - name: DstPort
-  range: 65535
-  cardinality: 100
+  range:
+    min: 0
+    max: 65535
+  cardinality:
+    numerator: 1
+    denominator: 10
 - name: Protocol
-  range: 256
+  range:
+    min: 1
+    max: 256
 - name: Packets
-  range: 1048576
+  range:
+    min: 1
+    max: 1048576
 - name: Bytes
-  range: 15728640
+  range:
+    min: 1
+    max: 15728640
 - name: Action
   enum: ["ACCEPT", "REJECT"]
 - name: LogStatus

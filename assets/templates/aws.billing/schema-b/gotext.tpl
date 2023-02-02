@@ -1,11 +1,14 @@
-{{- $currency := generate "aws.billing.currency"}}
+{{- $currency := generate "aws.billing.currency" }}
+{{- $groupBy := generate "aws.billing.group_definition.key" }}
+{{- $period := generate "metricset.period" }}
+{{- $cloudId := generate "cloud.account.id"}}
 {
     "@timestamp": "{{generate "timestamp"}}",
     "cloud": {
         "provider": "aws",
         "region": "{{generate "cloud.region"}}",
         "account": {
-            "id": "{{generate "cloud.account.id"}}",
+            "id": "{{$cloudId}}",
             "name": "{{generate "cloud.account.name"}}"
         }
     },
@@ -16,22 +19,27 @@
     },
     "metricset": {
         "name": "billing",
-        "period": {{generate "metricset.period"}}
+        "period": {{$period}}
     },
     "ecs": {
         "version": "8.2.0"
     },
     "aws": {
         "billing": {
+{{- if eq $groupBy "" }}
             "Currency": "{{$currency}}",
             "EstimatedCharges": {{generate "aws.billing.EstimatedCharges"}},
-            "ServiceName": "{{generate "aws.billing.ServiceName"}}",
+            "ServiceName": "{{generate "aws.billing.ServiceName"}}"
+{{- else }}
+{{- $sd := generate "aws.billing.start_date" }}
+            "start_date": "{{ $sd }}",
+            "end_date": "{{ $sd | date_modify (print $period "s") }}",
             "AmortizedCost": {
-                "amount": {{generate "aws.billing.AmortizedCost.amount"}},
-                "unit": "USD"
+                "amount": {{printf "%.2f" (generate "aws.billing.AmortizedCost.amount")}},
+                "unit": "{{$currency}}"
             },
             "BlendedCost": {
-                "amount": {{generate "aws.billing.BlendedCost.amount"}},
+                "amount": {{printf "%.2f" (generate "aws.billing.BlendedCost.amount")}},
                 "unit": "{{$currency}}"
             },
             "NormalizedUsageAmount": {
@@ -39,13 +47,29 @@
                 "unit": "N/A"
             },
             "UnblendedCost": {
-                "amount": {{generate "aws.billing.UnblendedCost.amount"}},
+                "amount": {{printf "%.2f" (generate "aws.billing.UnblendedCost.amount")}},
                 "unit": "{{$currency}}"
             },
             "UsageQuantity": {
                 "amount": {{generate "aws.billing.UsageQuantity.amount"}},
                 "unit": "N/A"
+            },
+            "group_definition": {
+              "key": "{{$groupBy}}",
+              "type": "{{generate "aws.billing.group_definition.type"}}"
+            },
+            "group_by": {
+{{- if eq $groupBy "AZ"}}
+              "AZ": "{{generate "aws.billing.group_by.AZ"}}"
+{{- else if eq $groupBy "INSTANCE_TYPE"}}
+              "INSTANCE_TYPE": "{{generate "aws.billing.group_by.INSTANCE_TYPE"}}"
+{{- else if eq $groupBy "SERVICE"}}
+              "SERVICE": "{{generate "aws.billing.group_by.SERVICE"}}"
+{{- else if eq $groupBy "LINKED_ACCOUNT"}}
+              "LINKED_ACCOUNT": "{{$cloudId}}"
+{{- end}}
             }
+{{- end}}
         }
     },
     "service": {

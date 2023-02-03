@@ -6,6 +6,7 @@ package genlib
 
 import (
 	"bytes"
+	"runtime"
 	"github.com/Masterminds/sprig/v3"
 	"text/template"
 	"time"
@@ -20,30 +21,36 @@ type GeneratorWithTextTemplate struct {
 
 func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*GeneratorWithTextTemplate, error) {
 	// Preprocess the fields, generating appropriate emit channels
+	chanSize := runtime.GOMAXPROCS(0) / 2
+	if chanSize < 1 {
+		chanSize = 1
+	}
+
 	closedChan := make(chan struct{})
 	fieldMap := make(map[string]any)
-	bindMap := make(map[string]chan interface{})
+	bindMap := make(map[string]chan any)
 	for _, field := range fields {
 		if err := bindField(cfg, field, fieldMap, true); err != nil {
 			return nil, err
 		}
 
-		bindChan := make(chan interface{})
+
+		bindChan := make(chan any)
 		bindMap[field.Name] = bindChan
-		go func(bindChan chan interface{}, closedChan chan struct{}, bindF EmitF) {
+		go func(bindChan chan any, closedChan chan struct{}, bindF EmitF) {
 			state := newGenState()
 
 			for {
+				// now := time.Now()
 				select {
 				case <-closedChan:
 					return
 				default:
-					value, err := bindF(state, nil)
-					if err != nil {
-						bindChan <- ""
-						continue
-					}
+					// time.Sleep(time.Millisecond)
+					value := bindF(state)
+					// fmt.Printf("pre chan: %v\n", now.Sub(time.Now()))
 					bindChan <- value
+					// fmt.Printf("pos chan: %v\n", now.Sub(time.Now()))
 				}
 			}
 		}(bindChan, closedChan, fieldMap[field.Name].(EmitF))
@@ -58,7 +65,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 		return time.Duration(duration)
 	}
 
-	templateFns["generate"] = func(field string) interface{} {
+	templateFns["generate"] = func(field string) any {
 		bindChan, ok := bindMap[field]
 		if !ok {
 			return ""

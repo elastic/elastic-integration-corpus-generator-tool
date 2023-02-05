@@ -6,6 +6,7 @@ package genlib
 
 import (
 	"bytes"
+	"io"
 	"regexp"
 )
 
@@ -19,6 +20,8 @@ type emitter struct {
 
 // GeneratorWithCustomTemplate is resolved at construction to a slice of emit functions
 type GeneratorWithCustomTemplate struct {
+	counter          uint64
+	totEvents        uint64
 	emitters         []emitter
 	trailingTemplate []byte
 }
@@ -80,7 +83,7 @@ func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) 
 
 }
 
-func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) (*GeneratorWithCustomTemplate, error) {
+func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, totSize uint64) (*GeneratorWithCustomTemplate, error) {
 	// Parse the template and extract relevant information
 	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
 
@@ -107,7 +110,30 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) 
 		})
 	}
 
-	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate}, nil
+	// Generate a single event to calculate the total number of events based on its size
+	buf := bytes.NewBufferString("")
+	for _, e := range emitters {
+		buf.Write(e.prefix)
+		state := newGenState()
+		if err := e.emitFunc(state, buf); err != nil {
+			return nil, err
+		}
+	}
+
+	buf.Write(trailingTemplate)
+
+	var totEvents uint64
+	singleEventSize := uint64(buf.Len())
+	if singleEventSize == 0 {
+		totEvents = 1
+	} else {
+		totEvents = totSize / singleEventSize
+		if totEvents < 1 {
+			totEvents = 1
+		}
+	}
+
+	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate, totEvents: totEvents}, nil
 }
 
 func (gen GeneratorWithCustomTemplate) Close() error {
@@ -123,13 +149,20 @@ func (gen GeneratorWithCustomTemplate) Emit(buf *bytes.Buffer) error {
 }
 
 func (gen GeneratorWithCustomTemplate) emit(buf *bytes.Buffer) error {
-	for _, e := range gen.emitters {
-		buf.Write(e.prefix)
-		if err := e.emitFunc(e.state, buf); err != nil {
-			return err
+	if gen.counter < gen.totEvents {
+		for _, e := range gen.emitters {
+			buf.Write(e.prefix)
+			if err := e.emitFunc(e.state, buf); err != nil {
+				return err
+			}
 		}
+
+		buf.Write(gen.trailingTemplate)
+	} else {
+		return io.EOF
 	}
 
-	buf.Write(gen.trailingTemplate)
+	gen.counter += 1
+
 	return nil
 }

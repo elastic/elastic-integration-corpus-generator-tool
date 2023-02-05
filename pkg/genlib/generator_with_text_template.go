@@ -6,60 +6,96 @@ package genlib
 
 import (
 	"bytes"
-	"runtime"
 	"github.com/Masterminds/sprig/v3"
+	"io"
+	"runtime"
 	"text/template"
 	"time"
 )
 
 // GeneratorWithTextTemplate
 type GeneratorWithTextTemplate struct {
-	closed  chan struct{}
-	bindMap map[string]chan any
-	tpl     *template.Template
+	counter   uint64
+	totEvents uint64
+	bindMap   map[string]chan any
+	tpl       *template.Template
 }
 
-func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*GeneratorWithTextTemplate, error) {
-	// Preprocess the fields, generating appropriate emit channels
+func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize uint64) (*GeneratorWithTextTemplate, error) {
+	// Preprocess the fields, generating appropriate bound function
+	fieldMap := make(map[string]any)
+	for _, field := range fields {
+		if err := bindField(cfg, field, fieldMap, true); err != nil {
+			return nil, err
+		}
+	}
+
+	// Generate a single event to calculate the total number of events based on its size
+	t := template.New("estimate_tot_events")
+	t = t.Option("missingkey=error")
+
+	templateFns := sprig.HermeticTxtFuncMap()
+
+	templateFns["timeDuration"] = func(duration int64) time.Duration {
+		return time.Duration(duration)
+	}
+
+	templateFns["generate"] = func(field string) any {
+		state := newGenState()
+		bindF, ok := fieldMap[field].(EmitF)
+		if !ok {
+			return ""
+		}
+
+		return bindF(state)
+	}
+
+	parsedTpl, err := t.Funcs(templateFns).Parse(string(tpl))
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewBufferString("")
+	err = parsedTpl.Execute(buf, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var totEvents uint64
+	singleEventSize := uint64(buf.Len())
+	if singleEventSize == 0 {
+		totEvents = 1
+	} else {
+		totEvents = totSize / singleEventSize
+		if totEvents < 1 {
+			totEvents = 1
+		}
+	}
+
+	// Generate appropriate emit channels for each bound function
 	chanSize := runtime.GOMAXPROCS(0) / 2
 	if chanSize < 1 {
 		chanSize = 1
 	}
 
-	closedChan := make(chan struct{})
-	fieldMap := make(map[string]any)
 	bindMap := make(map[string]chan any)
 	for _, field := range fields {
-		if err := bindField(cfg, field, fieldMap, true); err != nil {
-			return nil, err
-		}
-
-
 		bindChan := make(chan any)
 		bindMap[field.Name] = bindChan
-		go func(bindChan chan any, closedChan chan struct{}, bindF EmitF) {
+		go func(bindChan chan any, totEvents uint64, bindF EmitF) {
 			state := newGenState()
 
-			for {
-				// now := time.Now()
-				select {
-				case <-closedChan:
-					return
-				default:
-					// time.Sleep(time.Millisecond)
-					value := bindF(state)
-					// fmt.Printf("pre chan: %v\n", now.Sub(time.Now()))
-					bindChan <- value
-					// fmt.Printf("pos chan: %v\n", now.Sub(time.Now()))
-				}
+			for i := uint64(0); i < totEvents; i++ {
+				value := bindF(state)
+				bindChan <- value
 			}
-		}(bindChan, closedChan, fieldMap[field.Name].(EmitF))
+		}(bindChan, totEvents, fieldMap[field.Name].(EmitF))
 	}
 
-	t := template.New("generator")
+	t = template.New("generator")
 	t = t.Option("missingkey=error")
 
-	templateFns := sprig.HermeticTxtFuncMap()
+	templateFns = sprig.HermeticTxtFuncMap()
 
 	templateFns["timeDuration"] = func(duration int64) time.Duration {
 		return time.Duration(duration)
@@ -74,17 +110,15 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 		return <-bindChan
 	}
 
-	parsedTpl, err := t.Funcs(templateFns).Parse(string(tpl))
+	parsedTpl, err = t.Funcs(templateFns).Parse(string(tpl))
 	if err != nil {
 		return nil, err
 	}
 
-	return &GeneratorWithTextTemplate{tpl: parsedTpl, bindMap: bindMap, closed: closedChan}, nil
+	return &GeneratorWithTextTemplate{tpl: parsedTpl, bindMap: bindMap, totEvents: totEvents}, nil
 }
 
 func (gen GeneratorWithTextTemplate) Close() error {
-	close(gen.closed)
-
 	return nil
 }
 
@@ -97,10 +131,16 @@ func (gen GeneratorWithTextTemplate) Emit(buf *bytes.Buffer) error {
 }
 
 func (gen GeneratorWithTextTemplate) emit(buf *bytes.Buffer) error {
-	err := gen.tpl.Execute(buf, nil)
-	if err != nil {
-		return err
+	if gen.counter < gen.totEvents {
+		err := gen.tpl.Execute(buf, nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		return io.EOF
 	}
+
+	gen.counter += 1
 
 	return nil
 }

@@ -3,14 +3,13 @@ package genlib
 import (
 	"bytes"
 	"fmt"
+	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 )
 
 func Test_ParseTemplate(t *testing.T) {
@@ -180,7 +179,7 @@ func Test_ParseTemplate(t *testing.T) {
 func Test_EmptyCaseWithCustomTemplate(t *testing.T) {
 	template, _ := generateCustomTemplateFromField(Config{}, []Field{})
 	t.Logf("with template: %s", string(template))
-	g := makeGeneratorWithCustomTemplate(t, Config{}, []Field{}, template)
+	g := makeGeneratorWithCustomTemplate(t, Config{}, []Field{}, template, 0)
 
 	var buf bytes.Buffer
 
@@ -248,12 +247,12 @@ func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
 			t.Fatal(err)
 		}
 
-		g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template)
+		nSpins := 16384
+		g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(len(template)*nSpins*1024))
 
 		vmapAlpha := make(map[any]int)
 		vmapBeta := make(map[any]int)
 
-		nSpins := 16384
 		for i := 0; i < nSpins; i++ {
 
 			var buf bytes.Buffer
@@ -530,7 +529,7 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 		}
 	}
 
-	g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fld}, template)
+	g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fld}, template, 0)
 
 	var buf bytes.Buffer
 
@@ -555,8 +554,8 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 	return v
 }
 
-func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte) Generator {
-	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields)
+func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totSize uint64) Generator {
+	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields, totSize)
 
 	if err != nil {
 		t.Fatal(err)

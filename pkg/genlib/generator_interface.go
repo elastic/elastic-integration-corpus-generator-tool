@@ -6,10 +6,8 @@ package genlib
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"crypto/sha256"
 	"fmt"
 	"github.com/Pallinder/go-randomdata"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
@@ -85,7 +83,7 @@ type genState struct {
 
 func newGenState() *genState {
 	return &genState{
-		prevCacheForDup: make(map[any]struct{}),
+		prevCacheForDup:      make(map[any]struct{}),
 		prevCacheCardinality: make([]any, 0),
 		pool: sync.Pool{
 			New: func() any {
@@ -654,7 +652,6 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]any) error {
 			nTries := 11 // "These go to 11."
 			var tmp bytes.Buffer
 			var value []byte
-			var sha256Hash string
 			for i := 0; i < nTries; i++ {
 
 				tmp.Reset()
@@ -663,16 +660,12 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]any) error {
 				}
 
 				value = tmp.Bytes()
-				h := sha256.New()
-    				h.Write(value)
-				sha256Hash = hex.EncodeToString(h.Sum(nil))
-
-				if !isDupeAny(state.prevCacheForDup, sha256Hash) {
+				if !isDupeAny(state.prevCacheForDup, string(value)) {
 					break
 				}
 			}
 
-			state.prevCacheForDup[sha256Hash] = struct{}{}
+			state.prevCacheForDup[string(value)] = struct{}{}
 			state.prevCacheCardinality = append(state.prevCacheCardinality, value)
 		}
 

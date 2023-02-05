@@ -140,6 +140,7 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 	}()
 
 	for {
+		buf.Truncate(len(createPayload))
 		err := evgen.Emit(buf)
 		if err == nil {
 			buf.WriteByte('\n')
@@ -153,7 +154,9 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 			return nil
 		}
 
-		return err
+		if err != nil {
+			return err
+		}
 	}
 }
 

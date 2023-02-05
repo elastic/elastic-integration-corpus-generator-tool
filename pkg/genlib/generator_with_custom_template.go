@@ -136,11 +136,11 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate, totEvents: totEvents}, nil
 }
 
-func (gen GeneratorWithCustomTemplate) Close() error {
+func (gen *GeneratorWithCustomTemplate) Close() error {
 	return nil
 }
 
-func (gen GeneratorWithCustomTemplate) Emit(buf *bytes.Buffer) error {
+func (gen *GeneratorWithCustomTemplate) Emit(buf *bytes.Buffer) error {
 	if err := gen.emit(buf); err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func (gen GeneratorWithCustomTemplate) Emit(buf *bytes.Buffer) error {
 	return nil
 }
 
-func (gen GeneratorWithCustomTemplate) emit(buf *bytes.Buffer) error {
+func (gen *GeneratorWithCustomTemplate) emit(buf *bytes.Buffer) error {
 	if gen.counter < gen.totEvents {
 		for _, e := range gen.emitters {
 			buf.Write(e.prefix)

@@ -118,11 +118,11 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 	return &GeneratorWithTextTemplate{tpl: parsedTpl, bindMap: bindMap, totEvents: totEvents}, nil
 }
 
-func (gen GeneratorWithTextTemplate) Close() error {
+func (gen *GeneratorWithTextTemplate) Close() error {
 	return nil
 }
 
-func (gen GeneratorWithTextTemplate) Emit(buf *bytes.Buffer) error {
+func (gen *GeneratorWithTextTemplate) Emit(buf *bytes.Buffer) error {
 	if err := gen.emit(buf); err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (gen GeneratorWithTextTemplate) Emit(buf *bytes.Buffer) error {
 	return nil
 }
 
-func (gen GeneratorWithTextTemplate) emit(buf *bytes.Buffer) error {
+func (gen *GeneratorWithTextTemplate) emit(buf *bytes.Buffer) error {
 	if gen.counter < gen.totEvents {
 		err := gen.tpl.Execute(buf, nil)
 		if err != nil {

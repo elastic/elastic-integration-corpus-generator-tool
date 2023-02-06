@@ -12,18 +12,17 @@ import (
 
 type emitter struct {
 	fieldName string
-	emitFunc  emitFNotReturn
 	fieldType string
-	state     *genState
+	emitFunc  emitFNotReturn
 	prefix    []byte
 }
 
 // GeneratorWithCustomTemplate is resolved at construction to a slice of emit functions
 type GeneratorWithCustomTemplate struct {
-	counter          uint64
 	totEvents        uint64
 	emitters         []emitter
 	trailingTemplate []byte
+	state            *GenState
 }
 
 func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) {
@@ -88,6 +87,7 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
 
 	// Preprocess the fields, generating appropriate emit functions
+	state := NewGenState()
 	fieldMap := make(map[string]any)
 	fieldTypes := make(map[string]string)
 	for _, field := range fields {
@@ -96,6 +96,8 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 		}
 
 		fieldTypes[field.Name] = field.Type
+		state.prevCacheForDup[field.Name] = make(map[any]struct{})
+		state.prevCacheCardinality[field.Name] = make([]any, 0)
 	}
 
 	// Roll into slice of emit functions
@@ -105,7 +107,6 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 			fieldName: fieldName,
 			emitFunc:  fieldMap[fieldName].(emitFNotReturn),
 			fieldType: fieldTypes[fieldName],
-			state:     newGenState(),
 			prefix:    templateFieldsMap[fieldName],
 		})
 	}
@@ -114,7 +115,9 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 	buf := bytes.NewBufferString("")
 	for _, e := range emitters {
 		buf.Write(e.prefix)
-		state := newGenState()
+		state := NewGenState()
+		state.prevCacheForDup[e.fieldName] = make(map[any]struct{})
+		state.prevCacheCardinality[e.fieldName] = make([]any, 0)
 		if err := e.emitFunc(state, buf); err != nil {
 			return nil, err
 		}
@@ -133,26 +136,29 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 		}
 	}
 
-	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate, totEvents: totEvents}, nil
+	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate, totEvents: totEvents, state: state}, nil
 }
 
-func (gen *GeneratorWithCustomTemplate) Close() error {
+func (gen GeneratorWithCustomTemplate) Close() error {
 	return nil
 }
 
-func (gen *GeneratorWithCustomTemplate) Emit(buf *bytes.Buffer) error {
-	if err := gen.emit(buf); err != nil {
+func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
+	state = gen.state
+	if err := gen.emit(state, buf); err != nil {
 		return err
 	}
 
+	state.counter += 1
+
 	return nil
 }
 
-func (gen *GeneratorWithCustomTemplate) emit(buf *bytes.Buffer) error {
-	if gen.counter < gen.totEvents {
+func (gen GeneratorWithCustomTemplate) emit(state *GenState, buf *bytes.Buffer) error {
+	if state.counter < gen.totEvents {
 		for _, e := range gen.emitters {
 			buf.Write(e.prefix)
-			if err := e.emitFunc(e.state, buf); err != nil {
+			if err := e.emitFunc(state, buf); err != nil {
 				return err
 			}
 		}
@@ -161,8 +167,6 @@ func (gen *GeneratorWithCustomTemplate) emit(buf *bytes.Buffer) error {
 	} else {
 		return io.EOF
 	}
-
-	gen.counter += 1
 
 	return nil
 }

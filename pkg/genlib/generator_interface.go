@@ -58,33 +58,34 @@ var (
 )
 
 // This is the emit function for the custom template engine where we stream content directly to the output buffer and no need a return value
-type emitFNotReturn func(state *genState, buf *bytes.Buffer) error
+type emitFNotReturn func(state *GenState, buf *bytes.Buffer) error
 
 // EmitF Typedef of the internal emit function
-type EmitF func(state *genState) any
+type EmitF func(state *GenState) any
 
 type Generator interface {
-	Emit(buf *bytes.Buffer) error
+	Emit(state *GenState, buf *bytes.Buffer) error
 	Close() error
 }
 
-type genState struct {
+type GenState struct {
 	// event counter
 	counter uint64
 	// previous value cache; necessary for fuzziness, cardinality, etc.
-	prevCache any
+	prevCache map[string]any
 	// previous value cache for dup check; necessary for cardinality
-	prevCacheForDup map[any]struct{}
+	prevCacheForDup map[string]map[any]struct{}
 	// previous cardinality value cache; necessary for cardinality
-	prevCacheCardinality []any
+	prevCacheCardinality map[string][]any
 	// internal buffer pool to decrease load on GC
 	pool sync.Pool
 }
 
-func newGenState() *genState {
-	return &genState{
-		prevCacheForDup:      make(map[any]struct{}),
-		prevCacheCardinality: make([]any, 0),
+func NewGenState() *GenState {
+	return &GenState{
+		prevCache:            make(map[string]any),
+		prevCacheForDup:      make(map[string]map[any]struct{}),
+		prevCacheCardinality: make(map[string][]any, 0),
 		pool: sync.Pool{
 			New: func() any {
 				return new(bytes.Buffer)
@@ -386,11 +387,11 @@ func randGeoPointWithReturn() string {
 
 func bindConstantKeyword(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		value, ok := state.prevCache.(string)
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
+		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
 			value = randomdata.Noun()
-			state.prevCache = value
+			state.prevCache[field.Name] = value
 		}
 		buf.WriteString(value)
 		return nil
@@ -403,7 +404,7 @@ func bindConstantKeyword(field Field, fieldMap map[string]any) error {
 func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	if len(fieldCfg.Enum) > 0 {
 		var emitFNotReturn emitFNotReturn
-		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 			idx := rand.Intn(len(fieldCfg.Enum))
 			buf.WriteString(fieldCfg.Enum[idx])
 			return nil
@@ -428,7 +429,7 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 		return bindJoinRand(field, totWords, joiner, fieldMap)
 	} else {
 		var emitFNotReturn emitFNotReturn
-		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 			buf.WriteString(randomdata.Noun())
 			return nil
 		}
@@ -440,7 +441,7 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 
 func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		for i := 0; i < N-1; i++ {
 			buf.WriteString(randomdata.Noun())
 			buf.WriteString(joiner)
@@ -461,7 +462,7 @@ func bindStatic(field Field, v any, fieldMap map[string]any) error {
 	}
 
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		buf.Write(vstr)
 		return nil
 	}
@@ -472,7 +473,7 @@ func bindStatic(field Field, v any, fieldMap map[string]any) error {
 
 func bindBool(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		switch rand.Int() % 2 {
 		case 0:
 			buf.WriteString("false")
@@ -488,7 +489,7 @@ func bindBool(field Field, fieldMap map[string]any) error {
 
 func bindGeoPoint(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		return randGeoPoint(buf)
 	}
 
@@ -498,7 +499,7 @@ func bindGeoPoint(field Field, fieldMap map[string]any) error {
 
 func bindWordN(field Field, n int, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		genNounsN(rand.Intn(n), buf)
 		return nil
 	}
@@ -509,7 +510,7 @@ func bindWordN(field Field, n int, fieldMap map[string]any) error {
 
 func bindNearTime(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		offset := time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
 		newTime := time.Now().Add(offset)
 
@@ -522,7 +523,7 @@ func bindNearTime(field Field, fieldMap map[string]any) error {
 
 func bindIP(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		i0 := rand.Intn(255)
 		i1 := rand.Intn(255)
 		i2 := rand.Intn(255)
@@ -546,7 +547,7 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 
 	if fuzzinessNumerator <= 0 {
 		var emitFNotReturn emitFNotReturn
-		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 			v := make([]byte, 0, 32)
 			v = strconv.AppendInt(v, int64(dummyFunc()), 10)
 			buf.Write(v)
@@ -559,9 +560,9 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 	}
 
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		dummyInt := dummyFunc()
-		if previousDummyInt, ok := state.prevCache.(int); ok {
+		if previousDummyInt, ok := state.prevCache[field.Name].(int); ok {
 			adjustedRatio := float64(rand.Intn(fuzzinessNumerator)) / fuzzinessDenominator
 			if rand.Int()%2 == 0 {
 				adjustedRatio += 1.
@@ -570,7 +571,7 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 			}
 			dummyInt = int(math.Ceil(float64(previousDummyInt) * adjustedRatio))
 		}
-		state.prevCache = dummyInt
+		state.prevCache[field.Name] = dummyInt
 		v := make([]byte, 0, 32)
 		v = strconv.AppendInt(v, int64(dummyInt), 10)
 		buf.Write(v)
@@ -590,7 +591,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 
 	if fuzzinessNumerator <= 0 {
 		var emitFNotReturn emitFNotReturn
-		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 			dummyFloat := dummyFunc()
 			_, err := fmt.Fprintf(buf, "%f", dummyFloat)
 			return err
@@ -601,9 +602,9 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 	}
 
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		dummyFloat := dummyFunc()
-		if previousDummyFloat, ok := state.prevCache.(float64); ok {
+		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
 			adjustedRatio := float64(rand.Intn(fuzzinessNumerator)) / fuzzinessDenominator
 			if rand.Int()%2 == 0 {
 				adjustedRatio += 1.
@@ -612,7 +613,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 			}
 			dummyFloat = previousDummyFloat * adjustedRatio
 		}
-		state.prevCache = dummyFloat
+		state.prevCache[field.Name] = dummyFloat
 		_, err := fmt.Fprintf(buf, "%f", dummyFloat)
 
 		return err
@@ -643,9 +644,9 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]any) error {
 	}
 
 	var emitFNotReturn emitFNotReturn
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		// Have we rolled over once?  If not, generate a value and cache it.
-		if len(state.prevCacheCardinality) < cardinality {
+		if len(state.prevCacheCardinality[field.Name]) < cardinality {
 
 			// Do college try dupe detection on value;
 			// Allow dupe if no unique value in nTries.
@@ -660,24 +661,24 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]any) error {
 				}
 
 				value = tmp.Bytes()
-				if !isDupeAny(state.prevCacheForDup, string(value)) {
+				if !isDupeAny(state.prevCacheForDup[field.Name], string(value)) {
 					break
 				}
 			}
 
-			state.prevCacheForDup[string(value)] = struct{}{}
-			state.prevCacheCardinality = append(state.prevCacheCardinality, value)
+			state.prevCacheForDup[field.Name][string(value)] = struct{}{}
+			state.prevCacheCardinality[field.Name] = append(state.prevCacheCardinality[field.Name], value)
 		}
 
 		idx := int(state.counter % uint64(cardinality))
 		state.counter += 1
 
 		// Safety check; should be a noop
-		if idx >= len(state.prevCacheCardinality) {
-			idx = len(state.prevCacheCardinality) - 1
+		if idx >= len(state.prevCacheCardinality[field.Name]) {
+			idx = len(state.prevCacheCardinality[field.Name]) - 1
 		}
 
-		choice := state.prevCacheCardinality[idx].([]byte)
+		choice := state.prevCacheCardinality[field.Name][idx].([]byte)
 		buf.Write(choice)
 		return nil
 	}
@@ -687,7 +688,7 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]any) error {
 }
 
 func makeDynamicStub(boundF any) emitFNotReturn {
-	return func(state *genState, buf *bytes.Buffer) error {
+	return func(state *GenState, buf *bytes.Buffer) error {
 		v := state.pool.Get()
 		tmp := v.(*bytes.Buffer)
 		tmp.Reset()
@@ -711,18 +712,18 @@ func makeDynamicStub(boundF any) emitFNotReturn {
 }
 
 func makeDynamicStubWithReturn(boundF any) EmitF {
-	return func(state *genState) any {
+	return func(state *GenState) any {
 		return boundF.(EmitF)(state)
 	}
 }
 
 func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF EmitF
-	emitF = func(state *genState) any {
-		value, ok := state.prevCache.(string)
+	emitF = func(state *GenState) any {
+		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
 			value = randomdata.Noun()
-			state.prevCache = value
+			state.prevCache[field.Name] = value
 		}
 		return value
 	}
@@ -734,7 +735,7 @@ func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	if len(fieldCfg.Enum) > 0 {
 		var emitF EmitF
-		emitF = func(state *genState) any {
+		emitF = func(state *GenState) any {
 			idx := rand.Intn(len(fieldCfg.Enum))
 			return fieldCfg.Enum[idx]
 		}
@@ -758,7 +759,7 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 		return bindJoinRandWithReturn(field, totWords, joiner, fieldMap)
 	} else {
 		var emitF EmitF
-		emitF = func(state *genState) any {
+		emitF = func(state *GenState) any {
 			return randomdata.Noun()
 		}
 
@@ -769,7 +770,7 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 
 func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[string]any) error {
 	var emitF EmitF
-	emitF = func(state *genState) any {
+	emitF = func(state *GenState) any {
 		value := ""
 		for i := 0; i < N-1; i++ {
 			value += randomdata.Noun() + joiner
@@ -786,7 +787,7 @@ func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[stri
 
 func bindStaticWithReturn(field Field, v any, fieldMap map[string]any) error {
 	var emitF EmitF
-	emitF = func(state *genState) any {
+	emitF = func(state *GenState) any {
 		return v
 	}
 
@@ -796,7 +797,7 @@ func bindStaticWithReturn(field Field, v any, fieldMap map[string]any) error {
 
 func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF EmitF
-	emitF = func(state *genState) any {
+	emitF = func(state *GenState) any {
 		switch rand.Int() % 2 {
 		case 0:
 			return false
@@ -811,7 +812,7 @@ func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
 
 func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF EmitF
-	emitF = func(state *genState) any {
+	emitF = func(state *GenState) any {
 		return randGeoPointWithReturn()
 	}
 
@@ -822,7 +823,7 @@ func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
 
 func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
 	var emitF EmitF
-	emitF = func(state *genState) any {
+	emitF = func(state *GenState) any {
 		return genNounsNWithReturn(rand.Intn(n))
 	}
 	fieldMap[field.Name] = emitF
@@ -831,7 +832,7 @@ func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
 
 func bindNearTimeWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF EmitF
-	emitF = func(state *genState) any {
+	emitF = func(state *GenState) any {
 		offset := time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
 		newTime := time.Now().Add(offset)
 
@@ -843,7 +844,7 @@ func bindNearTimeWithReturn(field Field, fieldMap map[string]any) error {
 
 func bindIPWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF EmitF
-	emitF = func(state *genState) any {
+	emitF = func(state *GenState) any {
 		i0 := rand.Intn(255)
 		i1 := rand.Intn(255)
 		i2 := rand.Intn(255)
@@ -865,7 +866,7 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 
 	if fuzzinessNumerator <= 0 {
 		var emitF EmitF
-		emitF = func(state *genState) any {
+		emitF = func(state *GenState) any {
 			return dummyFunc()
 		}
 
@@ -874,16 +875,16 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	}
 
 	var emitF EmitF
-	emitF = func(state *genState) any {
+	emitF = func(state *GenState) any {
 		dummyInt := dummyFunc()
-		if previousDummyInt, ok := state.prevCache.(int); ok {
+		if previousDummyInt, ok := state.prevCache[field.Name].(int); ok {
 			adjustedRatio := 1. - float64(rand.Intn(fuzzinessNumerator))/fuzzinessDenominator
 			if rand.Int()%2 == 0 {
 				adjustedRatio = 1. + float64(rand.Intn(fuzzinessNumerator))/fuzzinessDenominator
 			}
 			dummyInt = int(math.Ceil(float64(previousDummyInt) * adjustedRatio))
 		}
-		state.prevCache = dummyInt
+		state.prevCache[field.Name] = dummyInt
 		return dummyInt
 	}
 
@@ -900,7 +901,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 
 	if fuzzinessNumerator <= 0 {
 		var emitF EmitF
-		emitF = func(state *genState) any {
+		emitF = func(state *GenState) any {
 			return dummyFunc()
 		}
 
@@ -910,16 +911,16 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	}
 
 	var emitF EmitF
-	emitF = func(state *genState) any {
+	emitF = func(state *GenState) any {
 		dummyFloat := dummyFunc()
-		if previousDummyFloat, ok := state.prevCache.(float64); ok {
+		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
 			adjustedRatio := 1. - float64(rand.Intn(fuzzinessNumerator))/fuzzinessDenominator
 			if rand.Int()%2 == 0 {
 				adjustedRatio = 1. + float64(rand.Intn(fuzzinessNumerator))/fuzzinessDenominator
 			}
 			dummyFloat = previousDummyFloat * adjustedRatio
 		}
-		state.prevCache = dummyFloat
+		state.prevCache[field.Name] = dummyFloat
 		return dummyFloat
 	}
 
@@ -945,35 +946,34 @@ func bindCardinalityWithReturn(cfg Config, field Field, fieldMap map[string]any)
 	// We will wrap the function we just generated
 	boundFWithReturn := fieldMap[field.Name].(EmitF)
 	var emitF EmitF
-	emitF = func(state *genState) any {
+	emitF = func(state *GenState) any {
 		var value any
 		// Have we rolled over once?  If not, generate a value and cache it.
-		if len(state.prevCacheCardinality) < cardinality {
-
+		if len(state.prevCacheCardinality[field.Name]) < cardinality {
 			// Do college try dupe detection on value;
 			// Allow dupe if no unique value in nTries.
 			nTries := 11 // "These go to 11."
 			for i := 0; i < nTries; i++ {
 				value = boundFWithReturn(state)
 
-				if !isDupeAny(state.prevCacheForDup, value) {
+				if !isDupeAny(state.prevCacheForDup[field.Name], value) {
 					break
 				}
 			}
 
-			state.prevCacheForDup[value] = struct{}{}
-			state.prevCacheCardinality = append(state.prevCacheCardinality, value)
+			state.prevCacheForDup[field.Name][value] = struct{}{}
+			state.prevCacheCardinality[field.Name] = append(state.prevCacheCardinality[field.Name], value)
 		}
 
 		idx := int(state.counter % uint64(cardinality))
 		state.counter += 1
 
 		// Safety check; should be a noop
-		if idx >= len(state.prevCacheCardinality) {
-			idx = len(state.prevCacheCardinality) - 1
+		if idx >= len(state.prevCacheCardinality[field.Name]) {
+			idx = len(state.prevCacheCardinality[field.Name]) - 1
 		}
 
-		choice := state.prevCacheCardinality[idx]
+		choice := state.prevCacheCardinality[field.Name][idx]
 
 		return choice
 	}

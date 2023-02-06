@@ -179,11 +179,11 @@ func Test_ParseTemplate(t *testing.T) {
 func Test_EmptyCaseWithCustomTemplate(t *testing.T) {
 	template, _ := generateCustomTemplateFromField(Config{}, []Field{})
 	t.Logf("with template: %s", string(template))
-	g := makeGeneratorWithCustomTemplate(t, Config{}, []Field{}, template, 0)
+	g, state := makeGeneratorWithCustomTemplate(t, Config{}, []Field{}, template, 0)
 
 	var buf bytes.Buffer
 
-	if err := g.Emit(&buf); err != nil {
+	if err := g.Emit(state, &buf); err != nil {
 		t.Fatal(err)
 	}
 
@@ -248,7 +248,7 @@ func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
 		}
 
 		nSpins := 16384
-		g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(len(template)*nSpins*1024))
+		g, state := makeGeneratorWithCustomTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(len(template)*nSpins*1024))
 
 		vmapAlpha := make(map[any]int)
 		vmapBeta := make(map[any]int)
@@ -256,7 +256,7 @@ func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
 		for i := 0; i < nSpins; i++ {
 
 			var buf bytes.Buffer
-			if err := g.Emit(&buf); err != nil {
+			if err := g.Emit(state, &buf); err != nil {
 				t.Fatal(err)
 			}
 
@@ -529,11 +529,11 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 		}
 	}
 
-	g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fld}, template, 0)
+	g, state := makeGeneratorWithCustomTemplate(t, cfg, []Field{fld}, template, 0)
 
 	var buf bytes.Buffer
 
-	if err := g.Emit(&buf); err != nil {
+	if err := g.Emit(state, &buf); err != nil {
 		t.Fatal(err)
 	}
 
@@ -554,12 +554,12 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 	return v
 }
 
-func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totSize uint64) Generator {
+func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totSize uint64) (Generator, *GenState) {
 	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields, totSize)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return g
+	return g, NewGenState()
 }

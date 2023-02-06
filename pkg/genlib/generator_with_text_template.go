@@ -8,26 +8,28 @@ import (
 	"bytes"
 	"github.com/Masterminds/sprig/v3"
 	"io"
-	"runtime"
 	"text/template"
 	"time"
 )
 
 // GeneratorWithTextTemplate
 type GeneratorWithTextTemplate struct {
-	counter   uint64
-	totEvents uint64
-	bindMap   map[string]chan any
 	tpl       *template.Template
+	state     *GenState
+	totEvents uint64
 }
 
 func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize uint64) (*GeneratorWithTextTemplate, error) {
 	// Preprocess the fields, generating appropriate bound function
+	state := NewGenState()
 	fieldMap := make(map[string]any)
 	for _, field := range fields {
 		if err := bindField(cfg, field, fieldMap, true); err != nil {
 			return nil, err
 		}
+
+		state.prevCacheForDup[field.Name] = make(map[any]struct{})
+		state.prevCacheCardinality[field.Name] = make([]any, 0)
 	}
 
 	// Generate a single event to calculate the total number of events based on its size
@@ -41,7 +43,9 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 	}
 
 	templateFns["generate"] = func(field string) any {
-		state := newGenState()
+		state := NewGenState()
+		state.prevCacheForDup[field] = make(map[any]struct{})
+		state.prevCacheCardinality[field] = make([]any, 0)
 		bindF, ok := fieldMap[field].(EmitF)
 		if !ok {
 			return ""
@@ -72,26 +76,6 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 		}
 	}
 
-	// Generate appropriate emit channels for each bound function
-	chanSize := runtime.GOMAXPROCS(0) / 2
-	if chanSize < 1 {
-		chanSize = 1
-	}
-
-	bindMap := make(map[string]chan any)
-	for _, field := range fields {
-		bindChan := make(chan any)
-		bindMap[field.Name] = bindChan
-		go func(bindChan chan any, totEvents uint64, bindF EmitF) {
-			state := newGenState()
-
-			for i := uint64(0); i < totEvents; i++ {
-				value := bindF(state)
-				bindChan <- value
-			}
-		}(bindChan, totEvents, fieldMap[field.Name].(EmitF))
-	}
-
 	t = template.New("generator")
 	t = t.Option("missingkey=error")
 
@@ -102,12 +86,12 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 	}
 
 	templateFns["generate"] = func(field string) any {
-		bindChan, ok := bindMap[field]
+		bindF, ok := fieldMap[field].(EmitF)
 		if !ok {
 			return ""
 		}
 
-		return <-bindChan
+		return bindF(state)
 	}
 
 	parsedTpl, err = t.Funcs(templateFns).Parse(string(tpl))
@@ -115,23 +99,26 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 		return nil, err
 	}
 
-	return &GeneratorWithTextTemplate{tpl: parsedTpl, bindMap: bindMap, totEvents: totEvents}, nil
+	return &GeneratorWithTextTemplate{tpl: parsedTpl, totEvents: totEvents, state: state}, nil
 }
 
-func (gen *GeneratorWithTextTemplate) Close() error {
+func (gen GeneratorWithTextTemplate) Close() error {
 	return nil
 }
 
-func (gen *GeneratorWithTextTemplate) Emit(buf *bytes.Buffer) error {
-	if err := gen.emit(buf); err != nil {
+func (gen GeneratorWithTextTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
+	state = gen.state
+	if err := gen.emit(state, buf); err != nil {
 		return err
 	}
 
+	state.counter += 1
+
 	return nil
 }
 
-func (gen *GeneratorWithTextTemplate) emit(buf *bytes.Buffer) error {
-	if gen.counter < gen.totEvents {
+func (gen GeneratorWithTextTemplate) emit(state *GenState, buf *bytes.Buffer) error {
+	if state.counter < gen.totEvents {
 		err := gen.tpl.Execute(buf, nil)
 		if err != nil {
 			return err
@@ -139,8 +126,6 @@ func (gen *GeneratorWithTextTemplate) emit(buf *bytes.Buffer) error {
 	} else {
 		return io.EOF
 	}
-
-	gen.counter += 1
 
 	return nil
 }

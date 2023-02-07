@@ -671,7 +671,6 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]any) error {
 		}
 
 		idx := int(state.counter % uint64(cardinality))
-		state.counter += 1
 
 		// Safety check; should be a noop
 		if idx >= len(state.prevCacheCardinality[field.Name]) {
@@ -966,7 +965,6 @@ func bindCardinalityWithReturn(cfg Config, field Field, fieldMap map[string]any)
 		}
 
 		idx := int(state.counter % uint64(cardinality))
-		state.counter += 1
 
 		// Safety check; should be a noop
 		if idx >= len(state.prevCacheCardinality[field.Name]) {

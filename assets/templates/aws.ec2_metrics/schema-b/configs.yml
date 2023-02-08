@@ -4,9 +4,9 @@
   cardinality:
     numerator: 1
     # we want every single different "dimension identifier", regardless of its type, to have always the same generated fixed "metadata" once the cardinality kicks in
-    # for this we must take the ordered highest enum length appending one by the ones that deos not have a 0 module between each others.
+    # for this we must take the ordered highest enum length appending one by obe the ones that does not have a 0 module between each others.
     # we start from the first two, multiple between their values and exclude from the order list the ones that have a 0 module on the result of the multiplication.
-    # we end up with the list of enum lengths those value, multiplied, define the least common multiple: this is the value we must use for the denominator of all fields.
+    # we end up with the list of enum lengths whose value, multiplied, define the least common multiple: this is the value we must use for the denominator of all fields.
     # in this case the remaining enum are two: `dimensionType` (40) and `region` (15), resulting in denominator `600`
     denominator: 600
 - name: Region
@@ -102,12 +102,19 @@
     numerator: 1
     denominator: 600
 - name: InstanceType
-  enum: []
+  enum: ["a1.medium", "c3.2xlarge", "c4.4xlarge", "c5.9xlarge", "c5a.12xlarge", "c5ad.16xlarge", "c5d.24xlarge", "c6a.32xlarge", "g5.48xlarge", "d2.2xlarge", "d3.xlarge", "t2.medium", "t2.micro", "t2.nano", "t2.small", "t3.large", "t3.medium", "t3.micro", "t3.nano", "t3.small"]
   cardinality:
     numerator: 1
     denominator: 600
 - name: instanceCoreCount
-  enum: ["1", "2", "4", "8", "16", "32", "64"]
+  # they map instance types
+  enum: ["1", "4", "8", "18", "24", "32", "48", "64", "96", "4", "2", "2", "1", "1", "1", "1", "1", "1", "1", "1"]
+  cardinality:
+    numerator: 1
+    denominator: 600
+- name: instanceThreadPerCore
+  # they map instance types
+  enum: ["1", "2", "2", " 2", " 2", " 2", " 2", " 2", " 2", "2", "2", "1", "1", "1", "1", "2", "2", "2", "2", "2"]
   cardinality:
     numerator: 1
     denominator: 600
@@ -144,11 +151,6 @@
 - name: instanceStateName
   # terminated: 10%, running: 90%
   enum: ["terminated", "running", "running", "running", "running", "running", "running", "running", "running", "running"]
-  cardinality:
-    numerator: 1
-    denominator: 600
-- name: instanceThreadPerCore
-  enum: ["1", "2"]
   cardinality:
     numerator: 1
     denominator: 600

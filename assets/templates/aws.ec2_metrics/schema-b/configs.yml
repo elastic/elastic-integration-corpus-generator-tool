@@ -101,20 +101,28 @@
   cardinality:
     numerator: 1
     denominator: 600
+- name: instanceTypeIdx
+  # we generate and index for the instance type enums, so that all the information related to a given type are properly matched
+  range:
+    min: 0
+    max: 19
+  cardinality:
+    numerator: 1
+    denominator: 600
 - name: InstanceType
-  enum: ["a1.medium", "c3.2xlarge", "c4.4xlarge", "c5.9xlarge", "c5a.12xlarge", "c5ad.16xlarge", "c5d.24xlarge", "c6a.32xlarge", "g5.48xlarge", "d2.2xlarge", "d3.xlarge", "t2.medium", "t2.micro", "t2.nano", "t2.small", "t3.large", "t3.medium", "t3.micro", "t3.nano", "t3.small"]
+  value: ["a1.medium", "c3.2xlarge", "c4.4xlarge", "c5.9xlarge", "c5a.12xlarge", "c5ad.16xlarge", "c5d.24xlarge", "c6a.32xlarge", "g5.48xlarge", "d2.2xlarge", "d3.xlarge", "t2.medium", "t2.micro", "t2.nano", "t2.small", "t3.large", "t3.medium", "t3.micro", "t3.nano", "t3.small"]
   cardinality:
     numerator: 1
     denominator: 600
 - name: instanceCoreCount
   # they map instance types
-  enum: ["1", "4", "8", "18", "24", "32", "48", "64", "96", "4", "2", "2", "1", "1", "1", "1", "1", "1", "1", "1"]
+  value: ["1", "4", "8", "18", "24", "32", "48", "64", "96", "4", "2", "2", "1", "1", "1", "1", "1", "1", "1", "1"]
   cardinality:
     numerator: 1
     denominator: 600
 - name: instanceThreadPerCore
   # they map instance types
-  enum: ["1", "2", "2", " 2", " 2", " 2", " 2", " 2", " 2", "2", "2", "1", "1", "1", "1", "2", "2", "2", "2", "2"]
+  value: ["1", "2", "2", " 2", " 2", " 2", " 2", " 2", " 2", "2", "2", "1", "1", "1", "1", "2", "2", "2", "2", "2"]
   cardinality:
     numerator: 1
     denominator: 600

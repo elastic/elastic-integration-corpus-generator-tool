@@ -54,7 +54,9 @@
 {{- $AutoScalingGroupName := generate "AutoScalingGroupName" }}
 {{- $ImageId := generate "ImageId" }}
 {{- $InstanceId := generate "InstanceId" }}
-{{- $InstanceType := generate "InstanceType" }}
+{{- $instanceTypeIdx := generate "instanceTypeIdx" }}
+{{- $InstanceTypeValues := generate "InstanceType" }}
+{{- $InstanceType := index $InstanceTypeValues $instanceTypeIdx }}
 {{- /*  metrics */ -}}
 {{- $StatusCheckFailed_InstanceAvg := generate "StatusCheckFailed_InstanceAvg" }}
 {{- $StatusCheckFailed_SystemAvg := generate "StatusCheckFailed_SystemAvg" }}
@@ -73,7 +75,10 @@
 {{- $DiskWriteBytesSum := generate "DiskWriteBytesSum" }}
 {{- $DiskWriteOpsSum := generate "DiskWriteOpsSum" }}
 {{- /*  instance data */ -}}
-{{- $instanceCoreCount := generate "instanceCoreCount" }}
+{{- $instanceCoreCountValues := generate "instanceCoreCount" }}
+{{- $instanceCoreCount := index $instanceCoreCountValues $instanceTypeIdx }}
+{{- $instanceThreadPerCoreValues := generate "instanceThreadPerCore" }}
+{{- $instanceThreadPerCore := index $instanceThreadPerCoreValues $instanceTypeIdx }}
 {{- $instanceImageId := generate "instanceImageId" }}
 {{- $instanceMonitoringState := generate "instanceMonitoringState" }}
 {{- $instancePrivateIP := generate "instancePrivateIP" }}
@@ -85,7 +90,6 @@
 {{- if eq $instanceStateName "running" }}
 {{- $instanceStateCode = 48 }}
 {{- end}}
-{{- $instanceThreadPerCore := generate "instanceThreadPerCore" }}
 {{- $cloudInstanceName := generate "cloudInstanceName" }}
 {{- /* rate period */ -}}
 {{- $period := 60. }}

@@ -43,7 +43,11 @@
   example: i-0af20a3fedc456530
 - name: InstanceType
   type: keyword
+- name: instanceTypeIdx
+  type: long
 - name: instanceCoreCount
+  type: keyword
+- name: instanceThreadPerCore
   type: keyword
 - name: instanceImageId
   type: keyword
@@ -59,8 +63,6 @@
 - name: instancePublicDnsEmpty
   type: keyword
 - name: instanceStateName
-  type: keyword
-- name: instanceThreadPerCore
   type: keyword
 - name: cloudInstanceName
   type: keyword

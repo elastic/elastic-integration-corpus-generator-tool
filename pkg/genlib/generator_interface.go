@@ -114,7 +114,7 @@ func bindField(cfg Config, field Field, fieldMapWithReturn map[string]EmitF, fie
 		}
 	}
 
-	if fieldCfg.Cardinality > 0 {
+	if fieldCfg.Cardinality.Numerator > 0 {
 		if withReturn {
 			return bindCardinalityWithReturn(cfg, field, fieldMapWithReturn)
 		} else {
@@ -213,14 +213,69 @@ func bindByTypeWithReturn(cfg Config, field Field, fieldMap map[string]EmitF) (e
 	return
 }
 
+func makeFloatFunc(fieldCfg ConfigField, field Field) func() float64 {
+	minValue := float64(0)
+	maxValue := float64(0)
+
+	switch fieldCfg.Range.Min.(type) {
+	case float64:
+		minValue = fieldCfg.Range.Min.(float64)
+	case uint64:
+		minValue = float64(fieldCfg.Range.Min.(uint64))
+	case int64:
+		minValue = float64(fieldCfg.Range.Min.(int64))
+	}
+
+	switch fieldCfg.Range.Max.(type) {
+	case float64:
+		maxValue = fieldCfg.Range.Max.(float64)
+	case uint64:
+		maxValue = float64(fieldCfg.Range.Max.(uint64))
+	case int64:
+		maxValue = float64(fieldCfg.Range.Max.(int64))
+	}
+
+	var dummyFunc func() float64
+
+	switch {
+	case maxValue > 0:
+		dummyFunc = func() float64 { return minValue + rand.Float64()*(maxValue-minValue) }
+	case len(field.Example) == 0:
+		dummyFunc = func() float64 { return rand.Float64() * 10 }
+	default:
+		totDigit := len(field.Example)
+		max := math.Pow10(totDigit)
+		dummyFunc = func() float64 {
+			return rand.Float64() * max
+		}
+	}
+
+	return dummyFunc
+}
+
 func makeIntFunc(fieldCfg ConfigField, field Field) func() int {
-	maxValue := fieldCfg.Range
+	minValue := 0
+	maxValue := 0
+
+	switch fieldCfg.Range.Min.(type) {
+	case uint64:
+		minValue = int(fieldCfg.Range.Min.(uint64))
+	case int64:
+		minValue = int(fieldCfg.Range.Min.(int64))
+	}
+
+	switch fieldCfg.Range.Max.(type) {
+	case uint64:
+		maxValue = int(fieldCfg.Range.Max.(uint64))
+	case int64:
+		maxValue = int(fieldCfg.Range.Max.(int64))
+	}
 
 	var dummyFunc func() int
 
 	switch {
 	case maxValue > 0:
-		dummyFunc = func() int { return rand.Intn(maxValue) }
+		dummyFunc = func() int { return rand.Intn(maxValue-minValue) + minValue }
 	case len(field.Example) == 0:
 		dummyFunc = func() int { return rand.Intn(10) }
 	default:
@@ -470,9 +525,10 @@ func bindLong(prefix []byte, fieldCfg ConfigField, field Field, fieldMap map[str
 
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
-	fuzziness := fieldCfg.Fuzziness
+	fuzzinessNumerator := float64(fieldCfg.Fuzziness.Numerator)
+	fuzzinessDenominator := float64(fieldCfg.Fuzziness.Denominator)
 
-	if fuzziness <= 0 {
+	if fuzzinessNumerator <= 0 {
 		fieldMap[field.Name] = func(state *GenState, buf *bytes.Buffer) error {
 			buf.Write(prefix)
 			v := make([]byte, 0, 32)
@@ -487,9 +543,11 @@ func bindLong(prefix []byte, fieldCfg ConfigField, field Field, fieldMap map[str
 	fieldMap[field.Name] = func(state *GenState, buf *bytes.Buffer) error {
 		dummyInt := dummyFunc()
 		if previousDummyInt, ok := state.prevCache[field.Name].(int); ok {
-			adjustedRatio := 1. - float64(rand.Intn(fuzziness))/100.
+			adjustedRatio := rand.Float64() * (fuzzinessNumerator / fuzzinessDenominator)
 			if rand.Int()%2 == 0 {
-				adjustedRatio = 1. + float64(rand.Intn(fuzziness))/100.
+				adjustedRatio += 1.
+			} else {
+				adjustedRatio = 1. - adjustedRatio
 			}
 			dummyInt = int(math.Ceil(float64(previousDummyInt) * adjustedRatio))
 		}
@@ -506,13 +564,14 @@ func bindLong(prefix []byte, fieldCfg ConfigField, field Field, fieldMap map[str
 
 func bindDouble(prefix []byte, fieldCfg ConfigField, field Field, fieldMap map[string]emitFNotReturn) error {
 
-	dummyFunc := makeIntFunc(fieldCfg, field)
+	dummyFunc := makeFloatFunc(fieldCfg, field)
 
-	fuzziness := fieldCfg.Fuzziness
+	fuzzinessNumerator := float64(fieldCfg.Fuzziness.Numerator)
+	fuzzinessDenominator := float64(fieldCfg.Fuzziness.Denominator)
 
-	if fuzziness <= 0 {
+	if fuzzinessNumerator <= 0 {
 		fieldMap[field.Name] = func(state *GenState, buf *bytes.Buffer) error {
-			dummyFloat := float64(dummyFunc()) / rand.Float64()
+			dummyFloat := dummyFunc()
 			buf.Write(prefix)
 			_, err := fmt.Fprintf(buf, "%f", dummyFloat)
 			return err
@@ -522,11 +581,13 @@ func bindDouble(prefix []byte, fieldCfg ConfigField, field Field, fieldMap map[s
 	}
 
 	fieldMap[field.Name] = func(state *GenState, buf *bytes.Buffer) error {
-		dummyFloat := float64(dummyFunc()) / rand.Float64()
+		dummyFloat := dummyFunc()
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
-			adjustedRatio := 1. - float64(rand.Intn(fuzziness))/100.
+			adjustedRatio := rand.Float64() * (fuzzinessNumerator / fuzzinessDenominator)
 			if rand.Int()%2 == 0 {
-				adjustedRatio = 1. + float64(rand.Intn(fuzziness))/100.
+				adjustedRatio += 1.
+			} else {
+				adjustedRatio = 1. - adjustedRatio
 			}
 			dummyFloat = previousDummyFloat * adjustedRatio
 		}
@@ -542,7 +603,7 @@ func bindDouble(prefix []byte, fieldCfg ConfigField, field Field, fieldMap map[s
 func bindCardinality(prefix []byte, cfg Config, field Field, fieldMap map[string]emitFNotReturn, templateFieldMap map[string][]byte) error {
 
 	fieldCfg, _ := cfg.GetField(field.Name)
-	cardinality := int(math.Ceil((1000. / float64(fieldCfg.Cardinality))))
+	cardinality := int(math.Ceil((float64(fieldCfg.Cardinality.Denominator) / float64(fieldCfg.Cardinality.Numerator))))
 
 	if strings.HasSuffix(field.Name, ".*") {
 		field.Name = replacer.Replace(field.Name)
@@ -762,9 +823,10 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]E
 
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
-	fuzziness := fieldCfg.Fuzziness
+	fuzzinessNumerator := float64(fieldCfg.Fuzziness.Numerator)
+	fuzzinessDenominator := float64(fieldCfg.Fuzziness.Denominator)
 
-	if fuzziness <= 0 {
+	if fuzzinessNumerator <= 0 {
 		fieldMap[field.Name] = func(state *GenState, buf *bytes.Buffer) (interface{}, error) {
 			return dummyFunc(), nil
 		}
@@ -775,9 +837,11 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]E
 	fieldMap[field.Name] = func(state *GenState, buf *bytes.Buffer) (interface{}, error) {
 		dummyInt := dummyFunc()
 		if previousDummyInt, ok := state.prevCache[field.Name].(int); ok {
-			adjustedRatio := 1. - float64(rand.Intn(fuzziness))/100.
+			adjustedRatio := rand.Float64() * (fuzzinessNumerator / fuzzinessDenominator)
 			if rand.Int()%2 == 0 {
-				adjustedRatio = 1. + float64(rand.Intn(fuzziness))/100.
+				adjustedRatio += 1.
+			} else {
+				adjustedRatio = 1. - adjustedRatio
 			}
 			dummyInt = int(math.Ceil(float64(previousDummyInt) * adjustedRatio))
 		}
@@ -790,24 +854,27 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]E
 
 func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]EmitF) error {
 
-	dummyFunc := makeIntFunc(fieldCfg, field)
+	dummyFunc := makeFloatFunc(fieldCfg, field)
 
-	fuzziness := fieldCfg.Fuzziness
+	fuzzinessNumerator := float64(fieldCfg.Fuzziness.Numerator)
+	fuzzinessDenominator := float64(fieldCfg.Fuzziness.Denominator)
 
-	if fuzziness <= 0 {
+	if fuzzinessNumerator <= 0 {
 		fieldMap[field.Name] = func(state *GenState, buf *bytes.Buffer) (interface{}, error) {
-			return float64(dummyFunc()) / rand.Float64(), nil
+			return dummyFunc(), nil
 		}
 
 		return nil
 	}
 
 	fieldMap[field.Name] = func(state *GenState, buf *bytes.Buffer) (interface{}, error) {
-		dummyFloat := float64(dummyFunc()) / rand.Float64()
+		dummyFloat := dummyFunc()
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
-			adjustedRatio := 1. - float64(rand.Intn(fuzziness))/100.
+			adjustedRatio := rand.Float64() * (fuzzinessNumerator / fuzzinessDenominator)
 			if rand.Int()%2 == 0 {
-				adjustedRatio = 1. + float64(rand.Intn(fuzziness))/100.
+				adjustedRatio += 1.
+			} else {
+				adjustedRatio = 1. - adjustedRatio
 			}
 			dummyFloat = previousDummyFloat * adjustedRatio
 		}
@@ -821,7 +888,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 func bindCardinalityWithReturn(cfg Config, field Field, fieldMap map[string]EmitF) error {
 
 	fieldCfg, _ := cfg.GetField(field.Name)
-	cardinality := int(math.Ceil((1000. / float64(fieldCfg.Cardinality))))
+	cardinality := int(math.Ceil((float64(fieldCfg.Cardinality.Denominator) / float64(fieldCfg.Cardinality.Numerator))))
 
 	if strings.HasSuffix(field.Name, ".*") {
 		field.Name = replacer.Replace(field.Name)

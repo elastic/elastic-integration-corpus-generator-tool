@@ -11,7 +11,7 @@ require (
 	github.com/elastic/go-ucfg v0.8.5
 	github.com/lithammer/shortuuid/v3 v3.0.7
 	github.com/spf13/afero v1.9.3
-	github.com/spf13/cobra v1.4.0
+	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/multierr v1.8.0
@@ -28,7 +28,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect

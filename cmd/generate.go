@@ -15,10 +15,6 @@ import (
 	"go.uber.org/multierr"
 )
 
-var packageRegistryBaseURL string
-var configFile string
-var totSize string
-
 var integrationPackage string
 var dataStream string
 var packageVersion string
@@ -66,12 +62,12 @@ func GenerateCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			location := viper.GetString("corpora_location")
-			config, err := config.LoadConfig(configFile)
+			cfg, err := config.LoadConfig(configFile)
 			if err != nil {
 				return err
 			}
 
-			fc, err := corpus.NewGenerator(config, afero.NewOsFs(), location)
+			fc, err := corpus.NewGenerator(cfg, afero.NewOsFs(), location)
 			if err != nil {
 				return err
 			}

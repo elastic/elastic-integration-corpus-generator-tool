@@ -16,6 +16,7 @@ func main() {
 
 	rootCmd := cmd.RootCmd()
 	rootCmd.AddCommand(cmd.GenerateCmd())
+	rootCmd.AddCommand(cmd.GenerateWithTemplateCmd())
 	rootCmd.AddCommand(cmd.VersionCmd())
 
 	err := rootCmd.Execute()

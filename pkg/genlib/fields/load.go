@@ -1,13 +1,17 @@
 package fields
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -26,12 +30,7 @@ const (
 
 func LoadFields(ctx context.Context, baseURL, integration, dataStream, version string) (Fields, error) {
 
-	packageURL, err := makePackageURL(baseURL, integration, version)
-	if err != nil {
-		return nil, err
-	}
-
-	fieldsContent, err := getFieldsFiles(ctx, packageURL, dataStream)
+	fieldsContent, err := getFieldsFiles(ctx, baseURL, integration, dataStream, version)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +40,35 @@ func LoadFields(ctx context.Context, baseURL, integration, dataStream, version s
 	}
 
 	fieldsFromYaml, err := loadFieldsFromYaml(fieldsContent)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := collectFields(fieldsFromYaml, "")
+
+	return normaliseFields(fields)
+}
+
+func LoadFieldsWithTemplate(ctx context.Context, fieldYamlPath string) (Fields, error) {
+	fieldsFileContent, err := os.ReadFile(fieldYamlPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var fieldsContent string
+
+	key := strings.TrimSuffix(filepath.Base(fieldYamlPath), filepath.Ext(fieldYamlPath))
+	keyEntry := fmt.Sprintf("- key: %s\n  fields:\n", key)
+	for _, line := range strings.Split(string(fieldsFileContent), "\n") {
+		keyEntry += `    ` + line + "\n"
+	}
+
+	fieldsContent += keyEntry
+	if len(fieldsContent) == 0 {
+		return nil, ErrNotFound
+	}
+
+	fieldsFromYaml, err := loadFieldsFromYaml([]byte(fieldsContent))
 	if err != nil {
 		return nil, err
 	}
@@ -61,42 +89,92 @@ func makePackageURL(baseURL, integration, version string) (*url.URL, error) {
 	return u, nil
 }
 
-func getFieldsFiles(ctx context.Context, packageURL *url.URL, dataStream string) ([]byte, error) {
-	body, err := getFromURL(ctx, packageURL.String())
+func makeDownloadURL(baseURL, donwloadPath string) (*url.URL, error) {
+
+	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
 	}
 
-	var assetsPayload struct {
-		Assets []string `json:"assets"`
-	}
+	u.Path = path.Join(u.Path, donwloadPath)
+	return u, nil
+}
 
-	if err = json.Unmarshal(body, &assetsPayload); err != nil {
+func getFieldsFiles(ctx context.Context, baseURL, integration, dataStream, version string) ([]byte, error) {
+	packageURL, err := makePackageURL(baseURL, integration, version)
+	if err != nil {
 		return nil, err
 	}
 
-	fieldsFilesURL := make([]string, 0)
-	prefixFieldsPath := path.Join(packageURL.Path, dataStreamSlug, dataStream, fieldsSlug)
-	for _, assetPath := range assetsPayload.Assets {
-		if !strings.HasPrefix(assetPath, prefixFieldsPath) {
+	r, err := getFromURL(ctx, packageURL.String())
+	if err != nil {
+		return nil, err
+	}
+
+	var downloadPayload struct {
+		Download string `json:"download"`
+	}
+
+	body, err := ioutil.ReadAll(r)
+	if err = json.Unmarshal(body, &downloadPayload); err != nil {
+		return nil, err
+	}
+
+	downloadURL, err := makeDownloadURL(baseURL, downloadPayload.Download)
+	r, err = getFromURL(ctx, downloadURL.String())
+	defer func(r io.ReadCloser) {
+		if r != nil {
+			_ = r.Close()
+		}
+	}(r)
+
+	if err != nil {
+		return nil, err
+	}
+
+	zipContent, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	archive, err := zip.NewReader(bytes.NewReader(zipContent), int64(len(zipContent)))
+	if err != nil {
+		return nil, err
+	}
+
+	prefixFieldsPath := path.Join(fmt.Sprintf("%s-%s", integration, version), dataStreamSlug, dataStream, fieldsSlug)
+
+	var fieldsContent string
+	for _, z := range archive.File {
+		if z.FileInfo().IsDir() {
 			continue
 		}
 
-		fieldsFilesURL = append(fieldsFilesURL, assetPath)
-	}
+		if !strings.HasPrefix(z.Name, prefixFieldsPath) {
+			continue
+		}
 
-	var fieldsContent string
-	for _, fieldsFileURL := range fieldsFilesURL {
-		packageURL.Path = fieldsFileURL
-
-		body, err := getFromURL(ctx, packageURL.String())
+		fieldsFileName := z.Name
+		zr, err := z.Open()
 		if err != nil {
+			if zr != nil {
+				_ = zr.Close()
+			}
 			return nil, err
 		}
 
-		key := strings.TrimSuffix(filepath.Base(fieldsFileURL), filepath.Ext(fieldsFileURL))
+		fieldsFileContent, err := ioutil.ReadAll(zr)
+		if err != nil {
+			if zr != nil {
+				_ = zr.Close()
+			}
+			return nil, err
+		}
+
+		_ = zr.Close()
+		key := strings.TrimSuffix(filepath.Base(fieldsFileName), filepath.Ext(fieldsFileName))
 		keyEntry := fmt.Sprintf("- key: %s\n  fields:\n", key)
-		for _, line := range strings.Split(string(body), "\n") {
+		for _, line := range strings.Split(string(fieldsFileContent), "\n") {
 			keyEntry += `    ` + line + "\n"
 		}
 
@@ -106,7 +184,7 @@ func getFieldsFiles(ctx context.Context, packageURL *url.URL, dataStream string)
 	return []byte(fieldsContent), nil
 }
 
-func getFromURL(ctx context.Context, srcURL string) ([]byte, error) {
+func getFromURL(ctx context.Context, srcURL string) (io.ReadCloser, error) {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", srcURL, nil)
 
@@ -116,18 +194,21 @@ func getFromURL(ctx context.Context, srcURL string) ([]byte, error) {
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-
 	if err != nil {
+		if resp.Body != nil {
+			_ = resp.Body.Close()
+		}
 		return nil, err
 	}
 
-	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
+		if resp.Body != nil {
+			_ = resp.Body.Close()
+		}
 		return nil, ErrNotFound
 	}
 
-	return ioutil.ReadAll(resp.Body)
+	return resp.Body, nil
 }
 
 func makeManifestURL(baseURL, integration, stream, version string) (*url.URL, error) {

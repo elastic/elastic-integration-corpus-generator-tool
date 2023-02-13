@@ -4,8 +4,6 @@ import (
 	"context"
 	"golang.org/x/sync/semaphore"
 	"sync"
-
-	"github.com/elastic/go-ucfg/yaml"
 )
 
 const (
@@ -97,49 +95,4 @@ func (f *Cache) LoadFields(ctx context.Context, integration, stream, version str
 	}
 
 	return flds, nil
-}
-
-func (f *Cache) LoadManifest(ctx context.Context, integration, stream, version string) (*Manifest, error) {
-	var err error
-
-	t := tuple{
-		integration: integration,
-		stream:      stream,
-		version:     version,
-	}
-
-	f.mut.RLock()
-	manifest, ok := f.manifest[t]
-	f.mut.RUnlock()
-
-	if ok {
-		return &manifest, nil
-	}
-
-	// Pull the manifest file
-	url, err := makeManifestURL(f.baseUrl, integration, stream, version)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := getFromURL(ctx, url.String())
-	if err != nil {
-		return nil, err
-	}
-
-	// deserialize
-	cfg, err := yaml.NewConfig(data)
-	if err != nil {
-		return nil, err
-	}
-	err = cfg.Unpack(&manifest)
-	if err != nil {
-		return nil, err
-	}
-
-	f.mut.Lock()
-	f.manifest[t] = manifest
-	f.mut.Unlock()
-
-	return &manifest, nil
 }

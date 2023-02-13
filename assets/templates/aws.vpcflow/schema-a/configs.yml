@@ -1,0 +1,47 @@
+- name: Version
+  value: 2
+- name: AccountID
+  value: 627286350134
+- name: InterfaceID
+  cardinality:
+    numerator: 1
+    denominator: 100
+- name: SrcAddr
+  cardinality:
+    numerator: 1
+    denominator: 1000
+- name: DstAddr
+  cardinality:
+    numerator: 1
+    denominator: 10
+- name: SrcPort
+  range:
+    min: 0
+    max: 65535
+- name: DstPort
+  range:
+    min: 0
+    max: 65535
+  cardinality:
+    numerator: 1
+    denominator: 10
+- name: Protocol
+  range:
+    min: 1
+    max: 256
+- name: Packets
+  range:
+    min: 1
+    max: 1048576
+- name: Bytes
+  range:
+    min: 1
+    max: 15728640
+- name: StartOffset
+  range:
+    min: 1
+    max: 60
+- name: Action
+  enum: ["ACCEPT", "REJECT"]
+- name: LogStatus
+  enum: ["OK", "SKIPDATA"]

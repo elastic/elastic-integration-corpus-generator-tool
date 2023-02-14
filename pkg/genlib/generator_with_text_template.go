@@ -45,7 +45,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 
 		value, err := bindF(state, nil)
 		if err != nil {
-			return ""
+			return "<unvalued field>"
 		}
 		return value
 	}

@@ -40,7 +40,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 	templateFns["generate"] = func(field string) interface{} {
 		bindF, ok := fieldMap[field]
 		if !ok {
-			return ""
+			return "<missing field>"
 		}
 
 		value, err := bindF(state, nil)

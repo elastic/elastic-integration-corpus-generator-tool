@@ -4,7 +4,7 @@
   cardinality:
     numerator: 1
     # we want every single different "dimension identifier", regardless of its type, to have always the same generated fixed "metadata" once the cardinality kicks in
-    # for this we must take the ordered highest enum length appending one by obe the ones that does not have a 0 module between each others.
+    # for this we must take the ordered highest enum length appending one by one the ones that does not have a 0 module between each others.
     # we start from the first two, multiple between their values and exclude from the order list the ones that have a 0 module on the result of the multiplication.
     # we end up with the list of enum lengths whose value, multiplied, define the least common multiple: this is the value we must use for the denominator of all fields.
     # in this case the remaining enum are two: `dimensionType` (40) and `region` (15), resulting in denominator `600`

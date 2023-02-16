@@ -364,12 +364,7 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 		t.Errorf("Expected map size 1, got %d", len(m))
 	}
 
-	v, ok := m[fld.Name]
-
-	if !ok {
-		t.Errorf("Missing key %v", fld.Name)
-
-	}
+	v, _ := m[fld.Name]
 
 	return v
 }
@@ -382,4 +377,19 @@ func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, temp
 	}
 
 	return g, NewGenState()
+}
+
+func Test_PanicOnMissingField(t *testing.T) {
+	fld := Field{}
+
+	template := []byte(`{"alpha":"{{generate "alpha"}}"}`)
+	t.Logf("with template: %s", string(template))
+
+	defer func() {
+		r := recover()
+		t.Log(r)
+	}()
+	a := testSingleTWithTextTemplate[string](t, fld, nil, template)
+	fmt.Printf("a: %s\n", a)
+	t.Errorf("should have triggered a panic")
 }

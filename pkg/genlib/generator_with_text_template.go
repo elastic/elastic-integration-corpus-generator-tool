@@ -6,6 +6,7 @@ package genlib
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/Masterminds/sprig/v3"
 	"text/template"
 	"time"
@@ -40,7 +41,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 	templateFns["generate"] = func(field string) interface{} {
 		bindF, ok := fieldMap[field]
 		if !ok {
-			return "<missing field>"
+			panic(fmt.Errorf("missing field: '%s' (is it present in fields.yml?)", field))
 		}
 
 		value, err := bindF(state, nil)

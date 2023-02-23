@@ -31,6 +31,10 @@ type ConfigField struct {
 	Value       interface{} `config:"value"`
 }
 
+type ConfigFile struct {
+	Fields []ConfigField `config:"fields"`
+}
+
 func LoadConfig(fs afero.Fs, configFile string) (Config, error) {
 	if len(configFile) == 0 {
 		return Config{}, nil
@@ -56,8 +60,8 @@ func LoadConfigFromYaml(c []byte) (Config, error) {
 		return Config{}, err
 	}
 
-	var cfgList []ConfigField
-	err = cfg.Unpack(&cfgList)
+	var cfgfile ConfigFile
+	err = cfg.Unpack(&cfgfile)
 	if err != nil {
 		return Config{}, err
 	}
@@ -66,7 +70,7 @@ func LoadConfigFromYaml(c []byte) (Config, error) {
 		m: make(map[string]ConfigField),
 	}
 
-	for _, c := range cfgList {
+	for _, c := range cfgfile.Fields {
 		outCfg.m[c.Name] = c
 	}
 

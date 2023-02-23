@@ -9,8 +9,9 @@ import (
 )
 
 const sampleConfigFile = `---
-- name: field
-  value: foobar
+fields:
+  - name: field
+    value: foobar
 `
 
 func TestLoadConfig(t *testing.T) {

@@ -1,9 +1,10 @@
 package config
 
 import (
-	"github.com/elastic/go-ucfg/yaml"
-	"io/ioutil"
 	"os"
+
+	"github.com/elastic/go-ucfg/yaml"
+	"github.com/spf13/afero"
 )
 
 type Ratio struct {
@@ -30,17 +31,17 @@ type ConfigField struct {
 	Value       interface{} `config:"value"`
 }
 
-func LoadConfig(configFile string) (Config, error) {
+func LoadConfig(fs afero.Fs, configFile string) (Config, error) {
 	if len(configFile) == 0 {
 		return Config{}, nil
 	}
 
 	configFile = os.ExpandEnv(configFile)
-	if _, err := os.Stat(configFile); err != nil {
+	if _, err := fs.Stat(configFile); err != nil {
 		return Config{}, err
 	}
 
-	data, err := ioutil.ReadFile(configFile)
+	data, err := afero.ReadFile(fs, configFile)
 	if err != nil {
 		return Config{}, err
 	}

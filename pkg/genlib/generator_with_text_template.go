@@ -32,7 +32,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 
 	state := NewGenState()
 
-	templateFns := sprig.HermeticTxtFuncMap()
+	templateFns := sprig.TxtFuncMap()
 
 	templateFns["timeDuration"] = func(duration int64) time.Duration {
 		return time.Duration(duration)

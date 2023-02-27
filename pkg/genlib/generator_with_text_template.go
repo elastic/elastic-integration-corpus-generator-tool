@@ -36,7 +36,9 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 	t := template.New("estimate_tot_events")
 	t = t.Option("missingkey=error")
 
-	templateFns := sprig.HermeticTxtFuncMap()
+	state := NewGenState()
+
+	templateFns := sprig.TxtFuncMap()
 
 	templateFns["timeDuration"] = func(duration int64) time.Duration {
 		return time.Duration(duration)
@@ -79,7 +81,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 	t = template.New("generator")
 	t = t.Option("missingkey=error")
 
-	templateFns = sprig.HermeticTxtFuncMap()
+	templateFns := sprig.TxtFuncMap()
 
 	templateFns["timeDuration"] = func(duration int64) time.Duration {
 		return time.Duration(duration)

@@ -6,17 +6,83 @@ package genlib
 
 import (
 	"bytes"
+	"errors"
 	"github.com/Masterminds/sprig/v3"
 	"io"
 	"text/template"
 	"time"
 )
 
+var generateOnFieldNotInFieldsYaml = errors.New("generate called on a field not present in fields yaml definition")
+
 // GeneratorWithTextTemplate
 type GeneratorWithTextTemplate struct {
 	tpl       *template.Template
 	state     *GenState
+	errChan   chan error
 	totEvents uint64
+}
+
+func calculateTotEventsWithTextTemplate(totSize uint64, fieldMap map[string]any, errChan chan error, tpl []byte) (uint64, error) {
+	if totSize == 0 {
+		return 0, nil
+	}
+
+	// Generate a single event to calculate the total number of events based on its size
+	t := template.New("estimate_tot_events")
+	t = t.Option("missingkey=error")
+
+	templateFns := sprig.TxtFuncMap()
+
+	templateFns["timeDuration"] = func(duration int64) time.Duration {
+		return time.Duration(duration)
+	}
+
+	templateFns["generate"] = func(field string) any {
+		state := NewGenState()
+		state.prevCacheForDup[field] = make(map[any]struct{})
+		state.prevCacheCardinality[field] = make([]any, 0)
+		bindF, ok := fieldMap[field].(EmitF)
+		if !ok {
+			close(errChan)
+			return nil
+		}
+
+		return bindF(state)
+	}
+
+generateErr:
+	for {
+		select {
+		case <-errChan:
+			return 0, generateOnFieldNotInFieldsYaml
+		default:
+			break generateErr
+		}
+	}
+
+	parsedTpl, err := t.Funcs(templateFns).Parse(string(tpl))
+	if err != nil {
+		return 0, err
+	}
+
+	buf := bytes.NewBufferString("")
+	err = parsedTpl.Execute(buf, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	singleEventSize := uint64(buf.Len())
+	if singleEventSize == 0 {
+		return 1, nil
+	}
+
+	totEvents := totSize / singleEventSize
+	if totEvents < 1 {
+		totEvents = 1
+	}
+
+	return totEvents, nil
 }
 
 func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize uint64) (*GeneratorWithTextTemplate, error) {
@@ -32,11 +98,15 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 		state.prevCacheCardinality[field.Name] = make([]any, 0)
 	}
 
-	// Generate a single event to calculate the total number of events based on its size
-	t := template.New("estimate_tot_events")
-	t = t.Option("missingkey=error")
+	errChan := make(chan error)
 
-	state := NewGenState()
+	totEvents, err := calculateTotEventsWithTextTemplate(totSize, fieldMap, errChan, tpl)
+	if err != nil {
+		return nil, err
+	}
+
+	t := template.New("generator")
+	t = t.Option("missingkey=error")
 
 	templateFns := sprig.TxtFuncMap()
 
@@ -45,12 +115,10 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 	}
 
 	templateFns["generate"] = func(field string) any {
-		state := NewGenState()
-		state.prevCacheForDup[field] = make(map[any]struct{})
-		state.prevCacheCardinality[field] = make([]any, 0)
 		bindF, ok := fieldMap[field].(EmitF)
 		if !ok {
-			return ""
+			close(errChan)
+			return nil
 		}
 
 		return bindF(state)
@@ -61,47 +129,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 		return nil, err
 	}
 
-	buf := bytes.NewBufferString("")
-	err = parsedTpl.Execute(buf, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var totEvents uint64
-	singleEventSize := uint64(buf.Len())
-	if singleEventSize == 0 {
-		totEvents = 1
-	} else {
-		totEvents = totSize / singleEventSize
-		if totEvents < 1 {
-			totEvents = 1
-		}
-	}
-
-	t = template.New("generator")
-	t = t.Option("missingkey=error")
-
-	templateFns := sprig.TxtFuncMap()
-
-	templateFns["timeDuration"] = func(duration int64) time.Duration {
-		return time.Duration(duration)
-	}
-
-	templateFns["generate"] = func(field string) any {
-		bindF, ok := fieldMap[field].(EmitF)
-		if !ok {
-			return ""
-		}
-
-		return bindF(state)
-	}
-
-	parsedTpl, err = t.Funcs(templateFns).Parse(string(tpl))
-	if err != nil {
-		return nil, err
-	}
-
-	return &GeneratorWithTextTemplate{tpl: parsedTpl, totEvents: totEvents, state: state}, nil
+	return &GeneratorWithTextTemplate{tpl: parsedTpl, totEvents: totEvents, state: state, errChan: errChan}, nil
 }
 
 func (gen GeneratorWithTextTemplate) Close() error {
@@ -120,10 +148,15 @@ func (gen GeneratorWithTextTemplate) Emit(state *GenState, buf *bytes.Buffer) er
 }
 
 func (gen GeneratorWithTextTemplate) emit(state *GenState, buf *bytes.Buffer) error {
-	if state.counter < gen.totEvents {
-		err := gen.tpl.Execute(buf, nil)
-		if err != nil {
-			return err
+	if gen.totEvents == 0 || state.counter < gen.totEvents {
+		select {
+		case <-gen.errChan:
+			return generateOnFieldNotInFieldsYaml
+		default:
+			err := gen.tpl.Execute(buf, nil)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		return io.EOF

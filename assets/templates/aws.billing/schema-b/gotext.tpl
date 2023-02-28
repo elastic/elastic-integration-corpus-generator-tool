@@ -1,12 +1,13 @@
 {{- $currency := generate "aws.billing.currency" }}
 {{- $groupBy := generate "aws.billing.group_definition.key" }}
 {{- $period := generate "metricset.period" }}
-{{- $cloudId := generate "cloud.account.id"}}
+{{- $cloudId := generate "cloud.account.id" }}
+{{- $cloudRegion := generate "cloud.region" }}
 {
     "@timestamp": "{{generate "timestamp"}}",
     "cloud": {
         "provider": "aws",
-        "region": "{{generate "cloud.region"}}",
+        "region": "{{$cloudRegion}}",
         "account": {
             "id": "{{$cloudId}}",
             "name": "{{generate "cloud.account.name"}}"
@@ -60,7 +61,7 @@
             },
             "group_by": {
 {{- if eq $groupBy "AZ"}}
-              "AZ": "{{generate "aws.billing.group_by.AZ"}}"
+              "AZ": "{{awsAZFromRegion $cloudRegion}}"
 {{- else if eq $groupBy "INSTANCE_TYPE"}}
               "INSTANCE_TYPE": "{{generate "aws.billing.group_by.INSTANCE_TYPE"}}"
 {{- else if eq $groupBy "SERVICE"}}

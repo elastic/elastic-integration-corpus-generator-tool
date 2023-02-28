@@ -6,15 +6,38 @@ package genlib
 
 import (
 	"bytes"
-	"github.com/Masterminds/sprig/v3"
+	"math/rand"
 	"text/template"
 	"time"
+
+	"github.com/Masterminds/sprig/v3"
 )
 
 // GeneratorWithTextTemplate
 type GeneratorWithTextTemplate struct {
 	tpl   *template.Template
 	state *GenState
+}
+
+// awsAZs list all possible AZs for a specific AWS region
+// NOTE: this list is not comprehensive
+var awsAZs map[string][]string = map[string][]string{
+	"ap-northeast-1": {"ap-northeast-1a", "ap-northeast-1c", "ap-northeast-1d"},
+	"ap-northeast-2": {"ap-northeast-2a", "ap-northeast-2b", "ap-northeast-2c", "ap-northeast-2d"},
+	"ap-northeast-3": {"ap-northeast-3a", "ap-northeast-3b", "ap-northeast-3c"},
+	"ap-south-1":     {"ap-south-1a", "ap-south-1b", "ap-south-1c"},
+	"ap-southeast-1": {"ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"},
+	"ap-southeast-2": {"ap-southeast-2a", "ap-southeast-2b", "ap-southeast-2c"},
+	"ca-central-1":   {"ca-central-1a", "ca-central-1b", "ca-central-1d"},
+	"eu-central-1":   {"eu-central-1a", "eu-central-1b", "eu-central-1c"},
+	"eu-north-1":     {"eu-north-1a", "eu-north-1b", "eu-north-1c"},
+	"eu-west-1":      {"eu-west-1a", "eu-west-1b", "eu-west-1c"},
+	"eu-west-2":      {"eu-west-2a", "eu-west-2b", "eu-west-2c"},
+	"eu-west-3":      {"eu-west-3a", "eu-west-3b", "eu-west-3c"},
+	"sa-east-1":      {"sa-east-1a", "sa-east-1b", "sa-east-1c"},
+	"us-east-1":      {"us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"},
+	"us-west-1":      {"us-west-1a", "us-west-1b"},
+	"us-west-2":      {"us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"},
 }
 
 func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*GeneratorWithTextTemplate, error) {
@@ -35,6 +58,15 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields) (*Gener
 
 	templateFns["timeDuration"] = func(duration int64) time.Duration {
 		return time.Duration(duration)
+	}
+
+	templateFns["awsAZFromRegion"] = func(region string) string {
+		azs, ok := awsAZs[region]
+		if !ok {
+			return "NoAZ"
+		}
+
+		return azs[rand.Intn(len(azs))]
 	}
 
 	templateFns["generate"] = func(field string) interface{} {

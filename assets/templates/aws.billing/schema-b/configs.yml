@@ -18,7 +18,7 @@
 - name: agent.name
   value: "host.local"
 - name: metricset.period
-  value: 86400000
+  value: 86400
 - name: aws.billing.group_definition.key
   # NOTE: repeated values are needed to produce 10% cases with "" value
   enum: ["", "AZ", "INSTANCE_TYPE", "SERVICE", "LINKED_ACCOUNT", "AZ", "INSTANCE_TYPE", "SERVICE", "LINKED_ACCOUNT"]

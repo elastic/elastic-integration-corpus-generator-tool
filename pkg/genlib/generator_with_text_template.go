@@ -21,7 +21,9 @@ type GeneratorWithTextTemplate struct {
 
 // awsAZs list all possible AZs for a specific AWS region
 // NOTE: this list is not comprehensive
+// missing regions: af-south-1, ap-south-2, ap-southeast-3, ap-southeast-4, eu-central-2, eu-south-1, eu-south-2, me-central-1
 var awsAZs map[string][]string = map[string][]string{
+	"ap-east-1":      {"ap-east-1a", "ap-east-1b", "ap-east-1c"},
 	"ap-northeast-1": {"ap-northeast-1a", "ap-northeast-1c", "ap-northeast-1d"},
 	"ap-northeast-2": {"ap-northeast-2a", "ap-northeast-2b", "ap-northeast-2c", "ap-northeast-2d"},
 	"ap-northeast-3": {"ap-northeast-3a", "ap-northeast-3b", "ap-northeast-3c"},
@@ -34,8 +36,10 @@ var awsAZs map[string][]string = map[string][]string{
 	"eu-west-1":      {"eu-west-1a", "eu-west-1b", "eu-west-1c"},
 	"eu-west-2":      {"eu-west-2a", "eu-west-2b", "eu-west-2c"},
 	"eu-west-3":      {"eu-west-3a", "eu-west-3b", "eu-west-3c"},
+	"me-south-1":     {"me-south-1a", "me-south-1b", "me-south-1c"},
 	"sa-east-1":      {"sa-east-1a", "sa-east-1b", "sa-east-1c"},
 	"us-east-1":      {"us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"},
+	"us-east-2":      {"us-east-2a", "us-east-2b", "us-east-2c"},
 	"us-west-1":      {"us-west-1a", "us-west-1b"},
 	"us-west-2":      {"us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"},
 }

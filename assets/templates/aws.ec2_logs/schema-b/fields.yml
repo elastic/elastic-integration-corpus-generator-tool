@@ -1,0 +1,8 @@
+- name: process.name
+  type: keyword
+- name: event.ingested
+  type: date
+- name: aws.ec2.ip_address
+  type: ip
+- name: message
+  type: text

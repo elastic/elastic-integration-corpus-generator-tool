@@ -47,7 +47,5 @@
   type: keyword
 - name: aws.billing.group_by.INSTANCE_TYPE
   type: keyword
-- name: aws.billing.group_by.AZ
-  type: keyword
 - name: aws.billing.group_by.SERVICE
   type: keyword

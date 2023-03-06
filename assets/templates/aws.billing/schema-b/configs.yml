@@ -10,7 +10,8 @@
 - name: aws.billing.currency
   value: "USD"
 - name: aws.billing.ServiceName
-  enum: ["AWSCloudTrail", "AWSCodeArtifact", "AWSConfig", "AWSCostExplorer", "AWSDataTransfer", "AWSELB", "AWSLambda", "AWSMarketplace", "AWSQueueService", "AWSSecretsManager", "AWSServiceCatalog", "AWSSystemsManager", "AWSXRay", "AmazonApiGateway", "AmazonCloudWatch", "AmazonCognito", "AmazonDynamoDB", "AmazonEC2", "AmazonECR", "AmazonEKS", "AmazonKinesis", "AmazonKinesisFirehose", "AmazonRDS", "AmazonRedshift", "AmazonRoute53", "AmazonS3", "AmazonSNS", "AmazonVPC", "awskms"]
+  # NOTE: When empty the data refers to estimated charged for the entire account. We cannot reproduce the content (as it's a sum of previous data) but we want to provide the case.
+  enum: ["", "AWSCloudTrail", "AWSCodeArtifact", "AWSConfig", "AWSCostExplorer", "AWSDataTransfer", "AWSELB", "AWSLambda", "AWSMarketplace", "AWSQueueService", "AWSSecretsManager", "AWSServiceCatalog", "AWSSystemsManager", "AWSXRay", "AmazonApiGateway", "AmazonCloudWatch", "AmazonCognito", "AmazonDynamoDB", "AmazonEC2", "AmazonECR", "AmazonEKS", "AmazonKinesis", "AmazonKinesisFirehose", "AmazonRDS", "AmazonRedshift", "AmazonRoute53", "AmazonS3", "AmazonSNS", "AmazonVPC", "awskms"]
 - name: agent.id
   value: "12f376ef-5186-4e8b-a175-70f1140a8f30"
 - name: agent.ephemeral_id

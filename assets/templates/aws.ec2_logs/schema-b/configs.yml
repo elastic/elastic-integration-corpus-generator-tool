@@ -1,0 +1,4 @@
+- name: process.name
+  enum: ["journal", "kernel", "systemd"]
+- name: agent.id
+  value: "da6cb4c8-c84c-4c5f-97c7-f8586a098af4"

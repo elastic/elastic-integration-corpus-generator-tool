@@ -6,14 +6,23 @@ package genlib
 
 import (
 	"bytes"
+	"io"
 	"regexp"
 )
 
-var trailingTemplate []byte
+type emitter struct {
+	fieldName string
+	fieldType string
+	emitFunc  emitFNotReturn
+	prefix    []byte
+}
 
 // GeneratorWithCustomTemplate is resolved at construction to a slice of emit functions
 type GeneratorWithCustomTemplate struct {
-	emitFuncs []emitFNotReturn
+	totEvents        uint64
+	emitters         []emitter
+	trailingTemplate []byte
+	state            *GenState
 }
 
 func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) {
@@ -73,33 +82,81 @@ func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) 
 
 }
 
-func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields) (*GeneratorWithCustomTemplate, error) {
-	// Parse the template and extract relevant information
-	orderedFields, templateFieldsMap, fieldPrefixBuffer := parseCustomTemplate(template)
-	trailingTemplate = fieldPrefixBuffer
+func calculateTotEventsWithCustomTemplate(totSize uint64, emitters []emitter, trailingTemplate []byte) (uint64, error) {
+	if totSize == 0 {
+		return 0, nil
+	}
 
-	// Preprocess the fields, generating appropriate emit functions
-	fieldMap := make(map[string]emitFNotReturn)
-	for _, field := range fields {
-		if err := bindField(cfg, field, nil, fieldMap, templateFieldsMap, false); err != nil {
-			return nil, err
+	// Generate a single event to calculate the total number of events based on its size
+	buf := bytes.NewBufferString("")
+	for _, e := range emitters {
+		buf.Write(e.prefix)
+		state := NewGenState()
+		state.prevCacheForDup[e.fieldName] = make(map[any]struct{})
+		state.prevCacheCardinality[e.fieldName] = make([]any, 0)
+		if err := e.emitFunc(state, buf); err != nil {
+			return 0, err
 		}
 	}
 
-	// Roll into slice of emit functions
-	emitFuncs := make([]emitFNotReturn, 0, len(fieldMap))
-	for _, fieldName := range orderedFields {
-		emitFuncs = append(emitFuncs, fieldMap[fieldName])
+	buf.Write(trailingTemplate)
+
+	singleEventSize := uint64(buf.Len())
+	if singleEventSize == 0 {
+		return 1, nil
 	}
 
-	return &GeneratorWithCustomTemplate{emitFuncs: emitFuncs}, nil
+	totEvents := totSize / singleEventSize
+	if totEvents < 1 {
+		totEvents = 1
+	}
+
+	return totEvents, nil
 }
 
-func (GeneratorWithCustomTemplate) Close() error {
+func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, totSize uint64) (*GeneratorWithCustomTemplate, error) {
+	// Parse the template and extract relevant information
+	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
+
+	// Preprocess the fields, generating appropriate emit functions
+	state := NewGenState()
+	fieldMap := make(map[string]any)
+	fieldTypes := make(map[string]string)
+	for _, field := range fields {
+		if err := bindField(cfg, field, fieldMap, false); err != nil {
+			return nil, err
+		}
+
+		fieldTypes[field.Name] = field.Type
+		state.prevCacheForDup[field.Name] = make(map[any]struct{})
+		state.prevCacheCardinality[field.Name] = make([]any, 0)
+	}
+
+	// Roll into slice of emit functions
+	emitters := make([]emitter, 0, len(fieldMap))
+	for _, fieldName := range orderedFields {
+		emitters = append(emitters, emitter{
+			fieldName: fieldName,
+			emitFunc:  fieldMap[fieldName].(emitFNotReturn),
+			fieldType: fieldTypes[fieldName],
+			prefix:    templateFieldsMap[fieldName],
+		})
+	}
+
+	totEvents, err := calculateTotEventsWithCustomTemplate(totSize, emitters, trailingTemplate)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate, totEvents: totEvents, state: state}, nil
+}
+
+func (gen GeneratorWithCustomTemplate) Close() error {
 	return nil
 }
 
 func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
+	state = gen.state
 	if err := gen.emit(state, buf); err != nil {
 		return err
 	}
@@ -110,12 +167,18 @@ func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) 
 }
 
 func (gen GeneratorWithCustomTemplate) emit(state *GenState, buf *bytes.Buffer) error {
-	for _, f := range gen.emitFuncs {
-		if err := f(state, buf); err != nil {
-			return err
+	if gen.totEvents == 0 || state.counter < gen.totEvents {
+		for _, e := range gen.emitters {
+			buf.Write(e.prefix)
+			if err := e.emitFunc(state, buf); err != nil {
+				return err
+			}
 		}
+
+		buf.Write(gen.trailingTemplate)
+	} else {
+		return io.EOF
 	}
 
-	buf.Write(trailingTemplate)
 	return nil
 }

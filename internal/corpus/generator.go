@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dustin/go-humanize"
+	"io"
 	"os"
 	"path"
 	"strings"
@@ -111,12 +112,12 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 	var evgen genlib.Generator
 	var err error
 	if len(template) == 0 {
-		evgen, err = genlib.NewGenerator(gc.config, fields)
+		evgen, err = genlib.NewGenerator(gc.config, fields, totSize)
 	} else {
 		if gc.templateType == templateTypeCustom {
-			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields)
+			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields, totSize)
 		} else if gc.templateType == templateTypeGoText {
-			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields)
+			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields, totSize)
 		} else {
 			return ErrNotValidTemplate
 		}
@@ -136,24 +137,29 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 		buf = bytes.NewBufferString("")
 	}
 
-	var currentSize uint64
-	for currentSize < totSize {
+	defer func() {
+		_ = evgen.Close()
+	}()
+
+	for {
 		buf.Truncate(len(createPayload))
+		err := evgen.Emit(state, buf)
+		if err == nil {
+			buf.WriteByte('\n')
 
-		if err := evgen.Emit(state, buf); err != nil {
-			return err
+			if _, err = f.Write(buf.Bytes()); err != nil {
+				return err
+			}
 		}
 
-		buf.WriteByte('\n')
-
-		if _, err = f.Write(buf.Bytes()); err != nil {
-			return err
+		if err == io.EOF {
+			return nil
 		}
 
-		currentSize += uint64(buf.Len())
+		if err != nil {
+			return err
+		}
 	}
-
-	return evgen.Close()
 }
 
 // Generate generates a bulk request corpus and persist it to file.

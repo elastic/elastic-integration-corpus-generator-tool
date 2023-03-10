@@ -21,13 +21,13 @@ type Config struct {
 }
 
 type ConfigField struct {
-	Name        string      `config:"name"`
-	Fuzziness   Ratio       `config:"fuzziness"`
-	Range       Range       `config:"range"`
-	Cardinality Ratio       `config:"cardinality"`
-	Enum        []string    `config:"enum"`
-	ObjectKeys  []string    `config:"object_keys"`
-	Value       interface{} `config:"value"`
+	Name        string   `config:"name"`
+	Fuzziness   Ratio    `config:"fuzziness"`
+	Range       Range    `config:"range"`
+	Cardinality Ratio    `config:"cardinality"`
+	Enum        []string `config:"enum"`
+	ObjectKeys  []string `config:"object_keys"`
+	Value       any      `config:"value"`
 }
 
 func LoadConfig(configFile string) (Config, error) {

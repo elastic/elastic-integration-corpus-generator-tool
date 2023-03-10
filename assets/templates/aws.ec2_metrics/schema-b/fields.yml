@@ -2,36 +2,6 @@
   type: keyword
 - name: Region
   type: keyword
-- name: AvailabilityZoneAPNorthEast1
-  type: keyword
-- name: AvailabilityZoneAPNorthEast2
-  type: keyword
-- name: AvailabilityZoneAPNorthEast3
-  type: keyword
-- name: AvailabilityZoneApSouth1
-  type: keyword
-- name: AvailabilityZoneAPSouthEast1
-  type: keyword
-- name: AvailabilityZoneAPSouthEast2
-  type: keyword
-- name: AvailabilityZoneEUCentral1
-  type: keyword
-- name: AvailabilityZoneEUNorth1
-  type: keyword
-- name: AvailabilityZoneEUWest1
-  type: keyword
-- name: AvailabilityZoneEUWest2
-  type: keyword
-- name: AvailabilityZoneEUWest3
-  type: keyword
-- name: AvailabilityZoneUSEast1
-  type: keyword
-- name: AvailabilityZoneUSEast2
-  type: keyword
-- name: AvailabilityZoneUSWest1
-  type: keyword
-- name: AvailabilityZoneUSWest2
-  type: keyword
 - name: AutoScalingGroupName
   type: keyword
   example: eks-standard-workers-22c2aa67-05ef-ad12-6406-b992651f6024

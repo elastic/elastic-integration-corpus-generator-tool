@@ -3,53 +3,7 @@
 {{- $eventIngested := generate "EventIngested" }}
 {{- $eventDuration := generate "EventDuration" }}
 {{- /*  availability zone */ -}}
-{{- $AvailabilityZone := "" }}
-{{- $AvailabilityZoneAPNorthEast1 := generate "AvailabilityZoneAPNorthEast1" }}
-{{- $AvailabilityZoneAPNorthEast2 := generate "AvailabilityZoneAPNorthEast2" }}
-{{- $AvailabilityZoneAPNorthEast3 := generate "AvailabilityZoneAPNorthEast3" }}
-{{- $AvailabilityZoneApSouth1 := generate "AvailabilityZoneApSouth1" }}
-{{- $AvailabilityZoneAPSouthEast1 := generate "AvailabilityZoneAPSouthEast1" }}
-{{- $AvailabilityZoneAPSouthEast2 := generate "AvailabilityZoneAPSouthEast2" }}
-{{- $AvailabilityZoneEUCentral1 := generate "AvailabilityZoneEUCentral1" }}
-{{- $AvailabilityZoneEUNorth1 := generate "AvailabilityZoneEUNorth1" }}
-{{- $AvailabilityZoneEUWest1 := generate "AvailabilityZoneEUWest1" }}
-{{- $AvailabilityZoneEUWest2 := generate "AvailabilityZoneEUWest2" }}
-{{- $AvailabilityZoneEUWest3 := generate "AvailabilityZoneEUWest3" }}
-{{- $AvailabilityZoneUSEast1 := generate "AvailabilityZoneUSEast1" }}
-{{- $AvailabilityZoneUSEast2 := generate "AvailabilityZoneUSEast2" }}
-{{- $AvailabilityZoneUSWest1 := generate "AvailabilityZoneUSWest1" }}
-{{- $AvailabilityZoneUSWest2 := generate "AvailabilityZoneUSWest2" }}
-{{- if eq $Region "ap-northeast-1" }}
-{{- $AvailabilityZone = $AvailabilityZoneAPNorthEast1 }}
-{{- else if eq $Region "ap-northeast-2" }}
-{{- $AvailabilityZone = $AvailabilityZoneAPNorthEast2 }}
-{{- else if eq $Region "ap-northeast-3" }}
-{{- $AvailabilityZone = $AvailabilityZoneAPNorthEast3 }}
-{{- else if eq $Region "ap-south-1" }}
-{{- $AvailabilityZone = $AvailabilityZoneApSouth1 }}
-{{- else if eq $Region "ap-southeast-1" }}
-{{- $AvailabilityZone = $AvailabilityZoneAPSouthEast1 }}
-{{- else if eq $Region "ap-southeast-2" }}
-{{- $AvailabilityZone = $AvailabilityZoneAPSouthEast2 }}
-{{- else if eq $Region "eu-central-1" }}
-{{- $AvailabilityZone = $AvailabilityZoneEUCentral1 }}
-{{- else if eq $Region "eu-north-1" }}
-{{- $AvailabilityZone = $AvailabilityZoneEUNorth1 }}
-{{- else if eq $Region "eu-west-1" }}
-{{- $AvailabilityZone = $AvailabilityZoneEUWest1 }}
-{{- else if eq $Region "eu-west-2" }}
-{{- $AvailabilityZone = $AvailabilityZoneEUWest2 }}
-{{- else if eq $Region "eu-west-3" }}
-{{- $AvailabilityZone = $AvailabilityZoneEUWest3 }}
-{{- else if eq $Region "us-east-1" }}
-{{- $AvailabilityZone = $AvailabilityZoneUSEast1 }}
-{{- else if eq $Region "us-east-2" }}
-{{- $AvailabilityZone = $AvailabilityZoneUSEast2 }}
-{{- else if eq $Region "us-west-1" }}
-{{- $AvailabilityZone = $AvailabilityZoneUSWest1 }}
-{{- else if eq $Region "us-west-2" }}
-{{- $AvailabilityZone = $AvailabilityZoneUSWest2 }}
-{{- end}}
+{{- $AvailabilityZone := awsAZFromRegion $Region }}
 {{- /*  dimensions */ -}}
 {{- $AutoScalingGroupName := generate "AutoScalingGroupName" }}
 {{- $ImageId := generate "ImageId" }}

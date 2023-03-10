@@ -55,7 +55,9 @@ func LoadFieldsWithTemplateFromString(ctx context.Context, fieldsContent string)
 	}
 
 	fieldsYaml := []byte("- key: key\n  fields:\n")
-	fieldsYaml = append(fieldsYaml, []byte(fieldsContent)...)
+	for _, line := range strings.Split(fieldsContent, "\n") {
+		fieldsYaml = append(fieldsYaml, []byte(`    `+line+"\n")...)
+	}
 
 	fieldsFromYaml, err := loadFieldsFromYaml(fieldsYaml)
 	if err != nil {

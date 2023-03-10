@@ -58,8 +58,12 @@ func calculateTotEventsWithTextTemplate(totSize uint64, fieldMap map[string]any,
 	// Generate a single event to calculate the total number of events based on its size
 	t := template.New("estimate_tot_events")
 	t = t.Option("missingkey=error")
+	tempTemplateFns := template.FuncMap{}
+	for k, v := range templateFns {
+		tempTemplateFns[k] = v
+	}
 
-	templateFns["generate"] = func(field string) any {
+	tempTemplateFns["generate"] = func(field string) any {
 		state := NewGenState()
 		state.prevCacheForDup[field] = make(map[any]struct{})
 		state.prevCacheCardinality[field] = make([]any, 0)

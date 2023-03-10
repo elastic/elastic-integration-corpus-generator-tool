@@ -86,7 +86,7 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		}
 
 		nSpins := 16384
-		g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, 0)
+		g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(len(template)*nSpins*1024))
 
 		vmapAlpha := make(map[any]int)
 		vmapBeta := make(map[any]int)

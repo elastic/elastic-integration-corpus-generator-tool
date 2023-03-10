@@ -3,8 +3,9 @@
 {{- $period := generate "metricset.period" }}
 {{- $cloudId := generate "cloud.account.id" }}
 {{- $cloudRegion := generate "cloud.region" }}
+{{- $timestamp := generate "timestamp" }}
 {
-    "@timestamp": "{{generate "timestamp"}}",
+    "@timestamp": "{{$timestamp.Format "2006-01-02T15:04:05.999999Z07:00"}}",
     "cloud": {
         "provider": "aws",
         "region": "{{$cloudRegion}}",

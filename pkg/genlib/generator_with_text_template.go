@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
-  "math/rand"
+	"math/rand"
 	"text/template"
 	"time"
 
@@ -50,7 +50,7 @@ var awsAZs map[string][]string = map[string][]string{
 	"us-west-2":      {"us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"},
 }
 
-func calculateTotEventsWithTextTemplate(totSize uint64, fieldMap map[string]any, errChan chan error, tpl []byte) (uint64, error) {
+func calculateTotEventsWithTextTemplate(totSize uint64, fieldMap map[string]any, errChan chan error, tpl []byte, templateFns template.FuncMap) (uint64, error) {
 	if totSize == 0 {
 		return 0, nil
 	}
@@ -58,14 +58,12 @@ func calculateTotEventsWithTextTemplate(totSize uint64, fieldMap map[string]any,
 	// Generate a single event to calculate the total number of events based on its size
 	t := template.New("estimate_tot_events")
 	t = t.Option("missingkey=error")
-
-	templateFns := sprig.TxtFuncMap()
-
-	templateFns["timeDuration"] = func(duration int64) time.Duration {
-		return time.Duration(duration)
+	tempTemplateFns := template.FuncMap{}
+	for k, v := range templateFns {
+		tempTemplateFns[k] = v
 	}
 
-	templateFns["generate"] = func(field string) any {
+	tempTemplateFns["generate"] = func(field string) any {
 		state := NewGenState()
 		state.prevCacheForDup[field] = make(map[any]struct{})
 		state.prevCacheCardinality[field] = make([]any, 0)
@@ -127,21 +125,13 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 
 	errChan := make(chan error)
 
-	totEvents, err := calculateTotEventsWithTextTemplate(totSize, fieldMap, errChan, tpl)
-	if err != nil {
-		return nil, err
-	}
-
-	t := template.New("generator")
-	t = t.Option("missingkey=error")
-
 	templateFns := sprig.TxtFuncMap()
 
 	templateFns["timeDuration"] = func(duration int64) time.Duration {
 		return time.Duration(duration)
 	}
-  
-  templateFns["awsAZFromRegion"] = func(region string) string {
+
+	templateFns["awsAZFromRegion"] = func(region string) string {
 		azs, ok := awsAZs[region]
 		if !ok {
 			return "NoAZ"
@@ -159,6 +149,14 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 
 		return bindF(state)
 	}
+
+	totEvents, err := calculateTotEventsWithTextTemplate(totSize, fieldMap, errChan, tpl, templateFns)
+	if err != nil {
+		return nil, err
+	}
+
+	t := template.New("generator")
+	t = t.Option("missingkey=error")
 
 	parsedTpl, err := t.Funcs(templateFns).Parse(string(tpl))
 	if err != nil {

@@ -18,3 +18,5 @@
   type: keyword
 - name: event.id
   type: keyword
+- name: cloud.region
+  type: keyword

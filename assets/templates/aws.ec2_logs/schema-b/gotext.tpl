@@ -12,7 +12,7 @@
     "log_group": "/var/log/messages"
   },
   "cloud": {
-    "region": ""
+    "region": "{{ generate "cloud.region" }}"
   },
   "log.file.path": "/var/log/messages/{{$logstream}}",
   "input": {

@@ -153,9 +153,33 @@
     numerator: 1
     denominator: 20
 - name: DiskReadBytesSum
+  range:
+    min: 0
+    max: 1500000
+  fuzziness:
+    numerator: 1
+    denominator: 20
 - name: DiskReadOpsSum
+  range:
+    min: 0
+    max: 1000
+  fuzziness:
+    numerator: 1
+    denominator: 20
 - name: DiskWriteBytesSum
+  range:
+    min: 0
+    max: 1500000000
+  fuzziness:
+    numerator: 1
+    denominator: 20
 - name: DiskWriteOpsSum
+  range:
+    min: 0
+    max: 1000
+  fuzziness:
+    numerator: 1
+    denominator: 20
 - name: EventDuration
   range:
     min: 1

@@ -208,16 +208,12 @@ It is possible to tweak the randomness of the generated data through a config fi
 ##### Sample config
 ```yaml
 - name: aws.dynamodb.metrics.AccountMaxReads.max
-  fuzziness:
-    numerator: 1
-    denominator: 10
+  fuzziness: 0.1
   range:
     min: 0
     max: 100
 - name: aws.dynamodb.metrics.AccountMaxTableLevelReads.max
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
   range:
     min: 0
     max: 50
@@ -225,9 +221,7 @@ It is possible to tweak the randomness of the generated data through a config fi
     numerator: 1
     denominator: 20
 - name: aws.dynamodb.metrics.AccountProvisionedReadCapacityUtilization.avg
-  fuzziness:
-    numerator: 1
-    denominator: 10
+  fuzziness: 0.1
 - name: aws.cloudwatch.namespace
   cardinality:
     numerator: 1
@@ -254,7 +248,7 @@ It is possible to tweak the randomness of the generated data through a config fi
 The config file is a yaml file consisting of an array of config entry.
 For each config entry the following fields are available
 - `name` *mandatory*: dotted path field
-- `fuzziness` *optional (`long` and `double` type only)*: delta from the previous generated value for the same field, expressed as a ratio between a `numerator` and a `denominator`
+- `fuzziness` *optional (`long` and `double` type only)*: maximum delta from the previous generated value for the same field, expressed as float where 1 = 100%
 - `range` *optional (`long` and `double` type only)*: value will be generated between `min` and `max`
 - `cardinality` *optional*: distribution of different values for the field, expressed as a ratio between a `numerator` and a `denominator`
 - `object_keys` *optional (`object` type only)*: list of field names to generate in a object field type. if not specified a random number of field names will be generated in the object filed type.

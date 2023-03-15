@@ -32,45 +32,32 @@
   cardinality:
     numerator: 1
     denominator: 25
-  fuzziness:
-    numerator: 1
-    denominator: 5
+  fuzziness: 0.2
 - name: aws.billing.AmortizedCost.amount
   cardinality:
     numerator: 1
     denominator: 25
-  fuzziness:
-    numerator: 1
-    denominator: 5
+  fuzziness: 0.2
 - name: aws.billing.BlendedCost.amount
   cardinality:
     numerator: 1
     denominator: 25
-  fuzziness:
-    numerator: 1
-    denominator: 5
+  fuzziness: 0.2
 - name: aws.billing.NormalizedUsageAmount.amount
   cardinality:
     numerator: 1
     denominator: 25
-  fuzziness:
-    numerator: 1
-    denominator: 5
+  fuzziness: 0.2
 - name: aws.billing.UnblendedCost.amount
   cardinality:
     numerator: 1
     denominator: 25
-  fuzziness:
-    numerator: 1
-    denominator: 5
+  fuzziness: 0.2
 - name: aws.billing.UsageQuantity.amount
   cardinality:
     numerator: 1
     denominator: 25
-  fuzziness:
-    numerator: 1
-    denominator: 5
-
+  fuzziness: 0.2
 - name: aws.billing.group_definition.type
   value: "DIMENSION"
 - name: aws.billing.group_by.INSTANCE_TYPE

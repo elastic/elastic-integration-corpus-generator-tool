@@ -220,25 +220,11 @@ func bindByTypeWithReturn(cfg Config, field Field, fieldMap map[string]any) (err
 }
 
 func makeFloatFunc(fieldCfg ConfigField, field Field) func() float64 {
-	minValue := float64(0)
-	maxValue := float64(0)
-
-	switch fieldCfg.Range.Min.(type) {
-	case float64:
-		minValue = fieldCfg.Range.Min.(float64)
-	case uint64:
-		minValue = float64(fieldCfg.Range.Min.(uint64))
-	case int64:
-		minValue = float64(fieldCfg.Range.Min.(int64))
-	}
-
-	switch fieldCfg.Range.Max.(type) {
-	case float64:
-		maxValue = fieldCfg.Range.Max.(float64)
-	case uint64:
-		maxValue = float64(fieldCfg.Range.Max.(uint64))
-	case int64:
-		maxValue = float64(fieldCfg.Range.Max.(int64))
+	minValue, _ := fieldCfg.Range.MinAsFloat64()
+	maxValue, err := fieldCfg.Range.MaxAsFloat64()
+	// maxValue not set, let's set it to 0 for the sake of the switch above
+	if err != nil {
+		maxValue = 0
 	}
 
 	var dummyFunc func() float64
@@ -259,36 +245,26 @@ func makeFloatFunc(fieldCfg ConfigField, field Field) func() float64 {
 	return dummyFunc
 }
 
-func makeIntFunc(fieldCfg ConfigField, field Field) func() int {
-	minValue := 0
-	maxValue := 0
-
-	switch fieldCfg.Range.Min.(type) {
-	case uint64:
-		minValue = int(fieldCfg.Range.Min.(uint64))
-	case int64:
-		minValue = int(fieldCfg.Range.Min.(int64))
+func makeIntFunc(fieldCfg ConfigField, field Field) func() int64 {
+	minValue, _ := fieldCfg.Range.MinAsInt64()
+	maxValue, err := fieldCfg.Range.MaxAsInt64()
+	// maxValue not set, let's set it to 0 for the sake of the switch above
+	if err != nil {
+		maxValue = 0
 	}
 
-	switch fieldCfg.Range.Max.(type) {
-	case uint64:
-		maxValue = int(fieldCfg.Range.Max.(uint64))
-	case int64:
-		maxValue = int(fieldCfg.Range.Max.(int64))
-	}
-
-	var dummyFunc func() int
+	var dummyFunc func() int64
 
 	switch {
 	case maxValue > 0:
-		dummyFunc = func() int { return rand.Intn(maxValue-minValue) + minValue }
+		dummyFunc = func() int64 { return rand.Int63n(maxValue-minValue) + minValue }
 	case len(field.Example) == 0:
-		dummyFunc = func() int { return rand.Intn(10) }
+		dummyFunc = func() int64 { return rand.Int63n(10) }
 	default:
 		totDigit := len(field.Example)
-		max := int(math.Pow10(totDigit))
-		dummyFunc = func() int {
-			return rand.Intn(max)
+		max := int64(math.Pow10(totDigit))
+		dummyFunc = func() int64 {
+			return rand.Int63n(max)
 		}
 	}
 
@@ -539,17 +515,13 @@ func bindIP(field Field, fieldMap map[string]any) error {
 }
 
 func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
-
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
-	fuzzinessNumerator := float64(fieldCfg.Fuzziness.Numerator)
-	fuzzinessDenominator := float64(fieldCfg.Fuzziness.Denominator)
-
-	if fuzzinessNumerator <= 0 {
+	if fieldCfg.Fuzziness <= 0 {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 			v := make([]byte, 0, 32)
-			v = strconv.AppendInt(v, int64(dummyFunc()), 10)
+			v = strconv.AppendInt(v, dummyFunc(), 10)
 			buf.Write(v)
 			return nil
 		}
@@ -559,21 +531,22 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 		return nil
 	}
 
+	min, _ := fieldCfg.Range.MinAsFloat64()
+	max, _ := fieldCfg.Range.MaxAsFloat64()
+
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		dummyInt := dummyFunc()
 		if previousDummyInt, ok := state.prevCache[field.Name].(int); ok {
-			adjustedRatio := rand.Float64() * (fuzzinessNumerator / fuzzinessDenominator)
-			if rand.Int()%2 == 0 {
-				adjustedRatio += 1.
-			} else {
-				adjustedRatio = 1. - adjustedRatio
-			}
-			dummyInt = int(math.Ceil(float64(previousDummyInt) * adjustedRatio))
+			lowerBound := float64(previousDummyInt) * (1 - fieldCfg.Fuzziness)
+			higherBound := float64(previousDummyInt) * (1 + fieldCfg.Fuzziness)
+			lowerBound = math.Max(lowerBound, min)
+			higherBound = math.Min(higherBound, max)
+			dummyInt = rand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
 		}
 		state.prevCache[field.Name] = dummyInt
 		v := make([]byte, 0, 32)
-		v = strconv.AppendInt(v, int64(dummyInt), 10)
+		v = strconv.AppendInt(v, dummyInt, 10)
 		buf.Write(v)
 		return nil
 	}
@@ -583,13 +556,9 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 }
 
 func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
-
 	dummyFunc := makeFloatFunc(fieldCfg, field)
 
-	fuzzinessNumerator := float64(fieldCfg.Fuzziness.Numerator)
-	fuzzinessDenominator := float64(fieldCfg.Fuzziness.Denominator)
-
-	if fuzzinessNumerator <= 0 {
+	if fieldCfg.Fuzziness <= 0 {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 			dummyFloat := dummyFunc()
@@ -601,17 +570,18 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 		return nil
 	}
 
+	min, _ := fieldCfg.Range.MinAsFloat64()
+	max, _ := fieldCfg.Range.MaxAsFloat64()
+
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		dummyFloat := dummyFunc()
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
-			adjustedRatio := rand.Float64() * (fuzzinessNumerator / fuzzinessDenominator)
-			if rand.Int()%2 == 0 {
-				adjustedRatio += 1.
-			} else {
-				adjustedRatio = 1. - adjustedRatio
-			}
-			dummyFloat = previousDummyFloat * adjustedRatio
+			lowerBound := previousDummyFloat * (1 - fieldCfg.Fuzziness)
+			higherBound := previousDummyFloat * (1 + fieldCfg.Fuzziness)
+			lowerBound = math.Max(lowerBound, min)
+			higherBound = math.Min(higherBound, max)
+			dummyFloat = lowerBound + rand.Float64()*(higherBound-lowerBound)
 		}
 		state.prevCache[field.Name] = dummyFloat
 		_, err := fmt.Fprintf(buf, "%f", dummyFloat)
@@ -857,13 +827,9 @@ func bindIPWithReturn(field Field, fieldMap map[string]any) error {
 }
 
 func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
-
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
-	fuzzinessNumerator := float64(fieldCfg.Fuzziness.Numerator)
-	fuzzinessDenominator := float64(fieldCfg.Fuzziness.Denominator)
-
-	if fuzzinessNumerator <= 0 {
+	if fieldCfg.Fuzziness <= 0 {
 		var emitF EmitF
 		emitF = func(state *GenState) any {
 			return dummyFunc()
@@ -873,17 +839,18 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 		return nil
 	}
 
+	min, _ := fieldCfg.Range.MinAsFloat64()
+	max, _ := fieldCfg.Range.MaxAsFloat64()
+
 	var emitF EmitF
 	emitF = func(state *GenState) any {
 		dummyInt := dummyFunc()
 		if previousDummyInt, ok := state.prevCache[field.Name].(int); ok {
-			adjustedRatio := rand.Float64() * (fuzzinessNumerator / fuzzinessDenominator)
-			if rand.Int()%2 == 0 {
-				adjustedRatio += 1.
-			} else {
-				adjustedRatio = 1. - adjustedRatio
-			}
-			dummyInt = int(math.Ceil(float64(previousDummyInt) * adjustedRatio))
+			lowerBound := float64(previousDummyInt) * (1 - fieldCfg.Fuzziness)
+			higherBound := float64(previousDummyInt) * (1 + fieldCfg.Fuzziness)
+			lowerBound = math.Max(lowerBound, min)
+			higherBound = math.Min(higherBound, max)
+			dummyInt = rand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
 		}
 		state.prevCache[field.Name] = dummyInt
 		return dummyInt
@@ -894,13 +861,9 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 }
 
 func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
-
 	dummyFunc := makeFloatFunc(fieldCfg, field)
 
-	fuzzinessNumerator := float64(fieldCfg.Fuzziness.Numerator)
-	fuzzinessDenominator := float64(fieldCfg.Fuzziness.Denominator)
-
-	if fuzzinessNumerator <= 0 {
+	if fieldCfg.Fuzziness <= 0 {
 		var emitF EmitF
 		emitF = func(state *GenState) any {
 			return dummyFunc()
@@ -911,17 +874,18 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 		return nil
 	}
 
+	min, _ := fieldCfg.Range.MinAsFloat64()
+	max, _ := fieldCfg.Range.MaxAsFloat64()
+
 	var emitF EmitF
 	emitF = func(state *GenState) any {
 		dummyFloat := dummyFunc()
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
-			adjustedRatio := rand.Float64() * (fuzzinessNumerator / fuzzinessDenominator)
-			if rand.Int()%2 == 0 {
-				adjustedRatio += 1.
-			} else {
-				adjustedRatio = 1. - adjustedRatio
-			}
-			dummyFloat = previousDummyFloat * adjustedRatio
+			lowerBound := previousDummyFloat * (1 - fieldCfg.Fuzziness)
+			higherBound := previousDummyFloat * (1 + fieldCfg.Fuzziness)
+			lowerBound = math.Max(lowerBound, min)
+			higherBound = math.Min(higherBound, max)
+			dummyFloat = lowerBound + rand.Float64()*(higherBound-lowerBound)
 		}
 		state.prevCache[field.Name] = dummyFloat
 		return dummyFloat

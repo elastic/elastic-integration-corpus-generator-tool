@@ -18,16 +18,3 @@ _NOTE_: Not all regions are supported at the moment (but can be added at need). 
 ```text
 us-east-1a
 ```
-
-# `timeDuration`
-
-The helper accepts an `int64` and returns the equivalent `time.Duration`.
-
-**Example**:
-
-```text
-{{$timeDuration := timeDuration 5000000000}}{{$timeDuration}}
-```
-```text
-5s
-```

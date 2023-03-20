@@ -341,6 +341,8 @@ func genNounsN(n int, buf *bytes.Buffer) {
 		buf.WriteByte(' ')
 	}
 
+	// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
+	buf.WriteString(randomdata.Adjective())
 	buf.WriteString(randomdata.Noun())
 }
 
@@ -350,6 +352,8 @@ func genNounsNWithReturn(n int) string {
 		value += randomdata.Noun() + " "
 	}
 
+	// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
+	value += randomdata.Adjective()
 	value += randomdata.Noun()
 
 	return value
@@ -390,7 +394,8 @@ func bindConstantKeyword(field Field, fieldMap map[string]any) error {
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
-			value = randomdata.Noun()
+			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
+			value = randomdata.Adjective() + randomdata.Noun()
 			state.prevCache[field.Name] = value
 		}
 		buf.WriteString(value)
@@ -430,7 +435,8 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 	} else {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
-			buf.WriteString(randomdata.Noun())
+			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
+			buf.WriteString(randomdata.Adjective() + randomdata.Noun())
 			return nil
 		}
 
@@ -446,6 +452,8 @@ func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]any) er
 			buf.WriteString(randomdata.Noun())
 			buf.WriteString(joiner)
 		}
+		// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
+		buf.WriteString(randomdata.Adjective())
 		buf.WriteString(randomdata.Noun())
 		return nil
 	}
@@ -721,7 +729,8 @@ func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 	emitF = func(state *GenState) any {
 		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
-			value = randomdata.Noun()
+			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
+			value = randomdata.Adjective() + randomdata.Noun()
 			state.prevCache[field.Name] = value
 		}
 		return value
@@ -759,7 +768,8 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 	} else {
 		var emitF EmitF
 		emitF = func(state *GenState) any {
-			return randomdata.Noun()
+			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
+			return randomdata.Adjective() + randomdata.Noun()
 		}
 
 		fieldMap[field.Name] = emitF
@@ -775,6 +785,8 @@ func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[stri
 			value += randomdata.Noun() + joiner
 		}
 
+		// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
+		value += randomdata.Adjective()
 		value += randomdata.Noun()
 
 		return value

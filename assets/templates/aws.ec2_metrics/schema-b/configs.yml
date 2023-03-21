@@ -86,100 +86,72 @@
   range:
     min: 0
     max: 10
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: StatusCheckFailed_SystemAvg
   range:
     min: 0
     max: 10
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: StatusCheckFailedAvg
   range:
     min: 0
     max: 10
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: CPUUtilizationAvg
   range:
     min: 0
     max: 100
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: NetworkPacketsInSum
   range:
     min: 0
     max: 1500000
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: NetworkPacketsOutSum
   range:
     min: 0
     max: 1500000
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: CPUCreditBalanceAvg
   range:
     min: 0
     max: 5000
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: CPUSurplusCreditBalanceAvg
   range:
     min: 0
     max: 5000
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: CPUSurplusCreditsChargedAvg
   range:
     min: 0
     max: 5000
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: CPUCreditUsageAvg
   range:
     min: 0
     max: 10
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: DiskReadBytesSum
   range:
     min: 0
     max: 1500000
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: DiskReadOpsSum
   range:
     min: 0
     max: 1000
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: DiskWriteBytesSum
   range:
     min: 0
     max: 1500000000
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: DiskWriteOpsSum
   range:
     min: 0
     max: 1000
-  fuzziness:
-    numerator: 1
-    denominator: 20
+  fuzziness: 0.05
 - name: EventDuration
   range:
     min: 1

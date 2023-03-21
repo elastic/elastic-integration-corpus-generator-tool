@@ -18,6 +18,7 @@ type Ratio struct {
 }
 
 type Range struct {
+  // NOTE: we want to distinguish when Min/Max are explicitly set to zero value or are not set at all. We use a pointer, such that when not set will be `nil`.
 	Min *float64 `config:"min"`
 	Max *float64 `config:"max"`
 }

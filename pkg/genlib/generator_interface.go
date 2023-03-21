@@ -514,6 +514,14 @@ func bindIP(field Field, fieldMap map[string]any) error {
 	return nil
 }
 
+func fuzzyInt(previous int64, fuzziness, min, max float64) int64 {
+	lowerBound := float64(previous) * (1 - fuzziness)
+	higherBound := float64(previous) * (1 + fuzziness)
+	lowerBound = math.Max(lowerBound, min)
+	higherBound = math.Min(higherBound, max)
+	return rand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
+}
+
 func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
@@ -537,12 +545,8 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		dummyInt := dummyFunc()
-		if previousDummyInt, ok := state.prevCache[field.Name].(int); ok {
-			lowerBound := float64(previousDummyInt) * (1 - fieldCfg.Fuzziness)
-			higherBound := float64(previousDummyInt) * (1 + fieldCfg.Fuzziness)
-			lowerBound = math.Max(lowerBound, min)
-			higherBound = math.Min(higherBound, max)
-			dummyInt = rand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
+		if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
+			dummyInt = fuzzyInt(previousDummyInt, fieldCfg.Fuzziness, min, max)
 		}
 		state.prevCache[field.Name] = dummyInt
 		v := make([]byte, 0, 32)
@@ -553,6 +557,14 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 
 	fieldMap[field.Name] = emitFNotReturn
 	return nil
+}
+
+func fuzzyFloat(previous, fuzziness, min, max float64) float64 {
+	lowerBound := previous * (1 - fuzziness)
+	higherBound := previous * (1 + fuzziness)
+	lowerBound = math.Max(lowerBound, min)
+	higherBound = math.Min(higherBound, max)
+	return lowerBound + rand.Float64()*(higherBound-lowerBound)
 }
 
 func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
@@ -577,11 +589,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
 		dummyFloat := dummyFunc()
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
-			lowerBound := previousDummyFloat * (1 - fieldCfg.Fuzziness)
-			higherBound := previousDummyFloat * (1 + fieldCfg.Fuzziness)
-			lowerBound = math.Max(lowerBound, min)
-			higherBound = math.Min(higherBound, max)
-			dummyFloat = lowerBound + rand.Float64()*(higherBound-lowerBound)
+			dummyFloat = fuzzyFloat(previousDummyFloat, fieldCfg.Fuzziness, min, max)
 		}
 		state.prevCache[field.Name] = dummyFloat
 		_, err := fmt.Fprintf(buf, "%f", dummyFloat)
@@ -845,12 +853,8 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	var emitF EmitF
 	emitF = func(state *GenState) any {
 		dummyInt := dummyFunc()
-		if previousDummyInt, ok := state.prevCache[field.Name].(int); ok {
-			lowerBound := float64(previousDummyInt) * (1 - fieldCfg.Fuzziness)
-			higherBound := float64(previousDummyInt) * (1 + fieldCfg.Fuzziness)
-			lowerBound = math.Max(lowerBound, min)
-			higherBound = math.Min(higherBound, max)
-			dummyInt = rand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
+		if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
+			dummyInt = fuzzyInt(previousDummyInt, fieldCfg.Fuzziness, min, max)
 		}
 		state.prevCache[field.Name] = dummyInt
 		return dummyInt
@@ -881,11 +885,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	emitF = func(state *GenState) any {
 		dummyFloat := dummyFunc()
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
-			lowerBound := previousDummyFloat * (1 - fieldCfg.Fuzziness)
-			higherBound := previousDummyFloat * (1 + fieldCfg.Fuzziness)
-			lowerBound = math.Max(lowerBound, min)
-			higherBound = math.Min(higherBound, max)
-			dummyFloat = lowerBound + rand.Float64()*(higherBound-lowerBound)
+			dummyFloat = fuzzyFloat(previousDummyFloat, fieldCfg.Fuzziness, min, max)
 		}
 		state.prevCache[field.Name] = dummyFloat
 		return dummyFloat

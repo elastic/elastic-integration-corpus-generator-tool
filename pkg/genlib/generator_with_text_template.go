@@ -10,7 +10,6 @@ import (
 	"io"
 	"math/rand"
 	"text/template"
-	"time"
 
 	"github.com/Masterminds/sprig/v3"
 )
@@ -126,10 +125,6 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totSize
 	errChan := make(chan error)
 
 	templateFns := sprig.TxtFuncMap()
-
-	templateFns["timeDuration"] = func(duration int64) time.Duration {
-		return time.Duration(duration)
-	}
 
 	templateFns["awsAZFromRegion"] = func(region string) string {
 		azs, ok := awsAZs[region]

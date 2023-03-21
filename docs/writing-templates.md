@@ -76,5 +76,6 @@ This is equivalent to the following when using the `placeholder` template type:
 {{ .Field1 }}
 ```
 
-#### sprig functions
-The template loads the functions provided by sprig (https://masterminds.github.io/sprig/) with the exclusion of the functions are not guaranteed to evaluate to the same result for given input (https://github.com/Masterminds/sprig/blob/581758eb7d96ae4d113649668fa96acc74d46e7f/functions.go#L68-L95)
+#### Helpers
+
+This template type supports other [helper functions](./go-text-template-helpers.md).

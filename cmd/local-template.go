@@ -23,9 +23,10 @@ var flag_schema string
 
 func TemplateCmd() *cobra.Command {
 	command := &cobra.Command{
-		Use:   "local-template package dataset",
-		Short: "Generate a corpus from a local template",
-		Long:  "Generate a bulk request corpus for the specified package dataset in the assets/templates folder",
+		Use:     "local-template package dataset",
+		Example: "local-template aws billing",
+		Short:   "Generate a corpus from a local template",
+		Long:    "Generate a bulk request corpus for the specified package dataset in the assets/templates folder",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 2 {
 				return errors.New("package and dataset arguments are required")

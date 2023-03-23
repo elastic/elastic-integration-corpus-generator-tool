@@ -6,7 +6,17 @@
 
 # Building the CLI
 
-Run `make build`
+`$ make build`
+
+# Running tests
+
+`$ make test`
+
+# Adding License header
+
+All files in this repository should have the License header. To do this, use:
+
+`$ make licenser`
 
 # This CLI and genlib
 

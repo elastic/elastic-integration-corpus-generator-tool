@@ -1,0 +1,29 @@
+- name: cloud.availabilit_zone
+  value: "europe-west1-d"  
+- name: agent.id
+  value: "12f376ef-5186-4e8b-a175-70f1140a8f30"
+- name: agent.name
+  value: "kubernetes-scale-123456"
+- name: agent.ephemeral_id  
+  value: "f94220b0-2ca6-4809-8656-eb478a66c541"
+- name: agent.version
+  value: "8.7.0"
+- name: metricset.period
+  value: 10000
+- name: event.duration
+  range:
+    min: 1
+    max: 4000000
+- name: container.network.ingress.bytes
+  range:
+    min: 0
+    max: 15000
+  fuzziness: 0.05
+- name: container.network.egress.bytes
+  range:
+    min: 0
+    max: 10000
+  fuzziness: 0.05
+- name: aws.billing.group_by.INSTANCE_TYPE
+  enum: ["NoInstanceType", "a1.large", "c5.2xlarge", "c5.xlarge", "c6i.2xlarge", "db.r6g.2xlarge", "db.t2.micro", "dc2.large", "m5.large", "t1.micro", "t2.medium", "t2.micro", "t2.small", "t2.xlarge", "t3.2xlarge", "t3.medium", "t3.xlarge","t3.xlarge"]
+

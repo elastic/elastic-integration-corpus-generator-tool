@@ -173,7 +173,7 @@
    "orchestrator":{
       "cluster":{
          "name":"kubernetes-scale",
-         "url":"https://{{generate "Ip"}}"
+         "url":"https://{{ generate "Ip" }}"
       }
    },
    "service":{

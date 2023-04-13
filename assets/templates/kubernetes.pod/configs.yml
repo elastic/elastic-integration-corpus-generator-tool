@@ -8,6 +8,8 @@
   value: "f94220b0-2ca6-4809-8656-eb478a66c541"
 - name: agent.version
   value: "8.7.0"
+- name: agent.snasphost
+  value: false
 - name: metricset.period
   value: 10000
 - name: event.duration
@@ -18,12 +20,23 @@
   range:
     min: 0
     max: 15000
-  fuzziness: 0.05
 - name: container.network.egress.bytes
   range:
     min: 0
     max: 10000
-  fuzziness: 0.05
+- name: Offset
+  range:
+    min: 1
+    max: 100
+- name: Bytes
+  range:
+    min: 1
+    max: 3000000
+- name: Percentage
+  range:
+    min: 0
+    max: 5000
+  fuzziness: 0.005
 - name: aws.billing.group_by.INSTANCE_TYPE
   enum: ["NoInstanceType", "a1.large", "c5.2xlarge", "c5.xlarge", "c6i.2xlarge", "db.r6g.2xlarge", "db.t2.micro", "dc2.large", "m5.large", "t1.micro", "t2.medium", "t2.micro", "t2.small", "t2.xlarge", "t3.2xlarge", "t3.medium", "t3.xlarge","t3.xlarge"]
 

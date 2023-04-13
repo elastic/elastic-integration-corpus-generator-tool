@@ -11,10 +11,22 @@
 - name: container.network.ingress.bytes
   type: double
 - name: container.network.egress.bytes
-  type: keyword
+  type: double
 - name: event.duration
   type: long  
 - name: event.ingested
   type: date
 - name: metricset.period
   type: long
+- name: Offset
+  type: long
+- name: Bytes
+  type: long  
+- name: Ip
+  type: ip
+- name: Percentage
+  type: double
+- name: suffix
+  type: keyword
+- name: agent.snapshot
+  type: boolean  

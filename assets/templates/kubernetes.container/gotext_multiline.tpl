@@ -8,21 +8,97 @@
 {{- $txbytes := generate "container.network.egress.bytes" | int }}
 {{- $uId := uuidv4 }}
 {{- $pod_uId := uuidv4 }}
+{{- $container_uId := uuidv4 }}
 {{- $suffix := split "-" $uId }}
 {{- $offset := generate "Offset" | int }}
+{{- $faults := generate "faults" | int }}
 {{- $pct := generate "Percentage" | float64 }}
 {  "@timestamp": "{{$timestamp.Format "2006-01-02T15:04:05.999999Z07:00"}}",
    "container":{
-      "network":{
-         "ingress":{
-            "bytes": {{ $rxbytes }} 
-         },
-         "egress":{
-            "bytes": {{ $txbytes }} 
-         }
-      }
+      "memory":{
+         "usage": {{divf $pct 1000000}}
+      },
+      "name":"{{ generate "container.name"}}",
+      "runtime":"containerd",
+      "cpu":{
+         "usage": {{divf $pct 1000000}}
+      },
+      "id":"{{ $container_uId }}"
    },
    "kubernetes": {
+      "container":{
+         "start_time":"{{$timestamp.Format "2006-01-02T15:04:05.999999Z07:00"}}",
+         "memory":{
+            "rss":{
+               "bytes": {{generate "Bytes"}}
+            },
+            "majorpagefaults": {{ $faults }},
+            "usage":{
+               "node":{
+                  "pct": {{divf $pct 1000000}}
+               },
+               "bytes": {{generate "Bytes"}},
+               "limit":{
+                  "pct": {{divf $pct 1000000}}
+               }
+            },
+            "available":{
+               "bytes": {{generate "Bytes"}}
+            },
+            "workingset":{
+               "bytes": {{generate "Bytes"}},
+               "limit":{
+                  "pct": {{divf $pct 1000000}}
+               }
+            },
+            "pagefaults": "{{ $faults }}"
+         },
+         "rootfs":{
+            "inodes":{
+               "used": {{ generate "kubernetes.container.rootfs.inodes.used" }}
+            },
+            "available":{
+               "bytes": {{generate "Bytes"}}
+            },
+            "used":{
+               "bytes": {{generate "Bytes"}}
+            },
+            "capacity":{
+               "bytes": {{generate "Bytes"}}
+            }
+         },
+         "name":"{{ generate "container.name" }}",
+         "cpu":{
+            "usage":{
+               "core":{
+                  "ns": 41129679
+               },
+               "node":{
+                  "pct": {{divf $pct 1000000}}
+               },
+               "nanocores":0,
+               "limit":{
+                  "pct": {{divf $pct 1000000}}
+               }
+            }
+         },
+         "logs":{
+            "inodes":{
+               "count": {{ generate "kubernetes.container.rootfs.inodes.used" }},
+               "used":5,
+               "free": {{ generate "kubernetes.container.rootfs.inodes.used" }}
+            },
+            "available":{
+               "bytes": {{generate "Bytes"}}
+            },
+            "used":{
+               "bytes": {{generate "Bytes"}}
+            },
+            "capacity":{
+               "bytes": {{generate "Bytes"}}
+            }
+         }
+      },
       "node":{
          "uid": "{{ $uId }}" ,
          "hostname":"{{ $agentName }}.c.elastic-obs-integrations-dev.internal",
@@ -54,73 +130,25 @@
       },
       "pod":{
          "uid": "{{ $pod_uId }}",
-         "start_time": "{{$timestamp.Format "2006-01-02T15:04:05.999999Z07:00"}}",
-         "memory":{
-            "rss":{
-               "bytes":"{{generate "Bytes"}}"
-            },
-            "major_page_faults":0,
-            "usage":{
-               "node":{
-                  "pct": "{{divf $pct 1000000}}"
-               },
-               "bytes": "{{generate "Bytes"}}",
-               "limit":{
-                  "pct":"{{divf $pct 1000000}}"
-               }
-            },
-            "available":{
-               "bytes":0
-            },
-            "page_faults":1386,
-            "working_set":{
-               "bytes": "{{generate "Bytes"}}",
-               "limit":{
-                  "pct": "{{divf $pct 1000000}}"
-               }
-            }
-         },
          "ip":"{{generate "Ip"}}",
          "name":"demo-deployment-{{ $offset }}-{{ $suffix._0 }}",
-         "cpu":{
-            "usage":{
-               "node":{
-                  "pct":0
-               },
-               "nanocores":0,
-               "limit":{
-                  "pct":0
-               }
-            }
+         "namespace":"demo-{{ $offset }}",
+         "namespace_uid":"demo-{{ $offset }}",
+         "replicaset":{
+            "name":"demo-deployment-{{ $offset }}-{{ $suffix._0 }}"
          },
-         "network":{
-            "tx":{
-               "bytes": {{ $txbytes }},
-               "errors":0
-            },
-            "rx":{
-               "bytes": {{ $rxbytes }},
-               "errors":0
-            }
+         "namespace_labels":{
+            "kubernetes_io/metadata_name":"demo-{{ $offset }}"
+         },
+         "labels":{
+            "app":"demo",
+            "pod-template-hash":"{{ $suffix._0 }}",
+            "app-2":"demo-2",
+            "app-1":"demo-1"
+         },
+         "deployment":{
+            "name":"demo-deployment-{{ $offset }}"
          }
-      },
-      "namespace":"demo-{{ $offset }}",
-      "namespace_uid":"demo-{{ $offset }}",
-      "replicaset":{
-         "name":"demo-deployment-{{ $offset }}-{{ $suffix._0 }}"
-      },
-      "namespace_labels":{
-         "kubernetes_io/metadata_name":"demo-{{ $offset }}"
-      },
-      "labels":{
-         "app":"demo",
-         "pod-template-hash":"{{ $suffix._0 }}",
-         "app-2":"demo-2",
-         "app-1":"demo-1"
-      },
-      "deployment":{
-         "name":"demo-deployment-{{ $offset }}"
-      }
    },
    "cloud": {
       "provider": "gcp",
@@ -155,7 +183,7 @@
    "data_stream":{
       "namespace":"default",
       "type":"metrics",
-      "dataset":"kubernetes.pod"
+      "dataset":"kubernetes.container"
    },
    "ecs": {
       "version": "8.2.0"
@@ -181,7 +209,7 @@
       "agent_id_status": "verified",
       "ingested": "{{ $timestamp.Format "2006-01-02T15:04:05.999999Z07:00" }}",
       "module":"kubernetes",
-      "dataset":"kubernetes.pod"
+      "dataset":"kubernetes.container"
    },
    "host":{
       "hostname":"{{ $agentName }}",

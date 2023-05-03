@@ -75,7 +75,6 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		rangeMax := rand.Intn(10000-rangeMin) + rangeMin
 
 		// Add the range to get some variety in integers
-		// Add the range to get some variety in integers
 		tmpl := "fields:\n  - name: alpha\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
 		tmpl += "  - name: beta\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s"
 

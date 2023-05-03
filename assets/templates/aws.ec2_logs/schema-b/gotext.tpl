@@ -5,7 +5,7 @@
 {{- $hostname := generate "host.name" }}
 {{- $agentId := generate "agent.id" }}
 {
-  "@timestamp": "{{ $ts }}",
+  "@timestamp": "{{ $ts.Format "2006-01-02T15:04:05.999999Z07:00" }}",
   "aws.cloudwatch": {
     "log_stream": "{{$logstream}}",
     "ingestion_time": "{{ $ts | date "2006-01-02T15:04:05.000Z" }}",

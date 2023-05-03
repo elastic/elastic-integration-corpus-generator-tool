@@ -34,8 +34,8 @@
             "ServiceName": "{{generate "aws.billing.ServiceName"}}"
 {{- else }}
 {{- $sd := generate "aws.billing.start_date" }}
-            "start_date": "{{ $sd }}",
-            "end_date": "{{ $sd | date_modify (print "+" $period "s") }}",
+            "start_date": "{{ $sd.Format "2006-01-02T15:04:05.999999Z07:00" }}",
+            "end_date": "{{ $sd | date_modify (print "+" $period "s") | date "2006-01-02T15:04:05.999999Z07:00" }}",
             "AmortizedCost": {
                 "amount": {{printf "%.2f" (generate "aws.billing.AmortizedCost.amount")}},
                 "unit": "{{$currency}}"

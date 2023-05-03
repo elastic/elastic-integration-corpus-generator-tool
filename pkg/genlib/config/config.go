@@ -1,11 +1,16 @@
 package config
 
 import (
+	"errors"
+
+	"math"
 	"os"
 
 	"github.com/elastic/go-ucfg/yaml"
 	"github.com/spf13/afero"
 )
+
+var rangeBoundNotSet = errors.New("range bound not set")
 
 type Ratio struct {
 	Numerator   int `config:"numerator"`
@@ -13,8 +18,9 @@ type Ratio struct {
 }
 
 type Range struct {
-	Min interface{} `config:"min"`
-	Max interface{} `config:"max"`
+	// NOTE: we want to distinguish when Min/Max are explicitly set to zero value or are not set at all. We use a pointer, such that when not set will be `nil`.
+	Min *float64 `config:"min"`
+	Max *float64 `config:"max"`
 }
 
 type Config struct {
@@ -22,13 +28,45 @@ type Config struct {
 }
 
 type ConfigField struct {
-	Name        string      `config:"name"`
-	Fuzziness   Ratio       `config:"fuzziness"`
-	Range       Range       `config:"range"`
-	Cardinality Ratio       `config:"cardinality"`
-	Enum        []string    `config:"enum"`
-	ObjectKeys  []string    `config:"object_keys"`
-	Value       interface{} `config:"value"`
+	Name        string   `config:"name"`
+	Fuzziness   float64  `config:"fuzziness"`
+	Range       Range    `config:"range"`
+	Cardinality Ratio    `config:"cardinality"`
+	Enum        []string `config:"enum"`
+	ObjectKeys  []string `config:"object_keys"`
+	Value       any      `config:"value"`
+}
+
+func (r Range) MinAsInt64() (int64, error) {
+	if r.Min == nil {
+		return 0, rangeBoundNotSet
+	}
+
+	return int64(*r.Min), nil
+}
+
+func (r Range) MaxAsInt64() (int64, error) {
+	if r.Max == nil {
+		return math.MaxInt64, rangeBoundNotSet
+	}
+
+	return int64(*r.Max), nil
+}
+
+func (r Range) MinAsFloat64() (float64, error) {
+	if r.Min == nil {
+		return 0, rangeBoundNotSet
+	}
+
+	return *r.Min, nil
+}
+
+func (r Range) MaxAsFloat64() (float64, error) {
+	if r.Max == nil {
+		return math.MaxFloat64, rangeBoundNotSet
+	}
+
+	return *r.Max, nil
 }
 
 type ConfigFile struct {

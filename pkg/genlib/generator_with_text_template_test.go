@@ -16,7 +16,7 @@ import (
 func Test_EmptyCaseWithTextTemplate(t *testing.T) {
 	template, _ := generateTextTemplateFromField(Config{}, []Field{})
 	t.Logf("with template: %s", string(template))
-	g, state := makeGeneratorWithTextTemplate(t, Config{}, []Field{}, template)
+	g, state := makeGeneratorWithTextTemplate(t, Config{}, []Field{}, template, 0)
 
 	var buf bytes.Buffer
 
@@ -40,12 +40,17 @@ func Test_CardinalityWithTextTemplate(t *testing.T) {
 }
 
 func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
-	template := []byte(`{"alpha":"{{generate "alpha"}}"}`)
+	template := []byte(`{"alpha":"{{generate "alpha"}}", "beta":"{{generate "beta"}}"}`)
 	if ty == FieldTypeInteger || ty == FieldTypeFloat {
-		template = []byte(`{"alpha":{{generate "alpha"}}}`)
+		template = []byte(`{"alpha":{{generate "alpha"}}, "beta":{{generate "beta"}}}`)
 	}
-	fld := Field{
+
+	fldAlpha := Field{
 		Name: "alpha",
+		Type: ty,
+	}
+	fldBeta := Field{
+		Name: "beta",
 		Type: ty,
 	}
 
@@ -70,20 +75,23 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		rangeMax := rand.Intn(10000-rangeMin) + rangeMin
 
 		// Add the range to get some variety in integers
-		tmpl := "fields:\n  - name: alpha\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s"
+		// Add the range to get some variety in integers
+		tmpl := "fields:\n  - name: alpha\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
+		tmpl += "fields:\n  - name: beta\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s"
 
-		yaml := []byte(fmt.Sprintf(tmpl, cardinalityNumerator, cardinalityDenominator, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
+		yaml := []byte(fmt.Sprintf(tmpl, cardinalityNumerator, cardinalityDenominator, rangeMin, rangeTrailing, rangeMax, rangeTrailing, cardinalityNumerator, cardinalityDenominator*2, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
 
 		cfg, err := config.LoadConfigFromYaml(yaml)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template)
-
-		vmap := make(map[any]int)
-
 		nSpins := 16384
+		g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(len(template)*nSpins*1024))
+
+		vmapAlpha := make(map[any]int)
+		vmapBeta := make(map[any]int)
+
 		for i := 0; i < nSpins; i++ {
 
 			var buf bytes.Buffer
@@ -93,21 +101,33 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 
 			m := unmarshalJSONT[T](t, buf.Bytes())
 
-			if len(m) != 1 {
+			if len(m) != 2 {
 				t.Errorf("Expected map size 1, got %d", len(m))
 			}
 
-			v, ok := m[fld.Name]
+			v, ok := m[fldAlpha.Name]
 
 			if !ok {
-				t.Errorf("Missing key %v", fld.Name)
+				t.Errorf("Missing key %v", fldAlpha.Name)
 			}
 
-			vmap[v] = vmap[v] + 1
+			vmapAlpha[v] = vmapAlpha[v] + 1
+
+			v, ok = m[fldBeta.Name]
+
+			if !ok {
+				t.Errorf("Missing key %v", fldBeta.Name)
+			}
+
+			vmapBeta[v] = vmapBeta[v] + 1
 		}
 
-		if len(vmap) != 1000/cardinality {
-			t.Errorf("Expected cardinality of %d got %d", 1000/cardinality, len(vmap))
+		if len(vmapAlpha) != 1000/cardinality {
+			t.Errorf("Expected cardinality of %d got %d", 1000/cardinality, len(vmapAlpha))
+		}
+
+		if len(vmapBeta) != 2000/cardinality {
+			t.Errorf("Expected cardinality of %d got %d", 2000/cardinality, len(vmapBeta))
 		}
 	}
 }
@@ -349,7 +369,7 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 		}
 	}
 
-	g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template)
+	g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 0)
 
 	var buf bytes.Buffer
 
@@ -374,8 +394,8 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 	return v
 }
 
-func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte) (Generator, *GenState) {
-	g, err := NewGeneratorWithTextTemplate(template, cfg, fields)
+func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totSize uint64) (Generator, *GenState) {
+	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totSize)
 
 	if err != nil {
 		t.Fatal(err)

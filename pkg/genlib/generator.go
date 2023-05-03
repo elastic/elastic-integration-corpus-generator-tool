@@ -162,9 +162,9 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 	return templateBuffer.Bytes(), objectKeysField
 }
 
-func NewGenerator(cfg Config, flds Fields) (Generator, error) {
+func NewGenerator(cfg Config, flds Fields, totSize uint64) (Generator, error) {
 	template, objectKeysField := generateCustomTemplateFromField(cfg, flds)
 	flds = append(flds, objectKeysField...)
 
-	return NewGeneratorWithCustomTemplate(template, cfg, flds)
+	return NewGeneratorWithCustomTemplate(template, cfg, flds, totSize)
 }

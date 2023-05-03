@@ -77,7 +77,7 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		// Add the range to get some variety in integers
 		// Add the range to get some variety in integers
 		tmpl := "fields:\n  - name: alpha\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
-		tmpl += "fields:\n  - name: beta\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s"
+		tmpl += "  - name: beta\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s"
 
 		yaml := []byte(fmt.Sprintf(tmpl, cardinalityNumerator, cardinalityDenominator, rangeMin, rangeTrailing, rangeMax, rangeTrailing, cardinalityNumerator, cardinalityDenominator*2, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
 

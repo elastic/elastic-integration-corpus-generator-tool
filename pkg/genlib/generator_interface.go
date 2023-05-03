@@ -552,9 +552,14 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
-		dummyInt := dummyFunc()
+		var dummyInt int64
 		if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
+			if previousDummyInt == 0 {
+				previousDummyInt = 1
+			}
 			dummyInt = fuzzyInt(previousDummyInt, fieldCfg.Fuzziness, min, max)
+		} else {
+			dummyInt = dummyFunc()
 		}
 		state.prevCache[field.Name] = dummyInt
 		v := make([]byte, 0, 32)
@@ -595,9 +600,11 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
-		dummyFloat := dummyFunc()
+		var dummyFloat float64
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
 			dummyFloat = fuzzyFloat(previousDummyFloat, fieldCfg.Fuzziness, min, max)
+		} else {
+			dummyFloat = dummyFunc()
 		}
 		state.prevCache[field.Name] = dummyFloat
 		_, err := fmt.Fprintf(buf, "%f", dummyFloat)
@@ -864,9 +871,14 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 
 	var emitF EmitF
 	emitF = func(state *GenState) any {
-		dummyInt := dummyFunc()
+		var dummyInt int64
 		if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
+			if previousDummyInt == 0 {
+				previousDummyInt = 1
+			}
 			dummyInt = fuzzyInt(previousDummyInt, fieldCfg.Fuzziness, min, max)
+		} else {
+			dummyInt = dummyFunc()
 		}
 		state.prevCache[field.Name] = dummyInt
 		return dummyInt
@@ -895,9 +907,11 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 
 	var emitF EmitF
 	emitF = func(state *GenState) any {
-		dummyFloat := dummyFunc()
+		var dummyFloat float64
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
 			dummyFloat = fuzzyFloat(previousDummyFloat, fieldCfg.Fuzziness, min, max)
+		} else {
+			dummyFloat = dummyFunc()
 		}
 		state.prevCache[field.Name] = dummyFloat
 		return dummyFloat

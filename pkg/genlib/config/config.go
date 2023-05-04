@@ -3,11 +3,11 @@ package config
 import (
 	"errors"
 
-	"io/ioutil"
 	"math"
 	"os"
 
 	"github.com/elastic/go-ucfg/yaml"
+	"github.com/spf13/afero"
 )
 
 var rangeBoundNotSet = errors.New("range bound not set")
@@ -18,7 +18,7 @@ type Ratio struct {
 }
 
 type Range struct {
-  // NOTE: we want to distinguish when Min/Max are explicitly set to zero value or are not set at all. We use a pointer, such that when not set will be `nil`.
+	// NOTE: we want to distinguish when Min/Max are explicitly set to zero value or are not set at all. We use a pointer, such that when not set will be `nil`.
 	Min *float64 `config:"min"`
 	Max *float64 `config:"max"`
 }
@@ -69,17 +69,21 @@ func (r Range) MaxAsFloat64() (float64, error) {
 	return *r.Max, nil
 }
 
-func LoadConfig(configFile string) (Config, error) {
+type ConfigFile struct {
+	Fields []ConfigField `config:"fields"`
+}
+
+func LoadConfig(fs afero.Fs, configFile string) (Config, error) {
 	if len(configFile) == 0 {
 		return Config{}, nil
 	}
 
 	configFile = os.ExpandEnv(configFile)
-	if _, err := os.Stat(configFile); err != nil {
+	if _, err := fs.Stat(configFile); err != nil {
 		return Config{}, err
 	}
 
-	data, err := ioutil.ReadFile(configFile)
+	data, err := afero.ReadFile(fs, configFile)
 	if err != nil {
 		return Config{}, err
 	}
@@ -94,8 +98,8 @@ func LoadConfigFromYaml(c []byte) (Config, error) {
 		return Config{}, err
 	}
 
-	var cfgList []ConfigField
-	err = cfg.Unpack(&cfgList)
+	var cfgfile ConfigFile
+	err = cfg.Unpack(&cfgfile)
 	if err != nil {
 		return Config{}, err
 	}
@@ -104,7 +108,7 @@ func LoadConfigFromYaml(c []byte) (Config, error) {
 		m: make(map[string]ConfigField),
 	}
 
-	for _, c := range cfgList {
+	for _, c := range cfgfile.Fields {
 		outCfg.m[c.Name] = c
 	}
 

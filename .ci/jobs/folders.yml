@@ -1,5 +1,0 @@
----
-- job:
-    name: "shared"
-    description: "shared"
-    project-type: folder

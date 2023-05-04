@@ -6,7 +6,7 @@ They must be added to a file named `configs.yml` in the assets template folder o
 
 ## Config entries definition
 
-The config file is a yaml file consisting of an array of config entry.
+The config file is a yaml file consisting of root level `fields` object that's an array of config entry.
 
 For each config entry the following fields are available:
 - `name` *mandatory*: dotted path field, matching an entry in [Fields definition](./glossary.md#fields-definition)

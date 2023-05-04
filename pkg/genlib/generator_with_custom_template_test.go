@@ -87,8 +87,7 @@ func Test_ParseTemplate(t *testing.T) {
 		},
 		{
 			template:                  []byte("{ with curly brace as prefix {{.aField}} {{.anotherField}} and { curly brace in trailing"),
-			expectedOrder
-			[]string{"aField", "anotherField"},
+			expectedOrderFields:       []string{"aField", "anotherField"},
 			expectedTemplateFieldsMap: map[string][]byte{"aField": []byte("{ with curly brace as prefix "), "anotherField": []byte(" ")},
 			expectedTrailingTemplate:  []byte(" and { curly brace in trailing"),
 		},

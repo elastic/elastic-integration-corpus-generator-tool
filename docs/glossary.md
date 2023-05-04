@@ -2,7 +2,7 @@
 
 # Data schemas
 
-Different data structures we observe in the end to end data collection flow for Elastic (Beats & Agent). See [./data-schemas.md](./data-schemas.md).
+Different data structures we observe in the end to end data collection flow for Elastic (Beats & Agent). See [Data Schemas](./data-schemas.md).
 
 In the context of this tool it also refers to folder names containing template information for a specific data schema.
 
@@ -14,17 +14,17 @@ In the context of this tool `dataset` refers to the name of the dataset you can 
 
 # Fields definition
 
-Datasets define data structure. Within them there are fields definitions that describe the fields a dataset provides. 
+Datasets define data structure. Within them there are fields definition that describe the fields a dataset provides. 
 
 In the context of this tool we can refer to:
 - the fields definition within a dataset in an integration package
 - a file named `fields.yml` that contains fields definition that is not (yet) part of a package
 
-# Fields definition configuration
+# Fields generation configuration
 
-Complete randomness in generated data may not always be advisable. There may be relationships or constraints that must be expressed to create corpus that have life-like characteristics. Through the Fields definition configuration file, named `configs.yml`, is possible to specify these constraints.
+Complete randomness in generated data may not always be advisable. There may be relationships or constraints that must be expressed to create corpus that have life-like characteristics. Through the Fields generation configuration file, named `configs.yml`, is possible to specify these constraints.
 
-See [./field-configurations.md](./field-configurations.md).
+See [Fields generation configuration](./fields-configuration.md).
 
 # Integration
 

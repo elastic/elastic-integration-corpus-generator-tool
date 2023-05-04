@@ -4,7 +4,7 @@ This file collects some common use cases for this tool.
 
 To do this, use the `generate` command. This command targets a specific dataset within an integration package at a specific version.
 
-You can pass a local Fields configuration file.
+You can pass a local Fields generation configuration file.
 
 `go run main.go generate <package> <dataset> <version> --tot-size <quantity>`
 
@@ -19,9 +19,12 @@ File generated: /path/to/corpora/1649330390-aws-dynamodb-1.14.0.ndjson
 
 # Generate schema-b data from a template
 
-To do this, use the `generate-with-template` command. This command targets a specific template within the `assets/templates` folder.
+To do this, use the `generate-with-template` command. This command targets a specific template, fields definition and fields generation configuration.
 
-You can pass a local Fields configuration file.
+A body of templates, fields definition and fields generation configuration are already available in the `assets/templates` folder. You can rely on them or write your own ones. Please consider opening a PR adding your custom templates, fields definition and fields configuration to the existing body, if they belong to an integration, so that we can enrich the catalogue for everyone.
+ within the `assets/templates` folder.
+
+You can pass a local Fields generation configuration file.
 
 `go run main.go generate-with-template <template-path> <fields-definition-path> --tot-size <quantity>`
 

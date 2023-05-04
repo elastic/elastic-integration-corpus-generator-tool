@@ -14,7 +14,7 @@
 
 # Adding License header
 
-All files in this repository should have the License header. To do this, use:
+All files in this repository that not resides in the `assets` folder should have the License header. To do this, use:
 
 `$ make licenser`
 

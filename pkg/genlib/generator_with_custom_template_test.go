@@ -238,8 +238,8 @@ func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
 		rangeMax := rand.Intn(10000-rangeMin) + rangeMin
 
 		// Add the range to get some variety in integers
-		tmpl := "- name: alpha\n  cardinality:\n    numerator: %d\n    denominator: %d\n  range:\n    min: %d%s\n    max: %d%s\n"
-		tmpl += "- name: beta\n  cardinality:\n    numerator: %d\n    denominator: %d\n  range:\n    min: %d%s\n    max: %d%s"
+		tmpl := "fields:\n  - name: alpha\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
+		tmpl += "  - name: beta\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s"
 
 		yaml := []byte(fmt.Sprintf(tmpl, cardinalityNumerator, cardinalityDenominator, rangeMin, rangeTrailing, rangeMax, rangeTrailing, cardinalityNumerator, cardinalityDenominator*2, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
 		cfg, err := config.LoadConfigFromYaml(yaml)
@@ -342,7 +342,7 @@ func Test_FieldStaticOverrideStringWithCustomTemplate(t *testing.T) {
 		Type: FieldTypeKeyword,
 	}
 
-	yaml := []byte("- name: alpha\n  value: beta")
+	yaml := []byte("fields:\n  - name: alpha\n    value: beta")
 	template := []byte(`{"alpha":{{.alpha}}}`)
 	t.Logf("with template: %s", string(template))
 	b := testSingleTWithCustomTemplate[string](t, fld, yaml, template)
@@ -358,7 +358,7 @@ func Test_FieldStaticOverrideNumericWithCustomTemplate(t *testing.T) {
 		Type: FieldTypeKeyword,
 	}
 
-	yaml := []byte("- name: alpha\n  value: 33.")
+	yaml := []byte("fields:\n  - name: alpha\n    value: 33.")
 	template := []byte(`{"alpha":{{.alpha}}}`)
 	t.Logf("with template: %s", string(template))
 	b := testSingleTWithCustomTemplate[float64](t, fld, yaml, template)
@@ -374,7 +374,7 @@ func Test_FieldStaticOverrideBoolWithCustomTemplate(t *testing.T) {
 		Type: FieldTypeKeyword,
 	}
 
-	yaml := []byte("- name: alpha\n  value: true")
+	yaml := []byte("fields:\n  - name: alpha\n    value: true")
 	template := []byte(`{"alpha":{{.alpha}}}`)
 	t.Logf("with template: %s", string(template))
 	b := testSingleTWithCustomTemplate[bool](t, fld, yaml, template)

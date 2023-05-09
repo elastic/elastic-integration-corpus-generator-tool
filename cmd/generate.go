@@ -60,14 +60,15 @@ func GenerateCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			fs := afero.NewOsFs()
 			location := viper.GetString("corpora_location")
-			cfg, err := config.LoadConfig(configFile)
+
+			cfg, err := config.LoadConfig(fs, configFile)
 			if err != nil {
 				return err
 			}
 
-			fc, err := corpus.NewGenerator(cfg, afero.NewOsFs(), location)
+			fc, err := corpus.NewGenerator(cfg, fs, location)
 			if err != nil {
 				return err
 			}

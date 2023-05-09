@@ -8,9 +8,9 @@ There are 2 supported template types: `placeholder` (fast) and `gotext` (flexibl
 
 ## How does templating works?
 
-At its core, this tool works by loading field definitions from a file and a template. The template is rendered using information from:
-- the field definitions file
-- the (optional) field generation configurations
+At its core, this tool works by loading fields definition from a file and a template. The template is rendered using information from:
+- the fields definition file
+- the (optional) fields generation configuration
 
 This operation has some caveats:
 - generating data is a computing and memory intensive task; you can expect to face computing pressure more easily while memory usage depends on the choosen template type and the template itself; performances of this tool is taken in great consideration, for more information see [performances.md](./performances.md);
@@ -34,13 +34,13 @@ Within these folder, these files should be added:
 - (_mandatory_) `gotext.tpl`: a `gotext` template file
 - (_optional_) `placeholder.tpl`: a `placeholder` template file
 
-## `fields.yml` - Field definitions
+## `fields.yml` - Fields definition
 
 A `YAML` file containing field mapping definitions. Ideally this file is extracted from Integration packages, but there is no automation for doing so at the moment.
 
-## `configs.yml` - Field generation configurations
+## `configs.yml` - Fields generation configuration
 
-A `YAML` file containing configurations for field mappings defined in `fields.yml`. Details on configurations are in [field-configurations.md](./field-configurations.md).
+A `YAML` file containing configurations for field mappings defined in `fields.yml`. Details on configurations are in [Fields generation configuration](./fields-configuration.md).
 
 This file allows to tweak the randomness of the generated data.
 

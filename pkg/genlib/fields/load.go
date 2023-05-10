@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/elastic/go-ucfg/yaml"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -17,7 +18,7 @@ import (
 	"strings"
 )
 
-var ErrNotFound = errors.New("Not found")
+var ErrNotFound = errors.New("not found")
 
 const (
 	fieldsSlug        = "fields"
@@ -28,25 +29,30 @@ const (
 	manifestSlug      = "manifest.yml"
 )
 
-func LoadFields(ctx context.Context, baseURL, integration, dataStream, version string) (Fields, error) {
+type yamlManifest struct {
+	Type string `config:"type"`
+}
 
-	fieldsContent, err := getFieldsFiles(ctx, baseURL, integration, dataStream, version)
+func LoadFields(ctx context.Context, baseURL, integration, dataStream, version string) (Fields, string, error) {
+
+	fieldsContent, dataStreamType, err := getFieldsFilesAndDataStreamType(ctx, baseURL, integration, dataStream, version)
 	if err != nil {
-		return nil, err
+		return nil, dataStreamType, err
 	}
 
 	if len(fieldsContent) == 0 {
-		return nil, ErrNotFound
+		return nil, dataStreamType, ErrNotFound
 	}
 
 	fieldsFromYaml, err := loadFieldsFromYaml(fieldsContent)
 	if err != nil {
-		return nil, err
+		return nil, dataStreamType, err
 	}
 
 	fields := collectFields(fieldsFromYaml, "")
 
-	return normaliseFields(fields)
+	fields, err = normaliseFields(fields)
+	return fields, dataStreamType, err
 }
 
 func LoadFieldsWithTemplateFromString(ctx context.Context, fieldsContent string) (Fields, error) {
@@ -120,15 +126,15 @@ func makeDownloadURL(baseURL, donwloadPath string) (*url.URL, error) {
 	return u, nil
 }
 
-func getFieldsFiles(ctx context.Context, baseURL, integration, dataStream, version string) ([]byte, error) {
+func getFieldsFilesAndDataStreamType(ctx context.Context, baseURL, integration, dataStream, version string) ([]byte, string, error) {
 	packageURL, err := makePackageURL(baseURL, integration, version)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	r, err := getFromURL(ctx, packageURL.String())
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	var downloadPayload struct {
@@ -137,7 +143,7 @@ func getFieldsFiles(ctx context.Context, baseURL, integration, dataStream, versi
 
 	body, err := ioutil.ReadAll(r)
 	if err = json.Unmarshal(body, &downloadPayload); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	downloadURL, err := makeDownloadURL(baseURL, downloadPayload.Download)
@@ -149,28 +155,30 @@ func getFieldsFiles(ctx context.Context, baseURL, integration, dataStream, versi
 	}(r)
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	zipContent, err := ioutil.ReadAll(r)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	archive, err := zip.NewReader(bytes.NewReader(zipContent), int64(len(zipContent)))
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	prefixFieldsPath := path.Join(fmt.Sprintf("%s-%s", integration, version), dataStreamSlug, dataStream, fieldsSlug)
+	manifestPath := path.Join(fmt.Sprintf("%s-%s", integration, version), dataStreamSlug, dataStream, manifestSlug)
 
+	var dataStreamType string
 	var fieldsContent string
 	for _, z := range archive.File {
 		if z.FileInfo().IsDir() {
 			continue
 		}
 
-		if !strings.HasPrefix(z.Name, prefixFieldsPath) {
+		if !strings.HasPrefix(z.Name, prefixFieldsPath) && !strings.HasPrefix(z.Name, manifestPath) {
 			continue
 		}
 
@@ -180,7 +188,7 @@ func getFieldsFiles(ctx context.Context, baseURL, integration, dataStream, versi
 			if zr != nil {
 				_ = zr.Close()
 			}
-			return nil, err
+			return nil, "", err
 		}
 
 		fieldsFileContent, err := ioutil.ReadAll(zr)
@@ -188,20 +196,38 @@ func getFieldsFiles(ctx context.Context, baseURL, integration, dataStream, versi
 			if zr != nil {
 				_ = zr.Close()
 			}
-			return nil, err
+			return nil, "", err
 		}
 
 		_ = zr.Close()
-		key := strings.TrimSuffix(filepath.Base(fieldsFileName), filepath.Ext(fieldsFileName))
-		keyEntry := fmt.Sprintf("- key: %s\n  fields:\n", key)
-		for _, line := range strings.Split(string(fieldsFileContent), "\n") {
-			keyEntry += `    ` + line + "\n"
+
+		if strings.HasPrefix(z.Name, prefixFieldsPath) {
+			key := strings.TrimSuffix(filepath.Base(fieldsFileName), filepath.Ext(fieldsFileName))
+			keyEntry := fmt.Sprintf("- key: %s\n  fields:\n", key)
+			for _, line := range strings.Split(string(fieldsFileContent), "\n") {
+				keyEntry += `    ` + line + "\n"
+			}
+
+			fieldsContent += keyEntry
 		}
 
-		fieldsContent += keyEntry
+		if strings.HasPrefix(z.Name, manifestPath) {
+			var manifest yamlManifest
+
+			cfg, err := yaml.NewConfig(fieldsFileContent)
+			if err != nil {
+				return nil, "", err
+			}
+			err = cfg.Unpack(&manifest)
+			if err != nil {
+				return nil, "", err
+			}
+
+			dataStreamType = manifest.Type
+		}
 	}
 
-	return []byte(fieldsContent), nil
+	return []byte(fieldsContent), dataStreamType, nil
 }
 
 func getFromURL(ctx context.Context, srcURL string) (io.ReadCloser, error) {
@@ -229,17 +255,4 @@ func getFromURL(ctx context.Context, srcURL string) (io.ReadCloser, error) {
 	}
 
 	return resp.Body, nil
-}
-
-func makeManifestURL(baseURL, integration, stream, version string) (*url.URL, error) {
-
-	u, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, err
-	}
-
-	// https://epr.elastic.co/package/endpoint/8.2.0/data_stream/process/manifest.yml
-	u.Path = path.Join(u.Path, packageSlug, integration, version, dataStreamSlug, stream, manifestSlug)
-
-	return u, nil
 }

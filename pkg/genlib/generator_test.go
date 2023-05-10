@@ -132,17 +132,11 @@ func Benchmark_GeneratorCustomTemplateVPCFlowLogs(b *testing.B) {
 - name: AccountID
   value: 627286350134
 - name: InterfaceID
-  cardinality:
-    numerator: 1
-    denominator: 100
+  cardinality: 100
 - name: SrcAddr
-  cardinality:
-    numerator: 1
-    denominator: 1000
+  cardinality: 1000
 - name: DstAddr
-  cardinality:
-    numerator: 1
-    denominator: 10
+  cardinality: 10
 - name: SrcPort
   range:
     min: 0
@@ -151,9 +145,7 @@ func Benchmark_GeneratorCustomTemplateVPCFlowLogs(b *testing.B) {
   range:
     min: 0
     max: 65535
-  cardinality:
-    numerator: 1
-    denominator: 10
+  cardinality: 10
 - name: Protocol
   range:
     min: 1
@@ -266,17 +258,11 @@ func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
 - name: AccountID
   value: 627286350134
 - name: InterfaceID
-  cardinality:
-    numerator: 1
-    denominator: 100
+  cardinality: 100
 - name: SrcAddr
-  cardinality:
-    numerator: 1
-    denominator: 1000
+  cardinality: 1000
 - name: DstAddr
-  cardinality:
-    numerator: 1
-    denominator: 10
+  cardinality: 10
 - name: SrcPort
   range:
     min: 0
@@ -285,9 +271,7 @@ func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
   range:
     min: 0
     max: 65535
-  cardinality:
-    numerator: 1
-    denominator: 10
+  cardinality: 10
 - name: Protocol
   range:
     min: 1

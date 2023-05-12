@@ -11,7 +11,7 @@ import (
 
 func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
-	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
+	flds, _, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
 	template, objectKeysField := generateCustomTemplateFromField(Config{}, flds)
 	flds = append(flds, objectKeysField...)
@@ -39,7 +39,7 @@ func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
 
 func Benchmark_GeneratorTextTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
-	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
+	flds, _, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
 	template, objectKeysField := generateTextTemplateFromField(Config{}, flds)
 	flds = append(flds, objectKeysField...)

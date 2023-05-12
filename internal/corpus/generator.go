@@ -179,12 +179,12 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 	}
 
 	ctx := context.Background()
-	flds, err := fields.LoadFields(ctx, packageRegistryBaseURL, integrationPackage, dataStream, packageVersion)
+	flds, dataStreamType, err := fields.LoadFields(ctx, packageRegistryBaseURL, integrationPackage, dataStream, packageVersion)
 	if err != nil {
 		return "", err
 	}
 
-	createPayload := []byte(`{ "create" : { "_index": "metrics-` + integrationPackage + `.` + dataStream + `-default" } }` + "\n")
+	createPayload := []byte(`{ "create" : { "_index": "` + dataStreamType + `-` + integrationPackage + `.` + dataStream + `-default" } }` + "\n")
 
 	err = gc.eventsPayloadFromFields(nil, flds, totSizeInBytes, createPayload, f)
 	if err != nil {

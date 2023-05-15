@@ -12,11 +12,6 @@ import (
 
 var rangeBoundNotSet = errors.New("range bound not set")
 
-type Ratio struct {
-	Numerator   int `config:"numerator"`
-	Denominator int `config:"denominator"`
-}
-
 type Range struct {
 	// NOTE: we want to distinguish when Min/Max are explicitly set to zero value or are not set at all. We use a pointer, such that when not set will be `nil`.
 	Min *float64 `config:"min"`
@@ -31,7 +26,7 @@ type ConfigField struct {
 	Name        string   `config:"name"`
 	Fuzziness   float64  `config:"fuzziness"`
 	Range       Range    `config:"range"`
-	Cardinality Ratio    `config:"cardinality"`
+	Cardinality int      `config:"cardinality"`
 	Enum        []string `config:"enum"`
 	ObjectKeys  []string `config:"object_keys"`
 	Value       any      `config:"value"`

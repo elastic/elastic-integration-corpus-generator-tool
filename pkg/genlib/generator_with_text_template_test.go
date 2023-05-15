@@ -58,13 +58,8 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 	// It's cardinality per mille, so a bit confusing :shrug:
 	for cardinality := 1000; cardinality >= 10; cardinality /= 10 {
 
-		cardinalityDenominator := 1000
-		cardinalityNumerator := cardinality
-		cardinalityModule := cardinalityDenominator % cardinality
-		if cardinalityModule == 0 {
-			cardinalityNumerator = 1
-			cardinalityDenominator /= cardinality
-		}
+		currentCardinality := 1000
+		currentCardinality /= cardinality
 
 		rangeTrailing := ""
 		if ty == FieldTypeFloat {
@@ -75,10 +70,10 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		rangeMax := rand.Intn(10000-rangeMin) + rangeMin
 
 		// Add the range to get some variety in integers
-		tmpl := "fields:\n  - name: alpha\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
-		tmpl += "  - name: beta\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s"
+		tmpl := "fields:\n  - name: alpha\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
+		tmpl += "  - name: beta\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s"
 
-		yaml := []byte(fmt.Sprintf(tmpl, cardinalityNumerator, cardinalityDenominator, rangeMin, rangeTrailing, rangeMax, rangeTrailing, cardinalityNumerator, cardinalityDenominator*2, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
+		yaml := []byte(fmt.Sprintf(tmpl, currentCardinality, rangeMin, rangeTrailing, rangeMax, rangeTrailing, currentCardinality*2, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
 
 		cfg, err := config.LoadConfigFromYaml(yaml)
 		if err != nil {

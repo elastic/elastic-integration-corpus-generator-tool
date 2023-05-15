@@ -115,7 +115,7 @@ func bindField(cfg Config, field Field, fieldMap map[string]any, withReturn bool
 		}
 	}
 
-	if fieldCfg.Cardinality.Numerator > 0 {
+	if fieldCfg.Cardinality > 0 {
 		if withReturn {
 			return bindCardinalityWithReturn(cfg, field, fieldMap)
 		} else {
@@ -619,7 +619,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 func bindCardinality(cfg Config, field Field, fieldMap map[string]any) error {
 
 	fieldCfg, _ := cfg.GetField(field.Name)
-	cardinality := int(math.Ceil((float64(fieldCfg.Cardinality.Denominator) / float64(fieldCfg.Cardinality.Numerator))))
+	cardinality := fieldCfg.Cardinality
 
 	if strings.HasSuffix(field.Name, ".*") {
 		field.Name = replacer.Replace(field.Name)
@@ -925,7 +925,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 func bindCardinalityWithReturn(cfg Config, field Field, fieldMap map[string]any) error {
 
 	fieldCfg, _ := cfg.GetField(field.Name)
-	cardinality := int(math.Ceil((float64(fieldCfg.Cardinality.Denominator) / float64(fieldCfg.Cardinality.Numerator))))
+	cardinality := fieldCfg.Cardinality
 
 	if strings.HasSuffix(field.Name, ".*") {
 		field.Name = replacer.Replace(field.Name)

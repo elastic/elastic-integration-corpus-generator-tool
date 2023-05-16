@@ -1,5 +1,9 @@
 - name: timestamp
-  type: date   
+  type: date
+- name: timedate
+  type: keyword   
+- name: timehour
+  type: keyword   
 - name: agent.id
   type: keyword
 - name: agent.name

@@ -1,5 +1,9 @@
 {{- $period := generate "metricset.period" }}
 {{- $timestamp := generate "timestamp" }}
+{{- $fulltimestamp := $timestamp.Format "2006-01-02T15:04:05.999999Z07:00" }}
+{{- $resttime := split ":" $fulltimestamp }}
+{{- $timedate := generate "timedate" }}
+{{- $timehour := generate "timehour" }}
 {{- $agentId := generate "agent.id" }}
 {{- $agentVersion := generate "agent.version" }}
 {{- $agentName := generate "agent.name" }}

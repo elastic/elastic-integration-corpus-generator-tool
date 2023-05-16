@@ -1,5 +1,4 @@
 {{- $period := generate "metricset.period" }}
-{{- $timestamp := generate "timestamp" }}
 {{- $agentId := generate "agent.id" }}
 {{- $agentVersion := generate "agent.version" }}
 {{- $agentName := generate "agent.name" }}
@@ -10,11 +9,16 @@
 {{- $pod_uId := uuidv4 }}
 {{- $container_uId := uuidv4 }}
 {{- $suffix := split "-" $uId }}
+{{- $timestamp := generate "timestamp" }}
+{{- $fulltimestamp := $timestamp.Format "2006-01-02T15:04:05.999999Z07:00" }}
+{{- $resttime := split ":" $fulltimestamp }}
+{{- $timedate := generate "timedate" }}
+{{- $timehour := generate "timehour" }}
 {{- $offset := generate "Offset" | int }}
 {{- $faults := generate "faults" | int }}
 {{- $pct := generate "Percentage" | float64 }}
 {{- $name :=  generate "container.name" }} 
-{  "@timestamp": "{{$timestamp.Format "2006-01-02T15:04:05.999999Z07:00"}}",
+{  "@timestamp": "{{$timedate}}:T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
       "memory":{
          "usage": {{divf $pct 1000000}}
@@ -28,7 +32,7 @@
    },
    "kubernetes": {
       "container":{
-         "start_time":"{{$timestamp.Format "2006-01-02T15:04:05.999999Z07:00"}}",
+         "start_time":"{{$timedate}}:T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
          "memory":{
             "rss":{
                "bytes": {{generate "Bytes"}}
@@ -208,7 +212,7 @@
    "event":{
       "duration": "{{generate "event.duration"}}",
       "agent_id_status": "verified",
-      "ingested": "{{ $timestamp.Format "2006-01-02T15:04:05.999999Z07:00" }}",
+      "ingested": "{{$timedate}}:T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
       "module":"kubernetes",
       "dataset":"kubernetes.container"
    },

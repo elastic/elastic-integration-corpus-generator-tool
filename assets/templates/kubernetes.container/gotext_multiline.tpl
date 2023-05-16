@@ -13,12 +13,13 @@
 {{- $offset := generate "Offset" | int }}
 {{- $faults := generate "faults" | int }}
 {{- $pct := generate "Percentage" | float64 }}
+{{- $name :=  generate "container.name" }} 
 {  "@timestamp": "{{$timestamp.Format "2006-01-02T15:04:05.999999Z07:00"}}",
    "container":{
       "memory":{
          "usage": {{divf $pct 1000000}}
       },
-      "name":"{{ generate "container.name"}}",
+      "name":"{{ $name }}",
       "runtime":"containerd",
       "cpu":{
          "usage": {{divf $pct 1000000}}
@@ -67,7 +68,7 @@
                "bytes": {{generate "Bytes"}}
             }
          },
-         "name":"{{ generate "container.name" }}",
+         "name":"{{ $name }}",
          "cpu":{
             "usage":{
                "core":{

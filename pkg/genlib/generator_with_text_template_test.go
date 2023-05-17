@@ -81,7 +81,7 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		}
 
 		nSpins := 16384
-		g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(len(template)*nSpins*1024))
+		g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(nSpins))
 
 		vmapAlpha := make(map[any]int)
 		vmapBeta := make(map[any]int)
@@ -388,8 +388,8 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 	return v
 }
 
-func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totSize uint64) (Generator, *GenState) {
-	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totSize)
+func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) (Generator, *GenState) {
+	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totEvents)
 
 	if err != nil {
 		t.Fatal(err)

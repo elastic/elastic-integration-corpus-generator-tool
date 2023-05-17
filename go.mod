@@ -6,7 +6,6 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/OpenPeeDeeP/xdg v1.0.0
 	github.com/Pallinder/go-randomdata v1.2.0
-	github.com/dustin/go-humanize v1.0.1
 	github.com/elastic/go-ucfg v0.8.6
 	github.com/lithammer/shortuuid/v3 v3.0.7
 	github.com/spf13/afero v1.9.5

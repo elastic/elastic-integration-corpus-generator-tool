@@ -82,39 +82,7 @@ func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) 
 
 }
 
-func calculateTotEventsWithCustomTemplate(totSize uint64, emitters []emitter, trailingTemplate []byte) (uint64, error) {
-	if totSize == 0 {
-		return 0, nil
-	}
-
-	// Generate a single event to calculate the total number of events based on its size
-	buf := bytes.NewBufferString("")
-	for _, e := range emitters {
-		buf.Write(e.prefix)
-		state := NewGenState()
-		state.prevCacheForDup[e.fieldName] = make(map[any]struct{})
-		state.prevCacheCardinality[e.fieldName] = make([]any, 0)
-		if err := e.emitFunc(state, buf); err != nil {
-			return 0, err
-		}
-	}
-
-	buf.Write(trailingTemplate)
-
-	singleEventSize := uint64(buf.Len())
-	if singleEventSize == 0 {
-		return 1, nil
-	}
-
-	totEvents := totSize / singleEventSize
-	if totEvents < 1 {
-		totEvents = 1
-	}
-
-	return totEvents, nil
-}
-
-func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, totSize uint64) (*GeneratorWithCustomTemplate, error) {
+func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, totEvents uint64) (*GeneratorWithCustomTemplate, error) {
 	// Parse the template and extract relevant information
 	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
 
@@ -141,11 +109,6 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 			fieldType: fieldTypes[fieldName],
 			prefix:    templateFieldsMap[fieldName],
 		})
-	}
-
-	totEvents, err := calculateTotEventsWithCustomTemplate(totSize, emitters, trailingTemplate)
-	if err != nil {
-		return nil, err
 	}
 
 	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate, totEvents: totEvents, state: state}, nil

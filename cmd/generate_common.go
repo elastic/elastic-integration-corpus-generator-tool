@@ -2,4 +2,4 @@ package cmd
 
 var packageRegistryBaseURL string
 var configFile string
-var totSize string
+var totEvents uint64

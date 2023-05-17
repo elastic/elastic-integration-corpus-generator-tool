@@ -82,6 +82,6 @@ func GenerateCmd() *cobra.Command {
 
 	generateCmd.Flags().StringVarP(&packageRegistryBaseURL, "package-registry-base-url", "r", "https://epr.elastic.co/", "base url of the package registry with schema")
 	generateCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
-	generateCmd.Flags().Uint64VarP(&totEvents, "tot-events", "t", 0, "total events of the corpus to generate")
+	generateCmd.Flags().Uint64VarP(&totEvents, "tot-events", "t", 1, "total events of the corpus to generate")
 	return generateCmd
 }

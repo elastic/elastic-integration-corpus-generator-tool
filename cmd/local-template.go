@@ -93,7 +93,7 @@ func TemplateCmd() *cobra.Command {
 
 	command.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
 	command.Flags().StringVarP(&templateType, "engine", "e", "gotext", "either 'placeholder' or 'gotext'")
-	command.Flags().Uint64VarP(&totEvents, "tot-events", "t", 0, "total events of the corpus to generate")
+	command.Flags().Uint64VarP(&totEvents, "tot-events", "t", 1, "total events of the corpus to generate")
 	command.Flags().StringVarP(&flag_schema, "schema", "", "b", "schema to generate data for; valid values: a, b")
 	return command
 }

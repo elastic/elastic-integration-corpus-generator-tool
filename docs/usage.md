@@ -6,9 +6,9 @@ To do this, use the `generate` command. This command targets a specific dataset 
 
 You can pass a local Fields generation configuration file.
 
-`go run main.go generate <package> <dataset> <version> --tot-size <quantity>`
+`go run main.go generate <package> <dataset> <version> --tot-events <quantity>`
 
-`package`, `dataset` and `version` are mandatory. `--tot-size` is mandatory.
+`package`, `dataset` and `version` are mandatory. `--tot-events` is not mandatory and in case it is not provided an infinite number of events will be generated.
 
 **Example**:
 
@@ -26,14 +26,14 @@ A body of templates, fields definition and fields generation configuration are a
 
 You can pass a local Fields generation configuration file.
 
-`go run main.go generate-with-template <template-path> <fields-definition-path> --tot-size <quantity>`
+`go run main.go generate-with-template <template-path> <fields-definition-path> --tot-events <quantity>`
 
-`template-path` and `fields-definition-path` are mandatory. `--tot-size` is mandatory.
+`template-path` and `fields-definition-path` are mandatory `--tot-events` is not mandatory and in case it is not provided an infinite number of events will be generated.
 
 **Example**:
 
 ```shell
-$ go run main.go generate-with-template ./assets/templates/aws.vpcflow/vpcflow.gotext.log ./assets/templates/aws.vpcflow/vpcflow.fields.yml -t 20KB --config-file ./assets/templates/aws.vpcflow/vpcflow.conf.yml -y gotext -t 1000
-File generated: /Users/andreaspacca/Library/Application Support/elastic-integration-corpus-generator-tool/corpora/1672731603-vpcflow.gotext.log
+$ go run main.go generate-with-template ./assets/templates/aws.vpcflow/schema-a/gotext.tpl ./assets/templates/aws.vpcflow/schema-a/fields.yml -t 1000 --config-file ./assets/templates/aws.vpcflow/schema-a/configs.yml -y gotext
+File generated: /path/to/corpora/1684304483-gotext.tpl
 ```
 

@@ -18,7 +18,7 @@
 {{- $faults := generate "faults" | int }}
 {{- $pct := generate "Percentage" | float64 }}
 {{- $name :=  generate "container.name" }} 
-{  "@timestamp": "{{$timedate}}:T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
+{  "@timestamp": "{{$timedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
       "memory":{
          "usage": {{divf $pct 1000000}}

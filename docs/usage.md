@@ -8,7 +8,7 @@ You can pass a local Fields generation configuration file.
 
 `go run main.go generate <package> <dataset> <version> --tot-events <quantity>`
 
-`package`, `dataset` and `version` are mandatory. `--tot-events` is not mandatory and in case it is not provided an infinite number of events will be generated.
+`package`, `dataset` and `version` are mandatory. `--tot-events` is not mandatory and in case it is not provided a single event will be generated. You can generate an infinite number of events expressly passing to the flag the value of `0`. 
 
 **Example**:
 
@@ -28,7 +28,7 @@ You can pass a local Fields generation configuration file.
 
 `go run main.go generate-with-template <template-path> <fields-definition-path> --tot-events <quantity>`
 
-`template-path` and `fields-definition-path` are mandatory `--tot-events` is not mandatory and in case it is not provided an infinite number of events will be generated.
+`template-path` and `fields-definition-path` are mandatory. `--tot-events` is not mandatory and in case it is not provided a single event will be generated. You can generate an infinite number of events expressly passing to the flag the value of `0`.
 
 **Example**:
 

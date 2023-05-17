@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize"
 	"io"
 	"os"
 	"path"
@@ -107,17 +106,17 @@ func (gc GeneratorCorpus) bulkPayloadFilenameWithTemplate(templatePath string) s
 var corpusLocPerm = os.FileMode(0770)
 var corpusPerm = os.FileMode(0660)
 
-func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totSize uint64, createPayload []byte, f afero.File) error {
+func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totEvents uint64, createPayload []byte, f afero.File) error {
 
 	var evgen genlib.Generator
 	var err error
 	if len(template) == 0 {
-		evgen, err = genlib.NewGenerator(gc.config, fields, totSize)
+		evgen, err = genlib.NewGenerator(gc.config, fields, totEvents)
 	} else {
 		if gc.templateType == templateTypeCustom {
-			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields, totSize)
+			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields, totEvents)
 		} else if gc.templateType == templateTypeGoText {
-			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields, totSize)
+			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields, totEvents)
 		} else {
 			return ErrNotValidTemplate
 		}
@@ -163,11 +162,7 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 }
 
 // Generate generates a bulk request corpus and persist it to file.
-func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion, totSize string) (string, error) {
-	totSizeInBytes, err := humanize.ParseBytes(totSize)
-	if err != nil {
-		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
-	}
+func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion string, totEvents uint64) (string, error) {
 	if err := gc.fs.MkdirAll(gc.location, corpusLocPerm); err != nil {
 		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
 	}
@@ -186,7 +181,7 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 
 	createPayload := []byte(`{ "create" : { "_index": "` + dataStreamType + `-` + integrationPackage + `.` + dataStream + `-default" } }` + "\n")
 
-	err = gc.eventsPayloadFromFields(nil, flds, totSizeInBytes, createPayload, f)
+	err = gc.eventsPayloadFromFields(nil, flds, totEvents, createPayload, f)
 	if err != nil {
 		return "", err
 	}
@@ -199,11 +194,7 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 }
 
 // GenerateWithTemplate generates a template based corpus and persist it to file.
-func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPath, totSize string) (string, error) {
-	totSizeInBytes, err := humanize.ParseBytes(totSize)
-	if err != nil {
-		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
-	}
+func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPath string, totEvents uint64) (string, error) {
 	if err := gc.fs.MkdirAll(gc.location, corpusLocPerm); err != nil {
 		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
 	}
@@ -229,7 +220,7 @@ func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPat
 		return "", err
 	}
 
-	err = gc.eventsPayloadFromFields(template, flds, totSizeInBytes, nil, f)
+	err = gc.eventsPayloadFromFields(template, flds, totEvents, nil, f)
 	if err != nil {
 		return "", err
 	}

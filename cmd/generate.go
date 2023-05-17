@@ -34,10 +34,6 @@ func GenerateCmd() *cobra.Command {
 				errs = append(errs, errors.New("you must provide a not empty --package-registry-base-url flag value"))
 			}
 
-			if totSize == "" {
-				errs = append(errs, errors.New("you must provide a not empty --tot-size flag value"))
-			}
-
 			integrationPackage = args[0]
 			if integrationPackage == "" {
 				errs = append(errs, errors.New("you must provide a not empty integration argument"))
@@ -73,7 +69,7 @@ func GenerateCmd() *cobra.Command {
 				return err
 			}
 
-			payloadFilename, err := fc.Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion, totSize)
+			payloadFilename, err := fc.Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion, totEvents)
 			if err != nil {
 				return err
 			}
@@ -86,6 +82,6 @@ func GenerateCmd() *cobra.Command {
 
 	generateCmd.Flags().StringVarP(&packageRegistryBaseURL, "package-registry-base-url", "r", "https://epr.elastic.co/", "base url of the package registry with schema")
 	generateCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
-	generateCmd.Flags().StringVarP(&totSize, "tot-size", "t", "", "total size of the corpus to generate")
+	generateCmd.Flags().Uint64VarP(&totEvents, "tot-events", "t", 0, "total events of the corpus to generate")
 	return generateCmd
 }

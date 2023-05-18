@@ -23,34 +23,75 @@ If you have an `object` type field that you defined one or multiple `object_keys
 ## Example configuration
 
 ```yaml
-- name: aws.dynamodb.metrics.AccountMaxReads.max
-  fuzziness: 0.1
-  range:
-    min: 0
-    max: 100
-- name: aws.dynamodb.metrics.AccountMaxTableLevelReads.max
-  fuzziness: 0.05
-  range:
-    min: 0
-    max: 50
-  cardinality: 20
-- name: aws.dynamodb.metrics.AccountProvisionedReadCapacityUtilization.avg
-  fuzziness: 0.1
-- name: aws.cloudwatch.namespace
-  cardinality: 1000
-- name: aws.dimensions.*
-  object_keys:
-    - TableName
-    - Operation
-- name: data_stream.type
-  value: metrics
-- name: data_stream.dataset
-  value: aws.dynamodb
-- name: data_stream.namespace
-  value: default
-- name: aws.dimensions.TableName
-  enum: ["table1", "table2"]
-- name: aws.dimensions.Operation
-  cardinality: 2
+fields:
+  - name: timestamp
+    period: "1h"
+  - name: aws.dynamodb.metrics.AccountMaxReads.max
+    fuzziness: 0.1
+    range:
+      min: 0
+      max: 100
+  - name: aws.dynamodb.metrics.AccountMaxTableLevelReads.max
+    fuzziness: 0.05
+    range:
+      min: 0
+      max: 50
+    cardinality: 20
+  - name: aws.dynamodb.metrics.AccountProvisionedReadCapacityUtilization.avg
+    fuzziness: 0.1
+  - name: aws.cloudwatch.namespace
+    cardinality: 1000
+  - name: aws.dimensions.*
+    object_keys:
+      - TableName
+      - Operation
+  - name: data_stream.type
+    value: metrics
+  - name: data_stream.dataset
+    value: aws.dynamodb
+  - name: data_stream.namespace
+    value: default
+  - name: aws.dimensions.TableName
+    enum: ["table1", "table2"]
+  - name: aws.dimensions.Operation
+    cardinality: 2
 ```
 
+Related [fields definition](./writing-templates.md#fieldsyml---fields-definition)
+```yaml
+- name: timestamp
+  type: date
+- name: data_stream.type
+  type: constant_keyword
+- name: data_stream.dataset
+  type: constant_keyword
+- name: data_stream.namespace
+  type: constant_keyword
+- name: aws
+  type: group
+  fields:
+    - name: dimensions
+      type: group
+      fields:
+        - name: Operation
+          type: keyword
+        - name: TableName
+          type: keyword
+    - name: dynamodb
+      type: group
+      fields:
+        - name: metrics
+          type: group
+          fields:
+            - name: AccountProvisionedReadCapacityUtilization.avg
+              type: double
+            - name: AccountMaxReads.max
+              type: long
+            - name: AccountMaxTableLevelReads.max
+              type: long
+    - name: cloudwatch
+      type: group
+      fields:
+        - name: namespace
+          type: keyword
+```

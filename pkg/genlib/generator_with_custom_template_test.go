@@ -507,9 +507,9 @@ func Test_FieldDateAndPeriodWithCustomTemplate(t *testing.T) {
 			t.Errorf("Fail parse timestamp %v", err)
 		} else {
 			// Timestamp should be +1s for every iteration
-			expectedTime := timeNow.Add(time.Second * time.Duration(i))
+			expectedTime := timeNow.Truncate(time.Millisecond).Add(time.Second * time.Duration(i))
 
-			diff := expectedTime.Sub(ts)
+			diff := expectedTime.Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {
 				t.Errorf("Date generated out of period range %v", diff)
 			}

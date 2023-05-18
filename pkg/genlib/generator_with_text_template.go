@@ -93,6 +93,8 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEven
 		return nil, err
 	}
 
+	state.totEvents = totEvents
+
 	return &GeneratorWithTextTemplate{tpl: parsedTpl, totEvents: totEvents, state: state, errChan: errChan}, nil
 }
 

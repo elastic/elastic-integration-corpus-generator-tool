@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"math"
 	"testing"
+	"time"
 )
 
 const sampleConfigFile = `---
@@ -23,7 +24,6 @@ func TestLoadConfig(t *testing.T) {
 
 	cfg, err := LoadConfig(fs, configFile)
 	assert.Nil(t, err)
-	//fmt.Printf("%+v\n", cfg)
 
 	f, ok := cfg.GetField("field")
 	assert.True(t, ok)
@@ -254,6 +254,65 @@ func TestRange_MinAsInt64(t *testing.T) {
 			}
 			if testCase.expected != v {
 				t.Fatalf("expected %v, got %v", testCase.expected, v)
+			}
+		})
+	}
+}
+
+func TestPeriod(t *testing.T) {
+	testCases := []struct {
+		scenario   string
+		periodYaml string
+		expected   time.Duration
+		hasField   bool
+	}{
+		{
+			scenario:   "time duration as number",
+			periodYaml: "- name: testField\n  period: 10",
+			expected:   10 * time.Second,
+			hasField:   true,
+		},
+		{
+			scenario: "empty period",
+			hasField: false,
+		},
+		{
+			scenario:   "1h",
+			periodYaml: "- name: testField\n  period: 1h",
+			expected:   3600 * time.Second,
+			hasField:   true,
+		},
+		{
+			scenario:   "-1h",
+			periodYaml: "- name: testField\n  period: -1h",
+			expected:   -3600 * time.Second,
+			hasField:   true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.scenario, func(t *testing.T) {
+			cfg, err := yaml.NewConfig([]byte(testCase.periodYaml))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var periodCfg []ConfigField
+			err = cfg.Unpack(&periodCfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			ok := len(periodCfg) == 1
+			if !testCase.hasField && ok {
+				t.Fatalf("expected missing field but got: %v", periodCfg[0])
+			}
+			if testCase.hasField && !ok {
+				t.Fatal("expected field but missing")
+			}
+
+			if ok && testCase.expected != periodCfg[0].Period {
+				t.Fatalf("expected %v, got %v", testCase.expected, periodCfg[0].Period)
 			}
 		})
 	}

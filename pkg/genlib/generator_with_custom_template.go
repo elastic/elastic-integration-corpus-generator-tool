@@ -111,6 +111,8 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 		})
 	}
 
+	state.totEvents = totEvents
+
 	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate, totEvents: totEvents, state: state}, nil
 }
 

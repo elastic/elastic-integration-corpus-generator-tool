@@ -22,11 +22,7 @@ import (
 	"time"
 )
 
-var timeNow time.Time
-
-func init() {
-	timeNow = time.Now()
-}
+var timeNowToBind time.Time
 
 type (
 	Fields      = fields.Fields
@@ -510,7 +506,7 @@ func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) er
 			offset = time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
 		}
 
-		newTime := timeNow.Add(offset)
+		newTime := timeNowToBind.Add(offset)
 
 		buf.WriteString(newTime.Format(FieldTypeTimeLayout))
 		return nil
@@ -850,7 +846,7 @@ func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[stri
 			offset = time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
 		}
 
-		newTime := timeNow.Add(offset)
+		newTime := timeNowToBind.Add(offset)
 
 		return newTime
 	}

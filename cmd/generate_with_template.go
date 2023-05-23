@@ -61,7 +61,12 @@ func GenerateWithTemplateCmd() *cobra.Command {
 				return err
 			}
 
-			payloadFilename, err := fc.GenerateWithTemplate(templatePath, fieldsDefinitionPath, totEvents)
+			timeNow, err := getTimeNowFromFlag(timeNowAsString)
+			if err != nil {
+				return err
+			}
+
+			payloadFilename, err := fc.GenerateWithTemplate(templatePath, fieldsDefinitionPath, totEvents, timeNow)
 			if err != nil {
 				return err
 			}
@@ -75,5 +80,6 @@ func GenerateWithTemplateCmd() *cobra.Command {
 	generateWithTemplateCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
 	generateWithTemplateCmd.Flags().StringVarP(&templateType, "template-type", "y", "placeholder", "either 'placeholder' or 'gotext'")
 	generateWithTemplateCmd.Flags().Uint64VarP(&totEvents, "tot-events", "t", 1, "total events of the corpus to generate")
+	generateWithTemplateCmd.Flags().StringVarP(&timeNowAsString, "now", "n", "", "time to use for generation based on now (`date` type)")
 	return generateWithTemplateCmd
 }

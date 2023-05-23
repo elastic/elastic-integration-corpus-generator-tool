@@ -8,7 +8,7 @@ You can pass a local Fields generation configuration file.
 
 `go run main.go generate <package> <dataset> <version> --tot-events <quantity>`
 
-`package`, `dataset` and `version` are mandatory. `--tot-events` is not mandatory and in case it is not provided a single event will be generated. You can generate an infinite number of events expressly passing to the flag the value of `0`. 
+`package`, `dataset` and `version` are mandatory. `--tot-events` is not mandatory and in case it is not provided a single event will be generated. You can generate an infinite number of events expressly passing to the flag the value of `0`. `--now` is not mandatory and in case it is provided must be a string parsable according the following `time.Parse()` layout: `2006-01-02T15:04:05.999999Z07:00`. The value provided will be used as base `time.Now()` for `date` type fields (see [Fields generation configuration](./fields-configuration.md#config-entries-definition))
 
 **Example**:
 
@@ -28,7 +28,7 @@ You can pass a local Fields generation configuration file.
 
 `go run main.go generate-with-template <template-path> <fields-definition-path> --tot-events <quantity>`
 
-`template-path` and `fields-definition-path` are mandatory. `--tot-events` is not mandatory and in case it is not provided a single event will be generated. You can generate an infinite number of events expressly passing to the flag the value of `0`.
+`template-path` and `fields-definition-path` are mandatory. `--tot-events` is not mandatory and in case it is not provided a single event will be generated. You can generate an infinite number of events expressly passing to the flag the value of `0`. `--now` is not mandatory and in case it is provided must be a string parsable according the following `time.Parse()` layout: `2006-01-02T15:04:05.999999Z07:00`. The value provided will be used as base `time.Now()` for `date` type fields (see [Fields generation configuration](./fields-configuration.md#config-entries-definition))
 
 **Example**:
 

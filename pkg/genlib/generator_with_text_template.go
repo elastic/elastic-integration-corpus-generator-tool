@@ -10,6 +10,7 @@ import (
 	"io"
 	"math/rand"
 	"text/template"
+	"time"
 
 	"github.com/Masterminds/sprig/v3"
 )
@@ -49,7 +50,10 @@ var awsAZs map[string][]string = map[string][]string{
 	"us-west-2":      {"us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"},
 }
 
-func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEvents uint64) (*GeneratorWithTextTemplate, error) {
+func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEvents uint64, timeNow time.Time) (*GeneratorWithTextTemplate, error) {
+	// set timeNowToBind to --now flag (already parsed or now)
+	timeNowToBind = timeNow
+
 	// Preprocess the fields, generating appropriate bound function
 	state := NewGenState()
 	fieldMap := make(map[string]any)

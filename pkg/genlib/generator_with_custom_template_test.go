@@ -507,7 +507,7 @@ func Test_FieldDateAndPeriodWithCustomTemplate(t *testing.T) {
 			t.Errorf("Fail parse timestamp %v", err)
 		} else {
 			// Timestamp should be +1s for every iteration
-			expectedTime := timeNow.Truncate(time.Millisecond).Add(time.Second * time.Duration(i))
+			expectedTime := timeNowToBind.Truncate(time.Millisecond).Add(time.Second * time.Duration(i))
 
 			diff := expectedTime.Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {
@@ -601,7 +601,7 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 }
 
 func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) (Generator, *GenState) {
-	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields, totEvents)
+	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields, totEvents, time.Now())
 
 	if err != nil {
 		t.Fatal(err)

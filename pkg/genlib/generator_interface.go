@@ -22,6 +22,8 @@ import (
 	"time"
 )
 
+var timeNowToBind time.Time
+
 type (
 	Fields      = fields.Fields
 	Field       = fields.Field
@@ -71,6 +73,8 @@ type Generator interface {
 type GenState struct {
 	// event counter
 	counter uint64
+	// total events
+	totEvents uint64
 	// previous value cache; necessary for fuzziness, cardinality, etc.
 	prevCache map[string]any
 	// previous value cache for dup check; necessary for cardinality
@@ -165,7 +169,7 @@ func bindByType(cfg Config, field Field, fieldMap map[string]any) (err error) {
 
 	switch field.Type {
 	case FieldTypeDate:
-		err = bindNearTime(field, fieldMap)
+		err = bindNearTime(fieldCfg, field, fieldMap)
 	case FieldTypeIP:
 		err = bindIP(field, fieldMap)
 	case FieldTypeDouble, FieldTypeFloat, FieldTypeHalfFloat, FieldTypeScaledFloat:
@@ -195,7 +199,7 @@ func bindByTypeWithReturn(cfg Config, field Field, fieldMap map[string]any) (err
 
 	switch field.Type {
 	case FieldTypeDate:
-		err = bindNearTimeWithReturn(field, fieldMap)
+		err = bindNearTimeWithReturn(fieldCfg, field, fieldMap)
 	case FieldTypeIP:
 		err = bindIPWithReturn(field, fieldMap)
 	case FieldTypeDouble, FieldTypeFloat, FieldTypeHalfFloat, FieldTypeScaledFloat:
@@ -492,11 +496,17 @@ func bindWordN(field Field, n int, fieldMap map[string]any) error {
 	return nil
 }
 
-func bindNearTime(field Field, fieldMap map[string]any) error {
+func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
-		offset := time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
-		newTime := time.Now().Add(offset)
+		var offset time.Duration
+		if fieldCfg.Period > 0 && state.totEvents > 0 {
+			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
+		} else {
+			offset = time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
+		}
+
+		newTime := timeNowToBind.Add(offset)
 
 		buf.WriteString(newTime.Format(FieldTypeTimeLayout))
 		return nil
@@ -826,11 +836,17 @@ func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
 	return nil
 }
 
-func bindNearTimeWithReturn(field Field, fieldMap map[string]any) error {
+func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	var emitF EmitF
 	emitF = func(state *GenState) any {
-		offset := time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
-		newTime := time.Now().Add(offset)
+		var offset time.Duration
+		if fieldCfg.Period > 0 {
+			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
+		} else {
+			offset = time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
+		}
+
+		newTime := timeNowToBind.Add(offset)
 
 		return newTime
 	}

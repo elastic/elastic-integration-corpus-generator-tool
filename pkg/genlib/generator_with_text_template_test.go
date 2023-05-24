@@ -305,6 +305,58 @@ func Test_FieldDateWithTextTemplate(t *testing.T) {
 	}
 }
 
+func Test_FieldDateAndPeriodWithTextTemplate(t *testing.T) {
+	fld := Field{
+		Name: "alpha",
+		Type: FieldTypeDate,
+	}
+
+	template := []byte(`{{$alpha := generate "alpha"}}{"alpha":"{{$alpha.Format "2006-01-02T15:04:05.999999Z07:00"}}"}`)
+	configYaml := []byte("fields:\n  - name: alpha\n    period: 10s")
+	t.Logf("with template: %s", string(template))
+
+	cfg, err := config.LoadConfigFromYaml(configYaml)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+
+	var buf bytes.Buffer
+
+	nSpins := 10
+	for i := 0; i < nSpins; i++ {
+		if err := g.Emit(state, &buf); err != nil {
+			t.Fatal(err)
+		}
+
+		m := unmarshalJSONT[string](t, buf.Bytes())
+		buf.Reset()
+
+		if len(m) != 1 {
+			t.Errorf("Expected map size 1, got %d", len(m))
+		}
+
+		v, ok := m[fld.Name]
+
+		if !ok {
+			t.Errorf("Missing key %v", fld.Name)
+		}
+
+		if ts, err := time.Parse(FieldTypeTimeLayout, v); err != nil {
+			t.Errorf("Fail parse timestamp %v", err)
+		} else {
+			// Timestamp should be +1s for every iteration
+			expectedTime := timeNowToBind.Truncate(time.Millisecond).Add(time.Second * time.Duration(i))
+
+			diff := expectedTime.Sub(ts.Truncate(time.Millisecond))
+			if diff != 0 {
+				t.Errorf("Date generated out of period range %v", diff)
+			}
+		}
+	}
+}
+
 func Test_FieldIPWithTextTemplate(t *testing.T) {
 	fld := Field{
 		Name: "alpha",
@@ -389,7 +441,7 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 }
 
 func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) (Generator, *GenState) {
-	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totEvents)
+	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totEvents, time.Now())
 
 	if err != nil {
 		t.Fatal(err)

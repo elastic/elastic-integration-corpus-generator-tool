@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"io"
 	"regexp"
+	"time"
 )
 
 type emitter struct {
@@ -82,7 +83,10 @@ func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) 
 
 }
 
-func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, totEvents uint64) (*GeneratorWithCustomTemplate, error) {
+func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, totEvents uint64, timeNow time.Time) (*GeneratorWithCustomTemplate, error) {
+	// set timeNowToBind to --now flag (already parsed or now)
+	timeNowToBind = timeNow
+
 	// Parse the template and extract relevant information
 	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
 
@@ -110,6 +114,8 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 			prefix:    templateFieldsMap[fieldName],
 		})
 	}
+
+	state.totEvents = totEvents
 
 	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate, totEvents: totEvents, state: state}, nil
 }

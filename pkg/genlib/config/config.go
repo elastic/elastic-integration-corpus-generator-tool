@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"time"
 
 	"math"
 	"os"
@@ -23,13 +24,14 @@ type Config struct {
 }
 
 type ConfigField struct {
-	Name        string   `config:"name"`
-	Fuzziness   float64  `config:"fuzziness"`
-	Range       Range    `config:"range"`
-	Cardinality int      `config:"cardinality"`
-	Enum        []string `config:"enum"`
-	ObjectKeys  []string `config:"object_keys"`
-	Value       any      `config:"value"`
+	Name        string        `config:"name"`
+	Fuzziness   float64       `config:"fuzziness"`
+	Range       Range         `config:"range"`
+	Cardinality int           `config:"cardinality"`
+	Period      time.Duration `config:"period"`
+	Enum        []string      `config:"enum"`
+	ObjectKeys  []string      `config:"object_keys"`
+	Value       any           `config:"value"`
 }
 
 func (r Range) MinAsInt64() (int64, error) {

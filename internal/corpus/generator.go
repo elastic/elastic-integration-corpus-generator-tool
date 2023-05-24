@@ -107,8 +107,8 @@ var corpusLocPerm = os.FileMode(0770)
 var corpusPerm = os.FileMode(0660)
 
 func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totEvents uint64, timeNow time.Time, randSeed int64, createPayload []byte, f afero.File) error {
-	genlib.GeneratorTimeNow(timeNow)
-	genlib.GeneratorRandSeed(randSeed)
+	genlib.InitGeneratorTimeNow(timeNow)
+	genlib.InitGeneratorRandSeed(randSeed)
 
 	var evgen genlib.Generator
 	var err error

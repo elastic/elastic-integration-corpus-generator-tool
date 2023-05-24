@@ -8,6 +8,10 @@ import (
 	"testing"
 )
 
+func TestMain(m *testing.M) {
+	InitGeneratorRandSeed(1)
+}
+
 func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
 	flds, _, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")

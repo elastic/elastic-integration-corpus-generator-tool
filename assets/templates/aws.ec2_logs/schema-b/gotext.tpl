@@ -1,4 +1,4 @@
-{{- $ts := now }}
+{{- $ts := generate "ts" }}
 {{- $ip := generate "aws.ec2.ip_address" }}
 {{- $pname := generate "process.name" }}
 {{- $logstream := generate "aws.cloudwatch.log_stream" }}

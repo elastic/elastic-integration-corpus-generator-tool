@@ -12,13 +12,13 @@
 {{- $timestamp := generate "timestamp" }}
 {{- $fulltimestamp := $timestamp.Format "2006-01-02T15:04:05.999999Z07:00" }}
 {{- $resttime := split ":" $fulltimestamp }}
-{{- $timedate := generate "timedate" }}
+{{- $picktimedate := generate "timedate" }}
 {{- $timehour := generate "timehour" }}
 {{- $offset := generate "Offset" | int }}
 {{- $faults := generate "faults" | int }}
 {{- $pct := generate "Percentage" | float64 }}
 {{- $name :=  generate "container.name" }} 
-{  "@timestamp": "{{$timedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
+{  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
       "memory":{
          "usage": {{divf $pct 1000000}}
@@ -32,7 +32,7 @@
    },
    "kubernetes": {
       "container":{
-         "start_time":"{{$timedate}}:T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
+         "start_time":"{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
          "memory":{
             "rss":{
                "bytes": {{generate "Bytes"}}
@@ -212,7 +212,7 @@
    "event":{
       "duration": "{{generate "event.duration"}}",
       "agent_id_status": "verified",
-      "ingested": "{{$timedate}}:T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
+      "ingested": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
       "module":"kubernetes",
       "dataset":"kubernetes.container"
    },

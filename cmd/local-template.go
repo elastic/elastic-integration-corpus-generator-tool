@@ -85,7 +85,7 @@ func TemplateCmd() *cobra.Command {
 				return err
 			}
 
-			payloadFilename, err := fc.GenerateWithTemplate(templatePath, fieldsDefinitionPath, totEvents, timeNow)
+			payloadFilename, err := fc.GenerateWithTemplate(templatePath, fieldsDefinitionPath, totEvents, timeNow, randSeed)
 			if err != nil {
 				return err
 			}
@@ -101,5 +101,7 @@ func TemplateCmd() *cobra.Command {
 	command.Flags().Uint64VarP(&totEvents, "tot-events", "t", 1, "total events of the corpus to generate")
 	command.Flags().StringVarP(&flagSchema, "schema", "", "b", "schema to generate data for; valid values: a, b")
 	command.Flags().StringVarP(&timeNowAsString, "now", "n", "", "time to use for generation based on now (`date` type)")
+
+	command.Flags().Int64VarP(&randSeed, "seed", "s", 1, "seed to set as source of rand")
 	return command
 }

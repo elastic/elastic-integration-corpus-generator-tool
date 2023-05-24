@@ -18,7 +18,6 @@ import (
 var integrationPackage string
 var dataStream string
 var packageVersion string
-var timeNowAsString string
 
 func GenerateCmd() *cobra.Command {
 	generateCmd := &cobra.Command{
@@ -75,7 +74,7 @@ func GenerateCmd() *cobra.Command {
 				return err
 			}
 
-			payloadFilename, err := fc.Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion, totEvents, timeNow)
+			payloadFilename, err := fc.Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion, totEvents, timeNow, randSeed)
 			if err != nil {
 				return err
 			}
@@ -90,5 +89,7 @@ func GenerateCmd() *cobra.Command {
 	generateCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
 	generateCmd.Flags().Uint64VarP(&totEvents, "tot-events", "t", 1, "total events of the corpus to generate")
 	generateCmd.Flags().StringVarP(&timeNowAsString, "now", "n", "", "time to use for generation based on now (`date` type)")
+	generateCmd.Flags().Int64VarP(&randSeed, "seed", "s", 1, "seed to set as source of rand")
+
 	return generateCmd
 }

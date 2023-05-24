@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+var customRand *rand.Rand
+
 const (
 	textTemplateEngine = iota
 	customTemplateEngine
@@ -179,6 +181,6 @@ func InitGeneratorTimeNow(timeNow time.Time) {
 // InitGeneratorRandSeed sets rand seed
 func InitGeneratorRandSeed(randSeed int64) {
 	// set rand and randomdata seed to --seed flag (custom or 1)
-	rand.Seed(randSeed)
-	randomdata.CustomRand(rand.New(rand.NewSource(randSeed)))
+	customRand = rand.New(rand.NewSource(randSeed))
+	randomdata.CustomRand(customRand)
 }

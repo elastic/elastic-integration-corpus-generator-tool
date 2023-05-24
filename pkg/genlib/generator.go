@@ -11,6 +11,7 @@ import (
 	"github.com/lithammer/shortuuid/v3"
 	"math/rand"
 	"strings"
+	"time"
 )
 
 const (
@@ -162,9 +163,9 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 	return templateBuffer.Bytes(), objectKeysField
 }
 
-func NewGenerator(cfg Config, flds Fields, totSize uint64) (Generator, error) {
+func NewGenerator(cfg Config, flds Fields, totEvents uint64, timeNow time.Time) (Generator, error) {
 	template, objectKeysField := generateCustomTemplateFromField(cfg, flds)
 	flds = append(flds, objectKeysField...)
 
-	return NewGeneratorWithCustomTemplate(template, cfg, flds, totSize)
+	return NewGeneratorWithCustomTemplate(template, cfg, flds, totEvents, timeNow)
 }

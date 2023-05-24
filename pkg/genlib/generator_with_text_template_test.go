@@ -58,13 +58,8 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 	// It's cardinality per mille, so a bit confusing :shrug:
 	for cardinality := 1000; cardinality >= 10; cardinality /= 10 {
 
-		cardinalityDenominator := 1000
-		cardinalityNumerator := cardinality
-		cardinalityModule := cardinalityDenominator % cardinality
-		if cardinalityModule == 0 {
-			cardinalityNumerator = 1
-			cardinalityDenominator /= cardinality
-		}
+		currentCardinality := 1000
+		currentCardinality /= cardinality
 
 		rangeTrailing := ""
 		if ty == FieldTypeFloat {
@@ -75,10 +70,10 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		rangeMax := rand.Intn(10000-rangeMin) + rangeMin
 
 		// Add the range to get some variety in integers
-		tmpl := "fields:\n  - name: alpha\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
-		tmpl += "  - name: beta\n    cardinality:\n      numerator: %d\n      denominator: %d\n    range:\n      min: %d%s\n      max: %d%s"
+		tmpl := "fields:\n  - name: alpha\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
+		tmpl += "  - name: beta\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s"
 
-		yaml := []byte(fmt.Sprintf(tmpl, cardinalityNumerator, cardinalityDenominator, rangeMin, rangeTrailing, rangeMax, rangeTrailing, cardinalityNumerator, cardinalityDenominator*2, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
+		yaml := []byte(fmt.Sprintf(tmpl, currentCardinality, rangeMin, rangeTrailing, rangeMax, rangeTrailing, currentCardinality*2, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
 
 		cfg, err := config.LoadConfigFromYaml(yaml)
 		if err != nil {
@@ -86,7 +81,7 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		}
 
 		nSpins := 16384
-		g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(len(template)*nSpins*1024))
+		g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(nSpins))
 
 		vmapAlpha := make(map[any]int)
 		vmapBeta := make(map[any]int)
@@ -310,6 +305,58 @@ func Test_FieldDateWithTextTemplate(t *testing.T) {
 	}
 }
 
+func Test_FieldDateAndPeriodWithTextTemplate(t *testing.T) {
+	fld := Field{
+		Name: "alpha",
+		Type: FieldTypeDate,
+	}
+
+	template := []byte(`{{$alpha := generate "alpha"}}{"alpha":"{{$alpha.Format "2006-01-02T15:04:05.999999Z07:00"}}"}`)
+	configYaml := []byte("fields:\n  - name: alpha\n    period: 10s")
+	t.Logf("with template: %s", string(template))
+
+	cfg, err := config.LoadConfigFromYaml(configYaml)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+
+	var buf bytes.Buffer
+
+	nSpins := 10
+	for i := 0; i < nSpins; i++ {
+		if err := g.Emit(state, &buf); err != nil {
+			t.Fatal(err)
+		}
+
+		m := unmarshalJSONT[string](t, buf.Bytes())
+		buf.Reset()
+
+		if len(m) != 1 {
+			t.Errorf("Expected map size 1, got %d", len(m))
+		}
+
+		v, ok := m[fld.Name]
+
+		if !ok {
+			t.Errorf("Missing key %v", fld.Name)
+		}
+
+		if ts, err := time.Parse(FieldTypeTimeLayout, v); err != nil {
+			t.Errorf("Fail parse timestamp %v", err)
+		} else {
+			// Timestamp should be +1s for every iteration
+			expectedTime := timeNowToBind.Truncate(time.Millisecond).Add(time.Second * time.Duration(i))
+
+			diff := expectedTime.Sub(ts.Truncate(time.Millisecond))
+			if diff != 0 {
+				t.Errorf("Date generated out of period range %v", diff)
+			}
+		}
+	}
+}
+
 func Test_FieldIPWithTextTemplate(t *testing.T) {
 	fld := Field{
 		Name: "alpha",
@@ -393,8 +440,8 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 	return v
 }
 
-func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totSize uint64) (Generator, *GenState) {
-	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totSize)
+func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) (Generator, *GenState) {
+	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totEvents, time.Now())
 
 	if err != nil {
 		t.Fatal(err)

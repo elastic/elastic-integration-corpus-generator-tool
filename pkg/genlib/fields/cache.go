@@ -85,7 +85,7 @@ func (f *Cache) LoadFields(ctx context.Context, integration, stream, version str
 
 	if !ok {
 
-		if flds, err = LoadFields(ctx, f.baseUrl, integration, stream, version); err != nil {
+		if flds, _, err = LoadFields(ctx, f.baseUrl, integration, stream, version); err != nil {
 			return nil, err
 		} else {
 			f.mut.Lock()

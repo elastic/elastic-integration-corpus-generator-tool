@@ -21,7 +21,5 @@ For example:
 - name: object_keys.a_key
   enum: ["a_value", "another_value"]
 - name: object_keys.another_key
-  cardinality:
-    numerator: 1
-    denominator: 2
+  cardinality: 2
 ```

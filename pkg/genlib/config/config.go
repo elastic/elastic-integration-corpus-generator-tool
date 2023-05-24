@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"time"
 
 	"math"
 	"os"
@@ -11,11 +12,6 @@ import (
 )
 
 var rangeBoundNotSet = errors.New("range bound not set")
-
-type Ratio struct {
-	Numerator   int `config:"numerator"`
-	Denominator int `config:"denominator"`
-}
 
 type Range struct {
 	// NOTE: we want to distinguish when Min/Max are explicitly set to zero value or are not set at all. We use a pointer, such that when not set will be `nil`.
@@ -28,13 +24,14 @@ type Config struct {
 }
 
 type ConfigField struct {
-	Name        string   `config:"name"`
-	Fuzziness   float64  `config:"fuzziness"`
-	Range       Range    `config:"range"`
-	Cardinality Ratio    `config:"cardinality"`
-	Enum        []string `config:"enum"`
-	ObjectKeys  []string `config:"object_keys"`
-	Value       any      `config:"value"`
+	Name        string        `config:"name"`
+	Fuzziness   float64       `config:"fuzziness"`
+	Range       Range         `config:"range"`
+	Cardinality int           `config:"cardinality"`
+	Period      time.Duration `config:"period"`
+	Enum        []string      `config:"enum"`
+	ObjectKeys  []string      `config:"object_keys"`
+	Value       any           `config:"value"`
 }
 
 func (r Range) MinAsInt64() (int64, error) {

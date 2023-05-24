@@ -18,6 +18,7 @@ import (
 var integrationPackage string
 var dataStream string
 var packageVersion string
+var timeNowAsString string
 
 func GenerateCmd() *cobra.Command {
 	generateCmd := &cobra.Command{
@@ -32,10 +33,6 @@ func GenerateCmd() *cobra.Command {
 
 			if packageRegistryBaseURL == "" {
 				errs = append(errs, errors.New("you must provide a not empty --package-registry-base-url flag value"))
-			}
-
-			if totSize == "" {
-				errs = append(errs, errors.New("you must provide a not empty --tot-size flag value"))
 			}
 
 			integrationPackage = args[0]
@@ -73,7 +70,12 @@ func GenerateCmd() *cobra.Command {
 				return err
 			}
 
-			payloadFilename, err := fc.Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion, totSize)
+			timeNow, err := getTimeNowFromFlag(timeNowAsString)
+			if err != nil {
+				return err
+			}
+
+			payloadFilename, err := fc.Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion, totEvents, timeNow)
 			if err != nil {
 				return err
 			}
@@ -86,6 +88,7 @@ func GenerateCmd() *cobra.Command {
 
 	generateCmd.Flags().StringVarP(&packageRegistryBaseURL, "package-registry-base-url", "r", "https://epr.elastic.co/", "base url of the package registry with schema")
 	generateCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
-	generateCmd.Flags().StringVarP(&totSize, "tot-size", "t", "", "total size of the corpus to generate")
+	generateCmd.Flags().Uint64VarP(&totEvents, "tot-events", "t", 1, "total events of the corpus to generate")
+	generateCmd.Flags().StringVarP(&timeNowAsString, "now", "n", "", "time to use for generation based on now (`date` type)")
 	return generateCmd
 }

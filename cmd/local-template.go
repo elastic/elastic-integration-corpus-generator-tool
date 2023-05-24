@@ -19,7 +19,7 @@ import (
 	"go.uber.org/multierr"
 )
 
-var flag_schema string
+var flagSchema string
 
 func TemplateCmd() *cobra.Command {
 	command := &cobra.Command{
@@ -50,7 +50,7 @@ func TemplateCmd() *cobra.Command {
 
 			var errs []error
 			datasetFolder := fmt.Sprintf("%s.%s", args[0], args[1])
-			schema := fmt.Sprintf("schema-%s", flag_schema)
+			schema := fmt.Sprintf("schema-%s", flagSchema)
 			datasetFolderPath := filepath.Join("assets", "templates", datasetFolder, schema)
 
 			templateFile := fmt.Sprintf("%s.tpl", templateType)
@@ -80,7 +80,12 @@ func TemplateCmd() *cobra.Command {
 				return err
 			}
 
-			payloadFilename, err := fc.GenerateWithTemplate(templatePath, fieldsDefinitionPath, totSize)
+			timeNow, err := getTimeNowFromFlag(timeNowAsString)
+			if err != nil {
+				return err
+			}
+
+			payloadFilename, err := fc.GenerateWithTemplate(templatePath, fieldsDefinitionPath, totEvents, timeNow)
 			if err != nil {
 				return err
 			}
@@ -93,7 +98,8 @@ func TemplateCmd() *cobra.Command {
 
 	command.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
 	command.Flags().StringVarP(&templateType, "engine", "e", "gotext", "either 'placeholder' or 'gotext'")
-	command.Flags().StringVarP(&totSize, "size", "s", "1", "total size of the corpus to generate")
-	command.Flags().StringVarP(&flag_schema, "schema", "", "b", "schema to generate data for; valid values: a, b")
+	command.Flags().Uint64VarP(&totEvents, "tot-events", "t", 1, "total events of the corpus to generate")
+	command.Flags().StringVarP(&flagSchema, "schema", "", "b", "schema to generate data for; valid values: a, b")
+	command.Flags().StringVarP(&timeNowAsString, "now", "n", "", "time to use for generation based on now (`date` type)")
 	return command
 }

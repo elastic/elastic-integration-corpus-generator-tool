@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"testing"
+	"time"
 
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
@@ -11,11 +12,11 @@ import (
 
 func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
-	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
+	flds, _, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
 	template, objectKeysField := generateCustomTemplateFromField(Config{}, flds)
 	flds = append(flds, objectKeysField...)
-	g, err := NewGeneratorWithCustomTemplate(template, Config{}, flds, uint64(len(template)*b.N*1024))
+	g, err := NewGeneratorWithCustomTemplate(template, Config{}, flds, uint64(len(template)*b.N*1024), time.Now())
 	defer func() {
 		_ = g.Close()
 	}()
@@ -39,12 +40,12 @@ func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
 
 func Benchmark_GeneratorTextTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
-	flds, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
+	flds, _, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
 	template, objectKeysField := generateTextTemplateFromField(Config{}, flds)
 	flds = append(flds, objectKeysField...)
 
-	g, err := NewGeneratorWithTextTemplate(template, Config{}, flds, uint64(b.N*len(template)*1024))
+	g, err := NewGeneratorWithTextTemplate(template, Config{}, flds, uint64(b.N*len(template)*1024), time.Now())
 	defer func() {
 		_ = g.Close()
 	}()
@@ -132,17 +133,11 @@ func Benchmark_GeneratorCustomTemplateVPCFlowLogs(b *testing.B) {
 - name: AccountID
   value: 627286350134
 - name: InterfaceID
-  cardinality:
-    numerator: 1
-    denominator: 100
+  cardinality: 100
 - name: SrcAddr
-  cardinality:
-    numerator: 1
-    denominator: 1000
+  cardinality: 1000
 - name: DstAddr
-  cardinality:
-    numerator: 1
-    denominator: 10
+  cardinality: 10
 - name: SrcPort
   range:
     min: 0
@@ -151,9 +146,7 @@ func Benchmark_GeneratorCustomTemplateVPCFlowLogs(b *testing.B) {
   range:
     min: 0
     max: 65535
-  cardinality:
-    numerator: 1
-    denominator: 10
+  cardinality: 10
 - name: Protocol
   range:
     min: 1
@@ -178,7 +171,7 @@ func Benchmark_GeneratorCustomTemplateVPCFlowLogs(b *testing.B) {
 	}
 
 	template := []byte(`{{.Version}} {{.AccountID}} {{.InterfaceID}} {{.SrcAddr}} {{.DstAddr}} {{.SrcPort}} {{.DstPort}} {{.Protocol}} {{.Packets}} {{.Bytes}} {{.Start}} {{.End}} {{.Action}} {{.LogStatus}}`)
-	g, err := NewGeneratorWithCustomTemplate(template, cfg, flds, uint64(len(template)*b.N*1024))
+	g, err := NewGeneratorWithCustomTemplate(template, cfg, flds, uint64(len(template)*b.N*1024), time.Now())
 	defer func() {
 		_ = g.Close()
 	}()
@@ -266,17 +259,11 @@ func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
 - name: AccountID
   value: 627286350134
 - name: InterfaceID
-  cardinality:
-    numerator: 1
-    denominator: 100
+  cardinality: 100
 - name: SrcAddr
-  cardinality:
-    numerator: 1
-    denominator: 1000
+  cardinality: 1000
 - name: DstAddr
-  cardinality:
-    numerator: 1
-    denominator: 10
+  cardinality: 10
 - name: SrcPort
   range:
     min: 0
@@ -285,9 +272,7 @@ func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
   range:
     min: 0
     max: 65535
-  cardinality:
-    numerator: 1
-    denominator: 10
+  cardinality: 10
 - name: Protocol
   range:
     min: 1
@@ -312,7 +297,7 @@ func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
 	}
 
 	template := []byte(`{{generate "Version"}} {{generate "AccountID"}} {{generate "InterfaceID"}} {{generate "SrcAddr"}} {{generate "DstAddr"}} {{generate "SrcPort"}} {{generate "DstPort"}} {{generate "Protocol"}}{{ $packets := generate "Packets" }} {{ $packets }} {{generate "Bytes"}} {{$start := generate "Start" }}{{$start.Format "2006-01-02T15:04:05.999999Z07:00" }} {{$end := generate "End" }}{{$end.Format "2006-01-02T15:04:05.999999Z07:00"}} {{generate "Action"}}{{ if eq $packets 0 }} NODATA {{ else }} {{generate "LogStatus"}} {{ end }}`)
-	g, err := NewGeneratorWithTextTemplate(template, cfg, flds, uint64(b.N*len(template)*1024))
+	g, err := NewGeneratorWithTextTemplate(template, cfg, flds, uint64(b.N*len(template)*1024), time.Now())
 	defer func() {
 		_ = g.Close()
 	}()

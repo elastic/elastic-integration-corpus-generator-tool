@@ -31,10 +31,6 @@ func GenerateWithTemplateCmd() *cobra.Command {
 				return errors.New("you must pass the template path and the fields definition path")
 			}
 
-			if totSize == "" {
-				errs = append(errs, errors.New("you must provide a not empty --tot-size flag value"))
-			}
-
 			templatePath = args[0]
 			if templatePath == "" {
 				errs = append(errs, errors.New("you must provide a not empty template path argument"))
@@ -65,7 +61,12 @@ func GenerateWithTemplateCmd() *cobra.Command {
 				return err
 			}
 
-			payloadFilename, err := fc.GenerateWithTemplate(templatePath, fieldsDefinitionPath, totSize)
+			timeNow, err := getTimeNowFromFlag(timeNowAsString)
+			if err != nil {
+				return err
+			}
+
+			payloadFilename, err := fc.GenerateWithTemplate(templatePath, fieldsDefinitionPath, totEvents, timeNow)
 			if err != nil {
 				return err
 			}
@@ -78,6 +79,7 @@ func GenerateWithTemplateCmd() *cobra.Command {
 
 	generateWithTemplateCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to config file for generator settings")
 	generateWithTemplateCmd.Flags().StringVarP(&templateType, "template-type", "y", "placeholder", "either 'placeholder' or 'gotext'")
-	generateWithTemplateCmd.Flags().StringVarP(&totSize, "tot-size", "t", "", "total size of the corpus to generate")
+	generateWithTemplateCmd.Flags().Uint64VarP(&totEvents, "tot-events", "t", 1, "total events of the corpus to generate")
+	generateWithTemplateCmd.Flags().StringVarP(&timeNowAsString, "now", "n", "", "time to use for generation based on now (`date` type)")
 	return generateWithTemplateCmd
 }

@@ -601,7 +601,7 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 }
 
 func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) (Generator, *GenState) {
-	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields, totEvents, time.Now())
+	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields, totEvents)
 
 	if err != nil {
 		t.Fatal(err)

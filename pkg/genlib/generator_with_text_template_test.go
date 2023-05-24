@@ -441,7 +441,7 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 }
 
 func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) (Generator, *GenState) {
-	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totEvents, time.Now())
+	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totEvents)
 
 	if err != nil {
 		t.Fatal(err)

@@ -12,10 +12,6 @@
   type: keyword
 - name: agent.ephemeral_id
   type: keyword  
-- name: container.network.ingress.bytes
-  type: double
-- name: container.network.egress.bytes
-  type: double
 - name: event.duration
   type: long  
 - name: event.ingested

@@ -3,8 +3,6 @@
 {{- $agentVersion := generate "agent.version" }}
 {{- $agentName := generate "agent.name" }}
 {{- $agentEphemeralid := generate "agent.ephemeral_id" }}
-{{- $rxbytes := generate "container.network.ingress.bytes" | int }}
-{{- $txbytes := generate "container.network.egress.bytes" | int }}
 {{- $uId := uuidv4 }}
 {{- $pod_uId := uuidv4 }}
 {{- $container_uId := uuidv4 }}
@@ -16,7 +14,7 @@
 {{- $timehour := generate "timehour" }}
 {{- $offset := generate "Offset" | int }}
 {{- $faults := generate "faults" | int }}
-{{- $pct := generate "Percentage" | float64 }}
+{{- $pct := generate "Percentage" }}
 {{- $name :=  generate "container.name" }} 
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{

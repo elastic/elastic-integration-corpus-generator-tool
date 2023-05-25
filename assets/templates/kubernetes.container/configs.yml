@@ -25,14 +25,6 @@ fields:
     range:
       min: 1
       max: 100000
-  - name: container.network.ingress.bytes
-    range:
-      min: 0
-      max: 15000
-  - name: container.network.egress.bytes
-    range:
-      min: 0
-      max: 10000
   - name: Offset
     range:
       min: 1

@@ -8,13 +8,13 @@
 {{- $agentVersion := generate "agent.version" }}
 {{- $agentName := generate "agent.name" }}
 {{- $agentEphemeralid := generate "agent.ephemeral_id" }}
-{{- $rxbytes := generate "container.network.ingress.bytes" | int }}
-{{- $txbytes := generate "container.network.egress.bytes" | int }}
+{{- $rxbytes := generate "container.network.ingress.bytes" }}
+{{- $txbytes := generate "container.network.egress.bytes" }}
 {{- $uId := uuidv4 }}
 {{- $pod_uId := uuidv4 }}
 {{- $suffix := split "-" $uId }}
 {{- $offset := generate "Offset" | int }}
-{{- $pct := generate "Percentage" | float64 }}
+{{- $pct := generate "Percentage" }}
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
       "network":{

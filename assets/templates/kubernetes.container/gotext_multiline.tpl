@@ -12,8 +12,8 @@
 {{- $resttime := split ":" $fulltimestamp }}
 {{- $picktimedate := generate "timedate" }}
 {{- $timehour := generate "timehour" }}
-{{- $offset := generate "Offset" | int }}
-{{- $faults := generate "faults" | int }}
+{{- $offset := generate "Offset" }}
+{{- $faults := generate "faults" }}
 {{- $pct := generate "Percentage" }}
 {{- $name :=  generate "container.name" }} 
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",

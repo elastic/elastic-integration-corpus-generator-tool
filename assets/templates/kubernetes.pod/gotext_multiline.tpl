@@ -13,7 +13,7 @@
 {{- $uId := uuidv4 }}
 {{- $pod_uId := uuidv4 }}
 {{- $suffix := split "-" $uId }}
-{{- $offset := generate "Offset" | int }}
+{{- $offset := generate "Offset" }}
 {{- $pct := generate "Percentage" }}
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{

@@ -19,11 +19,11 @@
 - name: metricset.period
   type: long
 - name: Offset
-  type: long
+  type: integer
 - name: kubernetes.container.rootfs.inodes.used
   type: integer
 - name: faults
-  type: long
+  type: integer
 - name: Bytes
   type: long  
 - name: Ip

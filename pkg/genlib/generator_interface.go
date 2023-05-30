@@ -13,7 +13,6 @@ import (
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 	"math"
-	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
@@ -235,14 +234,14 @@ func makeFloatFunc(fieldCfg ConfigField, field Field) func() float64 {
 
 	switch {
 	case maxValue > 0:
-		dummyFunc = func() float64 { return minValue + rand.Float64()*(maxValue-minValue) }
+		dummyFunc = func() float64 { return minValue + customRand.Float64()*(maxValue-minValue) }
 	case len(field.Example) == 0:
-		dummyFunc = func() float64 { return rand.Float64() * 10 }
+		dummyFunc = func() float64 { return customRand.Float64() * 10 }
 	default:
 		totDigit := len(field.Example)
 		max := math.Pow10(totDigit)
 		dummyFunc = func() float64 {
-			return rand.Float64() * max
+			return customRand.Float64() * max
 		}
 	}
 
@@ -261,14 +260,14 @@ func makeIntFunc(fieldCfg ConfigField, field Field) func() int64 {
 
 	switch {
 	case maxValue > 0:
-		dummyFunc = func() int64 { return rand.Int63n(maxValue-minValue) + minValue }
+		dummyFunc = func() int64 { return customRand.Int63n(maxValue-minValue) + minValue }
 	case len(field.Example) == 0:
-		dummyFunc = func() int64 { return rand.Int63n(10) }
+		dummyFunc = func() int64 { return customRand.Int63n(10) }
 	default:
 		totDigit := len(field.Example)
 		max := int64(math.Pow10(totDigit))
 		dummyFunc = func() int64 {
-			return rand.Int63n(max)
+			return customRand.Int63n(max)
 		}
 	}
 
@@ -340,30 +339,30 @@ func genNounsNWithReturn(n int) string {
 }
 
 func randGeoPoint(buf *bytes.Buffer) error {
-	lat := rand.Intn(181) - 90
+	lat := customRand.Intn(181) - 90
 	var latD int
 	if lat != -90 && lat != 90 {
-		latD = rand.Intn(100)
+		latD = customRand.Intn(100)
 	}
 	var longD int
-	long := rand.Intn(361) - 180
+	long := customRand.Intn(361) - 180
 	if long != -180 && long != 180 {
-		longD = rand.Intn(100)
+		longD = customRand.Intn(100)
 	}
 	_, err := fmt.Fprintf(buf, "%d.%d,%d.%d", lat, latD, long, longD)
 	return err
 }
 
 func randGeoPointWithReturn() string {
-	lat := rand.Intn(181) - 90
+	lat := customRand.Intn(181) - 90
 	var latD int
 	if lat != -90 && lat != 90 {
-		latD = rand.Intn(100)
+		latD = customRand.Intn(100)
 	}
 	var longD int
-	long := rand.Intn(361) - 180
+	long := customRand.Intn(361) - 180
 	if long != -180 && long != 180 {
-		longD = rand.Intn(100)
+		longD = customRand.Intn(100)
 	}
 
 	return fmt.Sprintf("%d.%d,%d.%d", lat, latD, long, longD)
@@ -390,7 +389,7 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 	if len(fieldCfg.Enum) > 0 {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
-			idx := rand.Intn(len(fieldCfg.Enum))
+			idx := customRand.Intn(len(fieldCfg.Enum))
 			buf.WriteString(fieldCfg.Enum[idx])
 			return nil
 		}
@@ -462,7 +461,7 @@ func bindStatic(field Field, v any, fieldMap map[string]any) error {
 func bindBool(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
-		switch rand.Int() % 2 {
+		switch customRand.Int() % 2 {
 		case 0:
 			buf.WriteString("false")
 		case 1:
@@ -488,7 +487,7 @@ func bindGeoPoint(field Field, fieldMap map[string]any) error {
 func bindWordN(field Field, n int, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
-		genNounsN(rand.Intn(n), buf)
+		genNounsN(customRand.Intn(n), buf)
 		return nil
 	}
 
@@ -503,7 +502,7 @@ func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) er
 		if fieldCfg.Period > 0 && state.totEvents > 0 {
 			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
 		} else {
-			offset = time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
+			offset = time.Duration(customRand.Intn(FieldTypeTimeRange)*-1) * time.Second
 		}
 
 		newTime := timeNowToBind.Add(offset)
@@ -518,10 +517,10 @@ func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) er
 func bindIP(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *GenState, buf *bytes.Buffer) error {
-		i0 := rand.Intn(255)
-		i1 := rand.Intn(255)
-		i2 := rand.Intn(255)
-		i3 := rand.Intn(255)
+		i0 := customRand.Intn(255)
+		i1 := customRand.Intn(255)
+		i2 := customRand.Intn(255)
+		i3 := customRand.Intn(255)
 
 		_, err := fmt.Fprintf(buf, "%d.%d.%d.%d", i0, i1, i2, i3)
 		return err
@@ -537,7 +536,7 @@ func fuzzyInt(previous int64, fuzziness, min, max float64) int64 {
 	higherBound := float64(previous) * (1 + fuzziness)
 	lowerBound = math.Max(lowerBound, min)
 	higherBound = math.Min(higherBound, max)
-	return rand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
+	return customRand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
 }
 
 func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
@@ -587,7 +586,7 @@ func fuzzyFloat(previous, fuzziness, min, max float64) float64 {
 	higherBound := previous * (1 + fuzziness)
 	lowerBound = math.Max(lowerBound, min)
 	higherBound = math.Min(higherBound, max)
-	return lowerBound + rand.Float64()*(higherBound-lowerBound)
+	return lowerBound + customRand.Float64()*(higherBound-lowerBound)
 }
 
 func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
@@ -739,7 +738,7 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 	if len(fieldCfg.Enum) > 0 {
 		var emitF EmitF
 		emitF = func(state *GenState) any {
-			idx := rand.Intn(len(fieldCfg.Enum))
+			idx := customRand.Intn(len(fieldCfg.Enum))
 			return fieldCfg.Enum[idx]
 		}
 
@@ -804,7 +803,7 @@ func bindStaticWithReturn(field Field, v any, fieldMap map[string]any) error {
 func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF EmitF
 	emitF = func(state *GenState) any {
-		switch rand.Int() % 2 {
+		switch customRand.Int() % 2 {
 		case 0:
 			return false
 		default:
@@ -830,7 +829,7 @@ func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
 func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
 	var emitF EmitF
 	emitF = func(state *GenState) any {
-		return genNounsNWithReturn(rand.Intn(n))
+		return genNounsNWithReturn(customRand.Intn(n))
 	}
 	fieldMap[field.Name] = emitF
 	return nil
@@ -843,7 +842,7 @@ func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[stri
 		if fieldCfg.Period > 0 {
 			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
 		} else {
-			offset = time.Duration(rand.Intn(FieldTypeTimeRange)*-1) * time.Second
+			offset = time.Duration(customRand.Intn(FieldTypeTimeRange)*-1) * time.Second
 		}
 
 		newTime := timeNowToBind.Add(offset)
@@ -857,10 +856,10 @@ func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[stri
 func bindIPWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF EmitF
 	emitF = func(state *GenState) any {
-		i0 := rand.Intn(255)
-		i1 := rand.Intn(255)
-		i2 := rand.Intn(255)
-		i3 := rand.Intn(255)
+		i0 := customRand.Intn(255)
+		i1 := customRand.Intn(255)
+		i2 := customRand.Intn(255)
+		i3 := customRand.Intn(255)
 
 		return fmt.Sprintf("%d.%d.%d.%d", i0, i1, i2, i3)
 	}

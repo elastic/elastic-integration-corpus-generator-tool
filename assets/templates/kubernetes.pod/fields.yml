@@ -25,7 +25,9 @@
 - name: Offset
   type: integer
 - name: Bytes
-  type: long  
+  type: long 
+- name: rangeofid
+  type: integer
 - name: Ip
   type: ip
 - name: Percentage

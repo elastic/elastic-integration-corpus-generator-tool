@@ -104,7 +104,7 @@
       "node":{
          "uid": "{{ $uId }}" ,
          "hostname":"{{ $agentName }}.c.elastic-obs-integrations-dev.internal",
-         "name":"{{ $agentName }}-{{ $suffix._0 }}",
+         "name":"{{ $agentName }}-{{ $rangeofid }}",
          "labels":{
             "cloud_google_com/machine-family":"e2",
             "cloud_google_com/gke-nodepool":"kubernetes-scale-nl",

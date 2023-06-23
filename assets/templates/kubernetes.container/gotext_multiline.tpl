@@ -6,15 +6,14 @@
 {{- $uId := uuidv4 }}
 {{- $pod_uId := uuidv4 }}
 {{- $container_uId := uuidv4 }}
-{{- $suffix := split "-" $uId }}
 {{- $timestamp := generate "timestamp" }}
 {{- $fulltimestamp := $timestamp.Format "2006-01-02T15:04:05.999999Z07:00" }}
 {{- $resttime := split ":" $fulltimestamp }}
 {{- $picktimedate := generate "timedate" }}
 {{- $timehour := generate "timehour" }}
-{{- $offset := generate "Offset" }}
 {{- $faults := generate "faults" }}
 {{- $pct := generate "Percentage" }}
+{{- $rangeofid := generate "rangeofid" -}}
 {{- $name :=  generate "container.name" }} 
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
@@ -105,7 +104,7 @@
       "node":{
          "uid": "{{ $uId }}" ,
          "hostname":"{{ $agentName }}.c.elastic-obs-integrations-dev.internal",
-         "name":"{{ $agentName }}-{{ $suffix._0 }}",
+         "name":"{{ $agentName }}-{{ $rangeofid }}",
          "labels":{
             "cloud_google_com/machine-family":"e2",
             "cloud_google_com/gke-nodepool":"kubernetes-scale-nl",
@@ -134,23 +133,23 @@
       "pod":{
          "uid": "{{ $pod_uId }}",
          "ip":"{{generate "Ip"}}",
-         "name":"demo-deployment-{{ $offset }}-{{ $suffix._0 }}",
-         "namespace":"demo-{{ $offset }}",
-         "namespace_uid":"demo-{{ $offset }}",
+         "name":"demo-deployment-{{ $rangeofid }}",
+         "namespace":"demo-{{ $rangeofid }}",
+         "namespace_uid":"demo-{{ $rangeofid }}",
          "replicaset":{
-            "name":"demo-deployment-{{ $offset }}-{{ $suffix._0 }}"
+            "name":"demo-deployment-{{ $rangeofid }}"
          },
          "namespace_labels":{
-            "kubernetes_io/metadata_name":"demo-{{ $offset }}"
+            "kubernetes_io/metadata_name":"demo-{{ $rangeofid }}"
          },
          "labels":{
             "app":"demo",
-            "pod-template-hash":"{{ $suffix._0 }}",
+            "pod-template-hash":"{{ $rangeofid }}",
             "app-2":"demo-2",
             "app-1":"demo-1"
          },
          "deployment":{
-            "name":"demo-deployment-{{ $offset }}"
+            "name":"demo-deployment-{{ $rangeofid }}"
          }
    },
    "cloud": {

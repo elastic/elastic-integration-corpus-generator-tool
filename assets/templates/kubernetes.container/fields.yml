@@ -18,8 +18,6 @@
   type: date
 - name: metricset.period
   type: long
-- name: Offset
-  type: integer
 - name: kubernetes.container.rootfs.inodes.used
   type: integer
 - name: faults
@@ -30,8 +28,8 @@
   type: ip
 - name: Percentage
   type: double
-- name: suffix
-  type: keyword
+- name: rangeofid
+  type: integer
 - name: agent.snapshot
   type: boolean
 - name: container.name  

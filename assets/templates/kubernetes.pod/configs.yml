@@ -25,24 +25,14 @@ fields:
     range:
       min: 0
       max: 10000
-<<<<<<< HEAD
-=======
-  - name: Offset
-    range:
-      min: 1
-      max: 100
->>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
   - name: Bytes
     range:
       min: 1
       max: 3000000
-<<<<<<< HEAD
   - name: rangeofid
     range:
       min: 0
       max: 10000
-=======
->>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
   - name: Percentage
     range:
       min: 0

@@ -12,12 +12,7 @@
 {{- $txbytes := generate "container.network.egress.bytes" }}
 {{- $uId := uuidv4 }}
 {{- $pod_uId := uuidv4 }}
-<<<<<<< HEAD
 {{- $rangeofid := generate "rangeofid" }}
-=======
-{{- $suffix := split "-" $uId }}
-{{- $offset := generate "Offset" }}
->>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
 {{- $pct := generate "Percentage" }}
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
@@ -34,11 +29,7 @@
       "node":{
          "uid": "{{ $uId }}" ,
          "hostname":"{{ $agentName }}.c.elastic-obs-integrations-dev.internal",
-<<<<<<< HEAD
          "name":"{{ $agentName }}-{{ $rangeofid }}",
-=======
-         "name":"{{ $agentName }}-{{ $suffix._0 }}",
->>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
          "labels":{
             "cloud_google_com/machine-family":"e2",
             "cloud_google_com/gke-nodepool":"kubernetes-scale-nl",
@@ -93,11 +84,7 @@
             }
          },
          "ip":"{{generate "Ip"}}",
-<<<<<<< HEAD
          "name":"demo-deployment-{{ $rangeofid }}",
-=======
-         "name":"demo-deployment-{{ $offset }}-{{ $suffix._0 }}",
->>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
          "cpu":{
             "usage":{
                "node":{
@@ -120,7 +107,6 @@
             }
          }
       },
-<<<<<<< HEAD
       "namespace":"demo-{{ $rangeofid }}",
       "namespace_uid":"demo-{{ $rangeofid }}",
       "replicaset":{
@@ -132,28 +118,11 @@
       "labels":{
          "app":"demo",
          "pod-template-hash":"{{ $rangeofid }}",
-=======
-      "namespace":"demo-{{ $offset }}",
-      "namespace_uid":"demo-{{ $offset }}",
-      "replicaset":{
-         "name":"demo-deployment-{{ $offset }}-{{ $suffix._0 }}"
-      },
-      "namespace_labels":{
-         "kubernetes_io/metadata_name":"demo-{{ $offset }}"
-      },
-      "labels":{
-         "app":"demo",
-         "pod-template-hash":"{{ $suffix._0 }}",
->>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
          "app-2":"demo-2",
          "app-1":"demo-1"
       },
       "deployment":{
-<<<<<<< HEAD
          "name":"demo-deployment-{{ $rangeofid }}"
-=======
-         "name":"demo-deployment-{{ $offset }}"
->>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
       }
    },
    "cloud": {

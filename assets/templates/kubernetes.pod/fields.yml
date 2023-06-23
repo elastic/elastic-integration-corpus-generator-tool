@@ -25,12 +25,21 @@
 - name: Offset
   type: integer
 - name: Bytes
+<<<<<<< HEAD
   type: long 
 - name: rangeofid
   type: integer
+=======
+  type: long  
+>>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
 - name: Ip
   type: ip
 - name: Percentage
   type: double
+<<<<<<< HEAD
+=======
+- name: suffix
+  type: keyword
+>>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
 - name: agent.snapshot
   type: boolean  

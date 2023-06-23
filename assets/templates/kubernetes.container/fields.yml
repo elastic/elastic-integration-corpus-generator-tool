@@ -18,6 +18,11 @@
   type: date
 - name: metricset.period
   type: long
+<<<<<<< HEAD
+=======
+- name: Offset
+  type: integer
+>>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
 - name: kubernetes.container.rootfs.inodes.used
   type: integer
 - name: faults
@@ -28,8 +33,13 @@
   type: ip
 - name: Percentage
   type: double
+<<<<<<< HEAD
 - name: rangeofid
   type: integer
+=======
+- name: suffix
+  type: keyword
+>>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
 - name: agent.snapshot
   type: boolean
 - name: container.name  

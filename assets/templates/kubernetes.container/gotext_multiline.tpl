@@ -6,14 +6,24 @@
 {{- $uId := uuidv4 }}
 {{- $pod_uId := uuidv4 }}
 {{- $container_uId := uuidv4 }}
+<<<<<<< HEAD
+=======
+{{- $suffix := split "-" $uId }}
+>>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
 {{- $timestamp := generate "timestamp" }}
 {{- $fulltimestamp := $timestamp.Format "2006-01-02T15:04:05.999999Z07:00" }}
 {{- $resttime := split ":" $fulltimestamp }}
 {{- $picktimedate := generate "timedate" }}
 {{- $timehour := generate "timehour" }}
+<<<<<<< HEAD
 {{- $faults := generate "faults" }}
 {{- $pct := generate "Percentage" }}
 {{- $rangeofid := generate "rangeofid" -}}
+=======
+{{- $offset := generate "Offset" }}
+{{- $faults := generate "faults" }}
+{{- $pct := generate "Percentage" }}
+>>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
 {{- $name :=  generate "container.name" }} 
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
@@ -104,7 +114,11 @@
       "node":{
          "uid": "{{ $uId }}" ,
          "hostname":"{{ $agentName }}.c.elastic-obs-integrations-dev.internal",
+<<<<<<< HEAD
          "name":"{{ $agentName }}-{{ $rangeofid }}",
+=======
+         "name":"{{ $agentName }}-{{ $suffix._0 }}",
+>>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
          "labels":{
             "cloud_google_com/machine-family":"e2",
             "cloud_google_com/gke-nodepool":"kubernetes-scale-nl",
@@ -133,6 +147,7 @@
       "pod":{
          "uid": "{{ $pod_uId }}",
          "ip":"{{generate "Ip"}}",
+<<<<<<< HEAD
          "name":"demo-deployment-{{ $rangeofid }}",
          "namespace":"demo-{{ $rangeofid }}",
          "namespace_uid":"demo-{{ $rangeofid }}",
@@ -145,11 +160,29 @@
          "labels":{
             "app":"demo",
             "pod-template-hash":"{{ $rangeofid }}",
+=======
+         "name":"demo-deployment-{{ $offset }}-{{ $suffix._0 }}",
+         "namespace":"demo-{{ $offset }}",
+         "namespace_uid":"demo-{{ $offset }}",
+         "replicaset":{
+            "name":"demo-deployment-{{ $offset }}-{{ $suffix._0 }}"
+         },
+         "namespace_labels":{
+            "kubernetes_io/metadata_name":"demo-{{ $offset }}"
+         },
+         "labels":{
+            "app":"demo",
+            "pod-template-hash":"{{ $suffix._0 }}",
+>>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
             "app-2":"demo-2",
             "app-1":"demo-1"
          },
          "deployment":{
+<<<<<<< HEAD
             "name":"demo-deployment-{{ $rangeofid }}"
+=======
+            "name":"demo-deployment-{{ $offset }}"
+>>>>>>> 061a2c9a03b97592613330f8c1ce399a0117e78d
          }
    },
    "cloud": {

@@ -106,17 +106,19 @@ func (gc GeneratorCorpus) bulkPayloadFilenameWithTemplate(templatePath string) s
 var corpusLocPerm = os.FileMode(0770)
 var corpusPerm = os.FileMode(0660)
 
-func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totEvents uint64, timeNow time.Time, createPayload []byte, f afero.File) error {
+func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totEvents uint64, timeNow time.Time, randSeed int64, createPayload []byte, f afero.File) error {
+	genlib.InitGeneratorTimeNow(timeNow)
+	genlib.InitGeneratorRandSeed(randSeed)
 
 	var evgen genlib.Generator
 	var err error
 	if len(template) == 0 {
-		evgen, err = genlib.NewGenerator(gc.config, fields, totEvents, timeNow)
+		evgen, err = genlib.NewGenerator(gc.config, fields, totEvents)
 	} else {
 		if gc.templateType == templateTypeCustom {
-			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields, totEvents, timeNow)
+			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields, totEvents)
 		} else if gc.templateType == templateTypeGoText {
-			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields, totEvents, timeNow)
+			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields, totEvents)
 		} else {
 			return ErrNotValidTemplate
 		}
@@ -162,7 +164,7 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 }
 
 // Generate generates a bulk request corpus and persist it to file.
-func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion string, totEvents uint64, timeNow time.Time) (string, error) {
+func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, dataStream, packageVersion string, totEvents uint64, timeNow time.Time, randSeed int64) (string, error) {
 	if err := gc.fs.MkdirAll(gc.location, corpusLocPerm); err != nil {
 		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
 	}
@@ -181,7 +183,7 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 
 	createPayload := []byte(`{ "create" : { "_index": "` + dataStreamType + `-` + integrationPackage + `.` + dataStream + `-default" } }` + "\n")
 
-	err = gc.eventsPayloadFromFields(nil, flds, totEvents, timeNow, createPayload, f)
+	err = gc.eventsPayloadFromFields(nil, flds, totEvents, timeNow, randSeed, createPayload, f)
 	if err != nil {
 		return "", err
 	}
@@ -194,7 +196,7 @@ func (gc GeneratorCorpus) Generate(packageRegistryBaseURL, integrationPackage, d
 }
 
 // GenerateWithTemplate generates a template based corpus and persist it to file.
-func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPath string, totEvents uint64, timeNow time.Time) (string, error) {
+func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPath string, totEvents uint64, timeNow time.Time, randSeed int64) (string, error) {
 	if err := gc.fs.MkdirAll(gc.location, corpusLocPerm); err != nil {
 		return "", fmt.Errorf("cannot generate corpus location folder: %v", err)
 	}
@@ -220,7 +222,7 @@ func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPat
 		return "", err
 	}
 
-	err = gc.eventsPayloadFromFields(template, flds, totEvents, timeNow, nil, f)
+	err = gc.eventsPayloadFromFields(template, flds, totEvents, timeNow, randSeed, nil, f)
 	if err != nil {
 		return "", err
 	}

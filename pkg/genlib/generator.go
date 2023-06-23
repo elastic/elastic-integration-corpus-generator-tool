@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+var customRand *rand.Rand
+
 const (
 	textTemplateEngine = iota
 	customTemplateEngine
@@ -163,9 +165,22 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 	return templateBuffer.Bytes(), objectKeysField
 }
 
-func NewGenerator(cfg Config, flds Fields, totEvents uint64, timeNow time.Time) (Generator, error) {
+func NewGenerator(cfg Config, flds Fields, totEvents uint64) (Generator, error) {
 	template, objectKeysField := generateCustomTemplateFromField(cfg, flds)
 	flds = append(flds, objectKeysField...)
 
-	return NewGeneratorWithCustomTemplate(template, cfg, flds, totEvents, timeNow)
+	return NewGeneratorWithCustomTemplate(template, cfg, flds, totEvents)
+}
+
+// InitGeneratorTimeNow sets base timeNow for `date` field
+func InitGeneratorTimeNow(timeNow time.Time) {
+	// set timeNowToBind to --now flag (already parsed or now)
+	timeNowToBind = timeNow
+}
+
+// InitGeneratorRandSeed sets rand seed
+func InitGeneratorRandSeed(randSeed int64) {
+	// set rand and randomdata seed to --seed flag (custom or 1)
+	customRand = rand.New(rand.NewSource(randSeed))
+	randomdata.CustomRand(customRand)
 }

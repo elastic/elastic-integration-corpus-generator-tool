@@ -10,6 +10,8 @@ import (
 var packageRegistryBaseURL string
 var configFile string
 var totEvents uint64
+var timeNowAsString string
+var randSeed int64
 
 func getTimeNowFromFlag(timeNowAsString string) (time.Time, error) {
 	if len(timeNowAsString) > 0 {

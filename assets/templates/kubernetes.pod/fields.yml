@@ -25,12 +25,12 @@
 - name: Offset
   type: integer
 - name: Bytes
-  type: long  
+  type: long 
+- name: rangeofid
+  type: integer
 - name: Ip
   type: ip
 - name: Percentage
   type: double
-- name: suffix
-  type: keyword
 - name: agent.snapshot
   type: boolean  

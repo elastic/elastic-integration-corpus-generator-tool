@@ -5,11 +5,22 @@ import (
 	"context"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
+	"log"
+	"math/rand"
 	"testing"
+	"time"
 )
 
 func TestMain(m *testing.M) {
-	InitGeneratorRandSeed(1)
+	timeNow := time.Now()
+	randSeed := rand.Int63()
+
+	log.Printf("rand seed generator initialised with value `%d`\n", randSeed)
+	log.Printf("time now generator initialised with value `%s`\n", timeNow.UTC().Format(time.RFC3339Nano))
+
+	InitGeneratorRandSeed(randSeed)
+	InitGeneratorTimeNow(timeNow)
+
 }
 
 func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {

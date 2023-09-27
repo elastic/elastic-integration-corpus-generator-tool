@@ -8,13 +8,13 @@ require (
 	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/elastic/go-ucfg v0.8.6
 	github.com/lithammer/shortuuid/v3 v3.0.7
-	github.com/spf13/afero v1.9.5
+	github.com/spf13/afero v1.10.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/multierr v1.11.0
-	golang.org/x/mod v0.10.0
-	golang.org/x/sync v0.2.0
+	golang.org/x/mod v0.12.0
+	golang.org/x/sync v0.3.0
 )
 
 require (

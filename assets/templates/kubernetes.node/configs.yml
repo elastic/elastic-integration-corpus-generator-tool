@@ -1,0 +1,33 @@
+fields:
+  - name: cloud.availabilit_zone
+    value: "europe-west1-d"  
+  - name: index
+    value: "metrics-kubernetes.node-default"  
+  - name: agent.id
+    enum: ["i-1", "i-2", "i-3", "i-4","i-5", "i-6", "i-7", "i-8","i-9", "i-10", "i-11", "i-12","i-13", "i-14", "i-15", "i-16"]
+  - name: agent.name
+    value: "kubernetes-scale-123456"
+  - name: agent.ephemeral_id  
+    value: "f94220b0-2ca6-4809-8656-eb478a66c541"
+  - name: agent.version
+    value: "8.7.0"
+  - name: agent.snasphost
+    value: false
+  - name: metricset.period
+    value: 10000
+  - name: event.duration
+    range:
+      min: 1
+      max: 4000000
+  - name: rangeofid
+    range:
+      min: 0
+      max: 10000
+  - name: timedate
+    value: "placeholder_date"
+  - name: hour
+    value: "placeholder_hour"
+  - name: minute
+    value: "placeholder_min"
+  - name: second
+    value: "placeholder_sec"

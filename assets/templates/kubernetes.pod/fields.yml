@@ -24,6 +24,8 @@
   type: long
 - name: Offset
   type: integer
+- name: nodeid
+  type: integer
 - name: Bytes
   type: long 
 - name: rangeofid

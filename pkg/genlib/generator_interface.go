@@ -65,7 +65,8 @@ type emitFNotReturn func(state *GenState, buf *bytes.Buffer) error
 type EmitF func(state *GenState) any
 
 type Generator interface {
-	Emit(state *GenState, buf *bytes.Buffer) error
+	Emit(buf *bytes.Buffer) error
+	GenState() *GenState
 	Close() error
 }
 
@@ -84,7 +85,7 @@ type GenState struct {
 	pool sync.Pool
 }
 
-func NewGenState() *GenState {
+func newGenState() *GenState {
 	return &GenState{
 		prevCache:            make(map[string]any),
 		prevCacheForDup:      make(map[string]map[any]struct{}),

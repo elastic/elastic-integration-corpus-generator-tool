@@ -50,7 +50,7 @@ var awsAZs map[string][]string = map[string][]string{
 
 func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEvents uint64) (*GeneratorWithTextTemplate, error) {
 	// Preprocess the fields, generating appropriate bound function
-	state := NewGenState()
+	state := newGenState()
 	fieldMap := make(map[string]any)
 	for _, field := range fields {
 		if err := bindField(cfg, field, fieldMap, true); err != nil {
@@ -97,23 +97,25 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEven
 	return &GeneratorWithTextTemplate{tpl: parsedTpl, totEvents: totEvents, state: state, errChan: errChan}, nil
 }
 
-func (gen GeneratorWithTextTemplate) Close() error {
+func (gen *GeneratorWithTextTemplate) Close() error {
 	return nil
 }
 
-func (gen GeneratorWithTextTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
-	state = gen.state
-	if err := gen.emit(state, buf); err != nil {
+func (gen *GeneratorWithTextTemplate) GenState() *GenState {
+	return gen.state
+}
+
+func (gen *GeneratorWithTextTemplate) Emit(buf *bytes.Buffer) error {
+	if err := gen.emit(buf); err != nil {
 		return err
 	}
 
-	state.counter += 1
-
+	gen.state.counter += 1
 	return nil
 }
 
-func (gen GeneratorWithTextTemplate) emit(state *GenState, buf *bytes.Buffer) error {
-	if gen.totEvents == 0 || state.counter < gen.totEvents {
+func (gen *GeneratorWithTextTemplate) emit(buf *bytes.Buffer) error {
+	if gen.totEvents == 0 || gen.state.counter < gen.totEvents {
 		select {
 		case <-gen.errChan:
 			return generateOnFieldNotInFieldsYaml

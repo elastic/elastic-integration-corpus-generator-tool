@@ -13,8 +13,8 @@ function exit_handler()
 function replace()
 {
     tmpfile=$(mktemp)
-    cp ./assets/templates/kubernetes.node/configs.yml "$tmpfile" 
-    awk '/name: '$1'/{ rl = NR + 1 } NR == rl { gsub( "'$2'","'"$3"'") } 1' "$tmpfile" > ./assets/templates/kubernetes.node/configs.yml
+    cp ./assets/templates/kubernetes.node/schema-b/configs.yml "$tmpfile" 
+    awk '/name: '$1'/{ rl = NR + 1 } NR == rl { gsub( "'$2'","'"$3"'") } 1' "$tmpfile" > ./assets/templates/kubernetes.node/schema-b/configs.yml
     rm "$tmpfile" 
 }
 
@@ -98,7 +98,7 @@ do
     oldminute=$minute
     oldsecond=$second
     trap "exit_handler $oldutchour $oldminute $oldsecond $timedate" EXIT
-    output=`./elastic-integration-corpus-generator-tool generate-with-template ./assets/templates/kubernetes.node/gotext.tpl ./assets/templates/kubernetes.node/fields.yml -c ./assets/templates/kubernetes.node/configs.yml -y gotext -t $1`
+    output=`./elastic-integration-corpus-generator-tool generate-with-template ./assets/templates/kubernetes.node/schema-b/gotext.tpl ./assets/templates/kubernetes.node/schema-b/fields.yml -c ./assets/templates/kubernetes.node/schema-b/configs.yml -y gotext -t $1`
     #Define multi-character delimiter
     delimiter=" "
     #Concatenate the delimiter with the main string

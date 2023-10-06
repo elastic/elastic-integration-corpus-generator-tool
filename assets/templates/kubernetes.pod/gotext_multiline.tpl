@@ -29,12 +29,12 @@
    "kubernetes": {
       "node":{
          "uid": "{{ $uId }}" ,
-         "hostname":"host-node-{{ $nodeid }}",
-         "name":"node-{{ $nodeid }}",
+         "hostname":"host-{{ $nodeid }}",
+         "name":"host-{{ $nodeid }}",
          "labels":{
             "cloud_google_com/machine-family":"e2",
             "cloud_google_com/gke-nodepool":"kubernetes-scale-nl",
-            "kubernetes_io/hostname":"host-node-{{ $nodeid }}",
+            "kubernetes_io/hostname":"host-{{ $nodeid }}",
             "cloud_google_com/gke-os-distribution":"cos",
             "topology_kubernetes_io/zone":"europe-west1-d",
             "topology_gke_io/zone":"europe-west1-d",
@@ -188,7 +188,7 @@
       "dataset":"kubernetes.pod"
    },
    "host":{
-      "hostname":"host-node-{{ $nodeid }}",
+      "hostname":"host-{{ $nodeid }}",
       "os":{
          "kernel":"5.10.161+",
          "codename":"focal",
@@ -199,7 +199,7 @@
          "platform":"ubuntu"
       },
       "containerized":false,
-      "name": "host-node-{{ $nodeid }}",
+      "name": "host-{{ $nodeid }}",
       "id": "{{ $uId }}",
       "architecture":"x86_64"
    }

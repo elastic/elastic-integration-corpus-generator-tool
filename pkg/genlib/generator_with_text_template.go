@@ -18,7 +18,7 @@ var generateOnFieldNotInFieldsYaml = errors.New("generate called on a field not 
 // GeneratorWithTextTemplate
 type GeneratorWithTextTemplate struct {
 	tpl       *template.Template
-	state     *GenState
+	state     *genState
 	errChan   chan error
 	totEvents uint64
 }
@@ -99,10 +99,6 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEven
 
 func (gen *GeneratorWithTextTemplate) Close() error {
 	return nil
-}
-
-func (gen *GeneratorWithTextTemplate) GenState() *GenState {
-	return gen.state
 }
 
 func (gen *GeneratorWithTextTemplate) Emit(buf *bytes.Buffer) error {

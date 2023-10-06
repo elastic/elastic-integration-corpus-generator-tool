@@ -22,7 +22,7 @@ type GeneratorWithCustomTemplate struct {
 	totEvents        uint64
 	emitters         []emitter
 	trailingTemplate []byte
-	state            *GenState
+	state            *genState
 }
 
 func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) {
@@ -118,10 +118,6 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 
 func (gen *GeneratorWithCustomTemplate) Close() error {
 	return nil
-}
-
-func (gen *GeneratorWithCustomTemplate) GenState() *GenState {
-	return gen.state
 }
 
 func (gen *GeneratorWithCustomTemplate) Emit(buf *bytes.Buffer) error {

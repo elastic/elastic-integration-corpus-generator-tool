@@ -23,11 +23,5 @@ fields:
     range:
       min: 0
       max: 10000
-  - name: timedate
-    value: "placeholder_date"
-  - name: hour
-    value: "placeholder_hour"
-  - name: minute
-    value: "placeholder_min"
-  - name: second
-    value: "placeholder_sec"
+  - name: period
+    period: "30s"

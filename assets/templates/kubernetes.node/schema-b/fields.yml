@@ -1,13 +1,3 @@
-- name: timestamp
-  type: date
-- name: timedate
-  type: keyword   
-- name: hour
-  type: keyword 
-- name: minute
-  type: keyword 
-- name: second
-  type: keyword 
 - name: agent.id
   type: keyword
 - name: agent.name
@@ -32,3 +22,5 @@
   type: boolean  
 - name: index
   type: keyword 
+- name: period
+  type: date

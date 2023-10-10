@@ -16,11 +16,11 @@ import (
 func Test_EmptyCaseWithTextTemplate(t *testing.T) {
 	template, _ := generateTextTemplateFromField(Config{}, []Field{})
 	t.Logf("with template: %s", string(template))
-	g, state := makeGeneratorWithTextTemplate(t, Config{}, []Field{}, template, 0)
+	g := makeGeneratorWithTextTemplate(t, Config{}, []Field{}, template, 0)
 
 	var buf bytes.Buffer
 
-	if err := g.Emit(state, &buf); err != nil {
+	if err := g.Emit(&buf); err != nil {
 		t.Fatal(err)
 	}
 
@@ -81,7 +81,7 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		}
 
 		nSpins := 16384
-		g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(nSpins))
+		g := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(nSpins))
 
 		vmapAlpha := make(map[any]int)
 		vmapBeta := make(map[any]int)
@@ -89,7 +89,7 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		for i := 0; i < nSpins; i++ {
 
 			var buf bytes.Buffer
-			if err := g.Emit(state, &buf); err != nil {
+			if err := g.Emit(&buf); err != nil {
 				t.Fatal(err)
 			}
 
@@ -320,13 +320,13 @@ func Test_FieldDateAndPeriodWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
 
 	var buf bytes.Buffer
 
 	nSpins := 10
 	for i := 0; i < nSpins; i++ {
-		if err := g.Emit(state, &buf); err != nil {
+		if err := g.Emit(&buf); err != nil {
 			t.Fatal(err)
 		}
 
@@ -415,11 +415,11 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 		}
 	}
 
-	g, state := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 0)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 0)
 
 	var buf bytes.Buffer
 
-	if err := g.Emit(state, &buf); err != nil {
+	if err := g.Emit(&buf); err != nil {
 		t.Fatal(err)
 	}
 
@@ -440,12 +440,12 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 	return v
 }
 
-func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) (Generator, *GenState) {
+func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) Generator {
 	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totEvents)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return g, NewGenState()
+	return g
 }

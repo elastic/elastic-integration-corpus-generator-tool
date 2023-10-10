@@ -22,7 +22,7 @@ type GeneratorWithCustomTemplate struct {
 	totEvents        uint64
 	emitters         []emitter
 	trailingTemplate []byte
-	state            *GenState
+	state            *genState
 }
 
 func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) {
@@ -87,7 +87,7 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
 
 	// Preprocess the fields, generating appropriate emit functions
-	state := NewGenState()
+	state := newGenState()
 	fieldMap := make(map[string]any)
 	fieldTypes := make(map[string]string)
 	for _, field := range fields {
@@ -116,26 +116,25 @@ func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, 
 	return &GeneratorWithCustomTemplate{emitters: emitters, trailingTemplate: trailingTemplate, totEvents: totEvents, state: state}, nil
 }
 
-func (gen GeneratorWithCustomTemplate) Close() error {
+func (gen *GeneratorWithCustomTemplate) Close() error {
 	return nil
 }
 
-func (gen GeneratorWithCustomTemplate) Emit(state *GenState, buf *bytes.Buffer) error {
-	state = gen.state
-	if err := gen.emit(state, buf); err != nil {
+func (gen *GeneratorWithCustomTemplate) Emit(buf *bytes.Buffer) error {
+	if err := gen.emit(buf); err != nil {
 		return err
 	}
 
-	state.counter += 1
+	gen.state.counter += 1
 
 	return nil
 }
 
-func (gen GeneratorWithCustomTemplate) emit(state *GenState, buf *bytes.Buffer) error {
-	if gen.totEvents == 0 || state.counter < gen.totEvents {
+func (gen *GeneratorWithCustomTemplate) emit(buf *bytes.Buffer) error {
+	if gen.totEvents == 0 || gen.state.counter < gen.totEvents {
 		for _, e := range gen.emitters {
 			buf.Write(e.prefix)
-			if err := e.emitFunc(state, buf); err != nil {
+			if err := e.emitFunc(gen.state, buf); err != nil {
 				return err
 			}
 		}

@@ -24,4 +24,4 @@ fields:
       min: 0
       max: 10000
   - name: period
-    period: "30s"
+    period: "10s"

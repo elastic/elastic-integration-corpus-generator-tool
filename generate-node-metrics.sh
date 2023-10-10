@@ -61,5 +61,5 @@ do
     mv "$generatedfile" data.json
     curl --location --request POST -u ${ELASTIC_USERNAME}:${ELASTIC_PASS} ${ELASTIC_HOST}/metrics-kubernetes.node-default/_bulk  --header 'Content-Type: application/x-ndjson' --data-binary @data.json
     rm data.json
-    sleep 30
+    sleep 10
 done

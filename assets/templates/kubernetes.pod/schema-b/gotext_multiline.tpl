@@ -11,7 +11,6 @@
 {{- $rxbytes := generate "container.network.ingress.bytes" }}
 {{- $txbytes := generate "container.network.egress.bytes" }}
 {{- $uId := uuidv4 }}
-{{- $pod_uId := uuidv4 }}
 {{- $rangeofid := generate "rangeofid" }}
 {{- $nodeid := generate "nodeid" -}}
 {{- $pct := generate "Percentage" }}
@@ -57,7 +56,7 @@
          }
       },
       "pod":{
-         "uid": "{{ $pod_uId }}",
+         "uid": "demo-pod-{{ $rangeofid }}",
          "start_time": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
          "memory":{
             "rss":{
@@ -85,7 +84,7 @@
             }
          },
          "ip":"{{generate "Ip"}}",
-         "name":"demo-deployment-{{ $rangeofid }}",
+         "name":"demo-pod-{{ $rangeofid }}",
          "cpu":{
             "usage":{
                "node":{

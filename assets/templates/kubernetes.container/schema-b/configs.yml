@@ -45,7 +45,7 @@ fields:
   - name: container.name
     enum: ["web", "default-http-backend", "dnsmasq", "csi-driver", "web", "web", "web", "prometheus", "konnectivity-agent", "sidecar", "kubedns", "metrics-server-nanny", "web", "web", "fluentbit", "autoscaler", "gke-metrics-agent", "elastic-agent", "web", "kube-state-metrics", "metrics-server", "fluentbit", "elastic-agent", "web", "prometheus-to-sd-exporter"]
   - name: timedate
-    # Add more dates below in case you want your data to be spread
+    # Add more dates below in case you want your data to be spread.Those are fixed because this is required in the nightly tests of Rally
     enum: ["2023-05-15" , "2023-05-16"]
   - name: timehour
     # Repeat or remove hours below to make data appear in specific hours. Below default enumaeration makes sure that data are spread throughout the 24 hours

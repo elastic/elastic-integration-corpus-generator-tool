@@ -3,7 +3,6 @@
 {{- $agentVersion := generate "agent.version" }}
 {{- $agentName := generate "agent.name" }}
 {{- $agentEphemeralid := generate "agent.ephemeral_id" }}
-{{- $container_uId := uuidv4 }}
 {{- $timestamp := generate "timestamp" }}
 {{- $fulltimestamp := $timestamp.Format "2006-01-02T15:04:05.999999Z07:00" }}
 {{- $resttime := split ":" $fulltimestamp }}
@@ -24,7 +23,7 @@
       "cpu":{
          "usage": {{divf $pct 1000000}}
       },
-      "id":"{{ $container_uId }}"
+      "id":"container-{{ $rangeofid }}"
    },
    "kubernetes": {
       "container":{

@@ -10,9 +10,8 @@
 {{- $agentEphemeralid := generate "agent.ephemeral_id" }}
 {{- $rxbytes := generate "container.network.ingress.bytes" }}
 {{- $txbytes := generate "container.network.egress.bytes" }}
-{{- $uId := uuidv4 }}
 {{- $rangeofid := generate "rangeofid" }}
-{{- $nodeid := generate "nodeid" -}}
+{{- $nodeid := div $rangeofid 110 -}}
 {{- $pct := generate "Percentage" }}
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
@@ -27,7 +26,7 @@
    },
    "kubernetes": {
       "node":{
-         "uid": "{{ $uId }}" ,
+         "uid":"host-{{ $nodeid }}" ,
          "hostname":"host-{{ $nodeid }}",
          "name":"host-{{ $nodeid }}",
          "labels":{
@@ -199,7 +198,7 @@
       },
       "containerized":false,
       "name": "host-{{ $nodeid }}",
-      "id": "{{ $uId }}",
+      "id": "host-{{ $nodeid }}",
       "architecture":"x86_64"
    }
 }

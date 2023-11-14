@@ -3,7 +3,6 @@
 {{- $agentVersion := generate "agent.version" }}
 {{- $agentName := generate "agent.name" }}
 {{- $agentEphemeralid := generate "agent.ephemeral_id" }}
-{{- $uId := uuidv4 }}
 {{- $container_uId := uuidv4 }}
 {{- $timestamp := generate "timestamp" }}
 {{- $fulltimestamp := $timestamp.Format "2006-01-02T15:04:05.999999Z07:00" }}
@@ -13,7 +12,7 @@
 {{- $faults := generate "faults" }}
 {{- $pct := generate "Percentage" }}
 {{- $rangeofid := generate "rangeofid" -}}
-{{- $nodeid := generate "nodeid" -}}
+{{- $nodeid := div $rangeofid 110 -}}
 {{- $name :=  generate "container.name" }} 
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
@@ -102,7 +101,7 @@
          }
       },
       "node":{
-         "uid": "{{ $uId }}" ,
+         "uid": "host-{{ $nodeid }}" ,
          "hostname":"host-{{ $nodeid }}",
          "name":host-{{ $nodeid }}",
          "labels":{
@@ -226,7 +225,7 @@
       },
       "containerized":false,
       "name": "host-{{ $nodeid }}",
-      "id": "{{ $uId }}",
+      "id": "host-{{ $nodeid }}",
       "architecture":"x86_64"
    }
 }

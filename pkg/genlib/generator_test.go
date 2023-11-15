@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func Test_Main(m *testing.M) {
+func TestMain(m *testing.M) {
 	timeNow := time.Now()
 	randSeed := rand.Int63()
 

@@ -48,8 +48,8 @@ const (
 	FieldTypeFlattened       = "flattened"
 	FieldTypeGeoPoint        = "geo_point"
 
-	FieldTypeTimeRange  = 3600 // seconds
-	FieldTypeTimeLayout = "2006-01-02T15:04:05.999999Z07:00"
+	FieldTypeDurationSpan = 1000 // milliseconds
+	FieldTypeTimeLayout   = "2006-01-02T15:04:05.999999Z07:00"
 )
 
 var (
@@ -501,11 +501,17 @@ func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) er
 		var offset time.Duration
 		if fieldCfg.Period > 0 && state.totEvents > 0 {
 			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
+		} else if fieldCfg.Period < 0 && state.totEvents > 0 {
+			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * (int64(state.totEvents - state.counter)))
 		} else {
-			offset = time.Duration(customRand.Intn(FieldTypeTimeRange)*-1) * time.Second
+			offset = time.Duration(customRand.Intn(FieldTypeDurationSpan)) * time.Millisecond
 		}
 
 		newTime := timeNowToBind.Add(offset)
+
+		if state.totEvents <= 0 {
+			timeNowToBind = newTime
+		}
 
 		buf.WriteString(newTime.Format(FieldTypeTimeLayout))
 		return nil
@@ -839,13 +845,19 @@ func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[stri
 	var emitF EmitF
 	emitF = func(state *genState) any {
 		var offset time.Duration
-		if fieldCfg.Period > 0 {
+		if fieldCfg.Period > 0 && state.totEvents > 0 {
 			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
+		} else if fieldCfg.Period < 0 && state.totEvents > 0 {
+			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * (int64(state.totEvents - state.counter)))
 		} else {
-			offset = time.Duration(customRand.Intn(FieldTypeTimeRange)*-1) * time.Second
+			offset = time.Duration(customRand.Intn(FieldTypeDurationSpan)) * time.Millisecond
 		}
 
 		newTime := timeNowToBind.Add(offset)
+
+		if state.totEvents <= 0 {
+			timeNowToBind = newTime
+		}
 
 		return newTime
 	}

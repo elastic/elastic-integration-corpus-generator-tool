@@ -498,26 +498,32 @@ func bindWordN(field Field, n int, fieldMap map[string]any) error {
 func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		var offset time.Duration
-		if fieldCfg.Period > 0 && state.totEvents > 0 {
-			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
-		} else if fieldCfg.Period < 0 && state.totEvents > 0 {
-			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * (int64(state.totEvents - state.counter)))
-		} else {
-			offset = time.Duration(customRand.Intn(FieldTypeDurationSpan)) * time.Millisecond
-		}
-
-		newTime := timeNowToBind.Add(offset)
-
-		if state.totEvents <= 0 {
-			timeNowToBind = newTime
-		}
+		newTime := nearTime(fieldCfg, state)
 
 		buf.WriteString(newTime.Format(FieldTypeTimeLayout))
 		return nil
 	}
 	fieldMap[field.Name] = emitFNotReturn
 	return nil
+}
+
+func nearTime(fieldCfg ConfigField, state *genState) time.Time {
+	var offset time.Duration
+	if fieldCfg.Period > 0 && state.totEvents > 0 {
+		offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
+	} else if fieldCfg.Period < 0 && state.totEvents > 0 {
+		offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * (int64(state.totEvents - state.counter)))
+	} else {
+		offset = time.Duration(customRand.Intn(FieldTypeDurationSpan)) * time.Millisecond
+	}
+
+	newTime := timeNowToBind.Add(offset)
+
+	if state.totEvents <= 0 {
+		timeNowToBind = newTime
+	}
+
+	return newTime
 }
 
 func bindIP(field Field, fieldMap map[string]any) error {
@@ -844,23 +850,9 @@ func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
 func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	var emitF EmitF
 	emitF = func(state *genState) any {
-		var offset time.Duration
-		if fieldCfg.Period > 0 && state.totEvents > 0 {
-			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
-		} else if fieldCfg.Period < 0 && state.totEvents > 0 {
-			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * (int64(state.totEvents - state.counter)))
-		} else {
-			offset = time.Duration(customRand.Intn(FieldTypeDurationSpan)) * time.Millisecond
-		}
-
-		newTime := timeNowToBind.Add(offset)
-
-		if state.totEvents <= 0 {
-			timeNowToBind = newTime
-		}
-
-		return newTime
+		return nearTime(fieldCfg, state)
 	}
+
 	fieldMap[field.Name] = emitF
 	return nil
 }

@@ -338,22 +338,7 @@ func genNounsNWithReturn(n int) string {
 	return value
 }
 
-func randGeoPoint(buf *bytes.Buffer) error {
-	lat := customRand.Intn(181) - 90
-	var latD int
-	if lat != -90 && lat != 90 {
-		latD = customRand.Intn(100)
-	}
-	var longD int
-	long := customRand.Intn(361) - 180
-	if long != -180 && long != 180 {
-		longD = customRand.Intn(100)
-	}
-	_, err := fmt.Fprintf(buf, "%d.%d,%d.%d", lat, latD, long, longD)
-	return err
-}
-
-func randGeoPointWithReturn() string {
+func randGeoPoint() (int, int, int, int) {
 	lat := customRand.Intn(181) - 90
 	var latD int
 	if lat != -90 && lat != 90 {
@@ -365,7 +350,7 @@ func randGeoPointWithReturn() string {
 		longD = customRand.Intn(100)
 	}
 
-	return fmt.Sprintf("%d.%d,%d.%d", lat, latD, long, longD)
+	return lat, latD, long, longD
 }
 
 func bindConstantKeyword(field Field, fieldMap map[string]any) error {
@@ -396,19 +381,7 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 
 		fieldMap[field.Name] = emitFNotReturn
 	} else if len(field.Example) > 0 {
-
-		totWords := len(keywordRegex.Split(field.Example, -1))
-
-		var joiner string
-		if strings.Contains(field.Example, "\\.") {
-			joiner = "\\."
-		} else if strings.Contains(field.Example, "-") {
-			joiner = "-"
-		} else if strings.Contains(field.Example, "_") {
-			joiner = "_"
-		} else if strings.Contains(field.Example, " ") {
-			joiner = " "
-		}
+		totWords, joiner := totWordsAndJoiner(field.Example)
 
 		return bindJoinRand(field, totWords, joiner, fieldMap)
 	} else {
@@ -424,6 +397,22 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 	return nil
 }
 
+func totWordsAndJoiner(fieldExample string) (int, string) {
+	totWords := len(keywordRegex.Split(fieldExample, -1))
+
+	var joiner string
+	if strings.Contains(fieldExample, "\\.") {
+		joiner = "\\."
+	} else if strings.Contains(fieldExample, "-") {
+		joiner = "-"
+	} else if strings.Contains(fieldExample, "_") {
+		joiner = "_"
+	} else if strings.Contains(fieldExample, " ") {
+		joiner = " "
+	}
+
+	return totWords, joiner
+}
 func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
@@ -477,7 +466,9 @@ func bindBool(field Field, fieldMap map[string]any) error {
 func bindGeoPoint(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		return randGeoPoint(buf)
+		lat, latD, long, longD := randGeoPoint()
+		_, err := fmt.Fprintf(buf, "%d.%d,%d.%d", lat, latD, long, longD)
+		return err
 	}
 
 	fieldMap[field.Name] = emitFNotReturn
@@ -529,10 +520,7 @@ func nearTime(fieldCfg ConfigField, state *genState) time.Time {
 func bindIP(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		i0 := customRand.Intn(255)
-		i1 := customRand.Intn(255)
-		i2 := customRand.Intn(255)
-		i3 := customRand.Intn(255)
+		i0, i1, i2, i3 := randIP()
 
 		_, err := fmt.Fprintf(buf, "%d.%d.%d.%d", i0, i1, i2, i3)
 		return err
@@ -756,19 +744,7 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 
 		fieldMap[field.Name] = emitF
 	} else if len(field.Example) > 0 {
-
-		totWords := len(keywordRegex.Split(field.Example, -1))
-
-		var joiner string
-		if strings.Contains(field.Example, "\\.") {
-			joiner = "\\."
-		} else if strings.Contains(field.Example, "-") {
-			joiner = "-"
-		} else if strings.Contains(field.Example, "_") {
-			joiner = "_"
-		} else if strings.Contains(field.Example, " ") {
-			joiner = " "
-		}
+		totWords, joiner := totWordsAndJoiner(field.Example)
 
 		return bindJoinRandWithReturn(field, totWords, joiner, fieldMap)
 	} else {
@@ -830,7 +806,8 @@ func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
 func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF EmitF
 	emitF = func(state *genState) any {
-		return randGeoPointWithReturn()
+		lat, latD, long, longD := randGeoPoint()
+		return fmt.Sprintf("%d.%d,%d.%d", lat, latD, long, longD)
 	}
 
 	fieldMap[field.Name] = emitF
@@ -860,10 +837,7 @@ func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[stri
 func bindIPWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF EmitF
 	emitF = func(state *genState) any {
-		i0 := customRand.Intn(255)
-		i1 := customRand.Intn(255)
-		i2 := customRand.Intn(255)
-		i3 := customRand.Intn(255)
+		i0, i1, i2, i3 := randIP()
 
 		return fmt.Sprintf("%d.%d.%d.%d", i0, i1, i2, i3)
 	}
@@ -871,7 +845,14 @@ func bindIPWithReturn(field Field, fieldMap map[string]any) error {
 	fieldMap[field.Name] = emitF
 	return nil
 }
+func randIP() (int, int, int, int) {
+	i0 := customRand.Intn(255)
+	i1 := customRand.Intn(255)
+	i2 := customRand.Intn(255)
+	i3 := customRand.Intn(255)
 
+	return i0, i1, i2, i3
+}
 func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	dummyFunc := makeIntFunc(fieldCfg, field)
 

@@ -7,6 +7,7 @@ import (
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 	"log"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 )
@@ -21,6 +22,7 @@ func TestMain(m *testing.M) {
 	InitGeneratorRandSeed(randSeed)
 	InitGeneratorTimeNow(timeNow)
 
+	os.Exit(m.Run())
 }
 
 func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {

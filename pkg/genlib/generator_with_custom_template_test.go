@@ -442,30 +442,25 @@ func Test_FieldDateWithCustomTemplate(t *testing.T) {
 	t.Logf("with template: %s", string(template))
 	nSpins := rand.Intn(1024) + 1
 	for i := 0; i < nSpins; i++ {
-		now := time.Now()
+		previous := timeNowToBind
 
 		b := testSingleTWithCustomTemplate[string](t, fld, nil, template)
 
 		if ts, err := time.Parse(FieldTypeTimeLayout, b); err != nil {
 			t.Errorf("Fail parse timestamp %v", err)
 		} else {
-			// Timestamp should be +- FieldTypeDurationSpan from now within a second of slop
-			ts.Add(time.Second * -1)
-			ts.Add(time.Second)
-
-			diff := ts.Sub(now)
-			if diff < 0 {
-				diff = -diff
+			// Timestamp should be from now within a FieldTypeDurationSpan milliseconds of slop
+			diff := ts.Sub(previous)
+			if diff < 0 || diff > FieldTypeDurationSpan*time.Millisecond {
+				t.Errorf("Data generated before now, diff: %v", diff)
 			}
 
-			if diff >= FieldTypeTimeRange*time.Second {
-				t.Errorf("Date generated out of span range %v", diff)
-			}
+			previous = ts
 		}
 	}
 }
 
-func Test_FieldDateAndPeriodWithCustomTemplate(t *testing.T) {
+func Test_FieldDateAndPeriodPositiveWithCustomTemplate(t *testing.T) {
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -508,6 +503,58 @@ func Test_FieldDateAndPeriodWithCustomTemplate(t *testing.T) {
 		} else {
 			// Timestamp should be +1s for every iteration
 			expectedTime := timeNowToBind.Truncate(time.Millisecond).Add(time.Second * time.Duration(i))
+
+			diff := expectedTime.Sub(ts.Truncate(time.Millisecond))
+			if diff != 0 {
+				t.Errorf("Date generated out of period range %v", diff)
+			}
+		}
+	}
+}
+
+func Test_FieldDateAndPeriodNegativeWithCustomTemplate(t *testing.T) {
+	fld := Field{
+		Name: "alpha",
+		Type: FieldTypeDate,
+	}
+
+	template := []byte(`{"alpha":"{{.alpha}}"}`)
+	configYaml := []byte("fields:\n  - name: alpha\n    period: -10s")
+	t.Logf("with template: %s", string(template))
+
+	cfg, err := config.LoadConfigFromYaml(configYaml)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fld}, template, 10)
+
+	var buf bytes.Buffer
+
+	nSpins := 10
+	for i := 0; i < nSpins; i++ {
+		if err := g.Emit(&buf); err != nil {
+			t.Fatal(err)
+		}
+
+		m := unmarshalJSONT[string](t, buf.Bytes())
+		buf.Reset()
+
+		if len(m) != 1 {
+			t.Errorf("Expected map size 1, got %d", len(m))
+		}
+
+		v, ok := m[fld.Name]
+
+		if !ok {
+			t.Errorf("Missing key %v", fld.Name)
+		}
+
+		if ts, err := time.Parse(FieldTypeTimeLayout, v); err != nil {
+			t.Errorf("Fail parse timestamp %v", err)
+		} else {
+			// Timestamp should be +1s for every iteration
+			expectedTime := timeNowToBind.Truncate(time.Millisecond).Add(-10*time.Second + time.Second*time.Duration(i))
 
 			diff := expectedTime.Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {

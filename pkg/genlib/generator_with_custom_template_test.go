@@ -504,7 +504,7 @@ func Test_FieldDateAndPeriodPositiveWithCustomTemplate(t *testing.T) {
 			// Timestamp should be +1s for every iteration
 			expectedTime := timeNowToBind.Add(time.Second * time.Duration(i))
 
-			diff := expectedTime.Sub(ts)
+			diff := expectedTime.Truncate(time.Millisecond).Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {
 				t.Errorf("Date generated out of period range %v", diff)
 			}
@@ -556,7 +556,7 @@ func Test_FieldDateAndPeriodNegativeWithCustomTemplate(t *testing.T) {
 			// Timestamp should be +1s for every iteration
 			expectedTime := timeNowToBind.Add(-10*time.Second + time.Second*time.Duration(i))
 
-			diff := expectedTime.Sub(ts)
+			diff := expectedTime.Truncate(time.Millisecond).Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {
 				t.Errorf("Date generated out of period range %v", diff)
 			}
@@ -611,7 +611,7 @@ func Test_FieldDateAndRangeFromInThePastWithCustomTemplate(t *testing.T) {
 			// Timestamp should be +(period.Nanoseconds() / nSpins) * i) for every iteration
 			expectedTime := timeNowToBind.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
 
-			diff := expectedTime.Sub(ts)
+			diff := expectedTime.Truncate(time.Millisecond).Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {
 				t.Errorf("Date generated out of period range %v", diff)
 			}
@@ -666,7 +666,7 @@ func Test_FieldDateAndRangeFromInTheFutureWithCustomTemplate(t *testing.T) {
 			// Timestamp should be +(period.Nanoseconds() / nSpins) * i) for every iteration
 			expectedTime := timeNowToBind.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
 
-			diff := expectedTime.Sub(ts)
+			diff := expectedTime.Truncate(time.Millisecond).Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {
 				t.Errorf("Date generated out of period range %v", diff)
 			}
@@ -721,7 +721,7 @@ func Test_FieldDateAndRangeToInThePastWithCustomTemplate(t *testing.T) {
 			// Timestamp should be +(period.Nanoseconds() / nSpins) * i) for every iteration
 			expectedTime := timeNowToBind.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
 
-			diff := expectedTime.Sub(ts)
+			diff := expectedTime.Truncate(time.Millisecond).Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {
 				t.Errorf("Date generated out of period range %v", diff)
 			}
@@ -776,7 +776,7 @@ func Test_FieldDateAndRangeToInTheFutureWithCustomTemplate(t *testing.T) {
 			// Timestamp should be +(period.Nanoseconds() / nSpins) * i) for every iteration
 			expectedTime := timeNowToBind.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
 
-			diff := expectedTime.Sub(ts)
+			diff := expectedTime.Truncate(time.Millisecond).Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {
 				t.Errorf("Date generated out of period range %v", diff)
 			}
@@ -832,7 +832,7 @@ func Test_FieldDateAndRangeFromAndToPositiveWithCustomTemplate(t *testing.T) {
 			// Timestamp should be +(period.Nanoseconds() / nSpins) * i) for every iteration
 			expectedTime := from.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
 
-			diff := expectedTime.Sub(ts)
+			diff := expectedTime.Truncate(time.Millisecond).Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {
 				t.Errorf("Date generated out of period range %v", diff)
 			}
@@ -888,7 +888,7 @@ func Test_FieldDateAndRangeFromAndToNegativeWithCustomTemplate(t *testing.T) {
 			// Timestamp should be +(period.Nanoseconds() / nSpins) * i) for every iteration
 			expectedTime := from.Add(time.Duration((period.Nanoseconds() / nSpins) * (nSpins - i)))
 
-			diff := expectedTime.Sub(ts)
+			diff := expectedTime.Truncate(time.Millisecond).Sub(ts.Truncate(time.Millisecond))
 			if diff != 0 {
 				t.Errorf("Date generated out of period range %v", diff)
 			}

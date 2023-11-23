@@ -572,7 +572,7 @@ func Test_FieldDateAndRangeFromInThePastWithCustomTemplate(t *testing.T) {
 
 	from := timeNowToBind.Add(-10 * time.Second)
 	template := []byte(`{"alpha":"{{.alpha}}"}`)
-	configYaml := []byte(fmt.Sprintf("fields:\n  - name: alpha\n    range:\n      from: %s", from.Format(time.RFC3339Nano)))
+	configYaml := []byte(fmt.Sprintf("fields:\n  - name: alpha\n    range:\n      from: %s", from.Format("2006-01-02T15:04:05.999999999-07:00")))
 	t.Logf("with template: %s", string(template))
 
 	cfg, err := config.LoadConfigFromYaml(configYaml)
@@ -627,7 +627,7 @@ func Test_FieldDateAndRangeFromInTheFutureWithCustomTemplate(t *testing.T) {
 
 	from := timeNowToBind.Add(10 * time.Second)
 	template := []byte(`{"alpha":"{{.alpha}}"}`)
-	configYaml := []byte(fmt.Sprintf("fields:\n  - name: alpha\n    range:\n      from: %s", from.Format(time.RFC3339Nano)))
+	configYaml := []byte(fmt.Sprintf("fields:\n  - name: alpha\n    range:\n      from: %s", from.Format("2006-01-02T15:04:05.999999999-07:00")))
 	t.Logf("with template: %s", string(template))
 
 	cfg, err := config.LoadConfigFromYaml(configYaml)

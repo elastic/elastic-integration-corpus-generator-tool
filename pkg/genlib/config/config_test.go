@@ -259,6 +259,112 @@ func TestRange_MinAsInt64(t *testing.T) {
 	}
 }
 
+func TestRange_FromAsTime(t *testing.T) {
+	from, err := time.Parse("2006-01-02T15:04:05Z", "2023-11-23T08:35:38Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		scenario  string
+		rangeYaml string
+		expected  time.Time
+		hasError  bool
+	}{
+		{
+			scenario:  "from nil",
+			rangeYaml: "to: 2023-11-23T08:35:38Z",
+			expected:  time.Time{},
+			hasError:  true,
+		},
+		{
+			scenario:  "from not nil",
+			rangeYaml: "from: 2023-11-23T08:35:38Z",
+			expected:  from,
+			hasError:  false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.scenario, func(t *testing.T) {
+			cfg, err := yaml.NewConfig([]byte(testCase.rangeYaml))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var rangeCfg Range
+			err = cfg.Unpack(&rangeCfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			v, err := rangeCfg.FromAsTime()
+			if testCase.hasError && err == nil {
+				t.Fatal("expected error but got nil")
+			}
+			if !testCase.hasError && err != nil {
+				t.Fatal("expected no error but got one")
+			}
+			if testCase.expected != v {
+				t.Fatalf("expected %v, got %v", testCase.expected, v)
+			}
+		})
+	}
+}
+
+func TestRange_ToAsTime(t *testing.T) {
+	to, err := time.Parse("2006-01-02T15:04:05Z", "2023-11-23T08:35:38Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		scenario  string
+		rangeYaml string
+		expected  time.Time
+		hasError  bool
+	}{
+		{
+			scenario:  "to nil",
+			rangeYaml: "from: 2023-11-23T08:35:38Z",
+			expected:  time.Time{},
+			hasError:  true,
+		},
+		{
+			scenario:  "to not nil",
+			rangeYaml: "to: 2023-11-23T08:35:38Z",
+			expected:  to,
+			hasError:  false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.scenario, func(t *testing.T) {
+			cfg, err := yaml.NewConfig([]byte(testCase.rangeYaml))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var rangeCfg Range
+			err = cfg.Unpack(&rangeCfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			v, err := rangeCfg.ToAsTime()
+			if testCase.hasError && err == nil {
+				t.Fatal("expected error but got nil")
+			}
+			if !testCase.hasError && err != nil {
+				t.Fatal("expected no error but got one")
+			}
+			if testCase.expected != v {
+				t.Fatalf("expected %v, got %v", testCase.expected, v)
+			}
+		})
+	}
+}
+
 func TestPeriod(t *testing.T) {
 	testCases := []struct {
 		scenario   string

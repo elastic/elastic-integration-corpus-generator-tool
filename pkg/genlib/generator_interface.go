@@ -500,6 +500,30 @@ func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) er
 
 func nearTime(fieldCfg ConfigField, state *genState) time.Time {
 	var offset time.Duration
+	from, errFrom := fieldCfg.Range.FromAsTime()
+	to, errTo := fieldCfg.Range.ToAsTime()
+	if errFrom == nil && errTo == nil {
+		timeNowToBind = from
+		fieldCfg.Period = to.UTC().Sub(from.UTC())
+	}
+
+	if errFrom == nil && errTo != nil {
+		if from.UTC().After(timeNowToBind.UTC()) {
+			fieldCfg.Period = from.UTC().Sub(timeNowToBind.UTC())
+		} else {
+			fieldCfg.Period = timeNowToBind.UTC().Sub(from.UTC())
+		}
+
+	}
+
+	if errFrom != nil && errTo == nil {
+		if to.UTC().After(timeNowToBind.UTC()) {
+			fieldCfg.Period = to.UTC().Sub(timeNowToBind.UTC())
+		} else {
+			fieldCfg.Period = timeNowToBind.UTC().Sub(to.UTC())
+		}
+	}
+
 	if fieldCfg.Period > 0 && state.totEvents > 0 {
 		offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
 	} else if fieldCfg.Period < 0 && state.totEvents > 0 {

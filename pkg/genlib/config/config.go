@@ -13,6 +13,7 @@ import (
 
 var rangeBoundNotSet = errors.New("range bound not set")
 var rangeTimeNotSet = errors.New("range time not set")
+var rangeInvalidConfig = errors.New("range defining both `period` and `from`/`to`")
 
 type TimeRange struct {
 	time.Time
@@ -20,7 +21,7 @@ type TimeRange struct {
 
 func (ct *TimeRange) Unpack(t string) error {
 	var err error
-	ct.Time, err = time.Parse(time.RFC3339Nano, t)
+	ct.Time, err = time.Parse("2006-01-02T15:04:05.999999999-07:00", t)
 	return err
 }
 
@@ -45,6 +46,14 @@ type ConfigField struct {
 	Enum        []string      `config:"enum"`
 	ObjectKeys  []string      `config:"object_keys"`
 	Value       any           `config:"value"`
+}
+
+func (cf ConfigField) ValidForDateField() error {
+	if cf.Period.Abs() > 0 && (cf.Range.From != nil || cf.Range.To != nil) {
+		return rangeInvalidConfig
+	}
+
+	return nil
 }
 
 func (r Range) FromAsTime() (time.Time, error) {

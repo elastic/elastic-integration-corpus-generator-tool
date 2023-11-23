@@ -12,9 +12,9 @@ For each config entry the following fields are available:
 - `name` *mandatory*: dotted path field, matching an entry in [Fields definition](./glossary.md#fields-definition)
 - `fuzziness` *optional (`long` and `double` type only)*: when generating data you could want generated values to change in a known interval. Fuzziness allow to specify the maximum delta a generated value can have from the previous value (for the same field), as a delta percentage; value must be between 0.0 and 1.0, where 0 is 0% and 1 is 100%. When not specified there is no constraint on the generated values, boundaries will be defined by the underlying field type
 - `range` *optional (`long` and `double` type only)*: value will be generated between `min` and `max`
-- `range` *optional (`date` type only)*: value will be generated between `from` and `to`. Only one between `from` and `to` can be set, in this case the dates will be generated between `from`/`to` and `time.Now()`. Progressive order of the generated dates is always assured regardless the interval involving `from`, `to` and `time.Now()` is positive or negative. This setting has preference over `period`. 
+- `range` *optional (`date` type only)*: value will be generated between `from` and `to`. Only one between `from` and `to` can be set, in this case the dates will be generated between `from`/`to` and `time.Now()`. Progressive order of the generated dates is always assured regardless the interval involving `from`, `to` and `time.Now()` is positive or negative. If both at least one of `from` or `to` and `period` settings are defined an error will be returned and the generator will stop. The format of the date must be parsable by the following golang date format: `2006-01-02T15:04:05.999999999-07:00`. 
 - `cardinality` *optional*: number of different values for the field; note that this value may not be respected if not enough events are generated. Es `cardinality: 1000` with `100` generated events would produce `100` different values, not `1000`.
-- `period` *optional (`date` type only)*: values will be evenly generated between `time.Now()` and `time.Now().Add(period)`, where period is expressed as `time.Duration`. It accepts also a negative duration: in this case  values will be evenly generated between `time.Now().Add(period)` and `time.Now()`. This setting is ignored if a `range` with `from`/`to` is configured.
+- `period` *optional (`date` type only)*: values will be evenly generated between `time.Now()` and `time.Now().Add(period)`, where period is expressed as `time.Duration`. It accepts also a negative duration: in this case  values will be evenly generated between `time.Now().Add(period)` and `time.Now()`. If both `period` and at least one of `from` or `to` settings are defined an error will be returned and the generator will stop.
 - `object_keys` *optional (`object` type only)*: list of field names to generate in a object field type; if not specified a random number of field names will be generated in the object filed type
 - `value` *optional*: hardcoded value to set for the field (any `cardinality` will be ignored)
 - `enum` *optional (`keyword` type only)*: list of strings to randomly chose from a value to set for the field (any `cardinality` will be applied limited to the size of the `enum` values)
@@ -29,8 +29,8 @@ fields:
     period: "1h"
   - name: lastSnapshot
     range:
-      from: "2023-11-23-11:29:48Z"
-      to: "2023-12-13-01:39:58Z"
+      from: "2023-11-23-11:29:48"
+      to: "2023-12-13-01:39:58"
   - name: aws.dynamodb.metrics.AccountMaxReads.max
     fuzziness: 0.1
     range:

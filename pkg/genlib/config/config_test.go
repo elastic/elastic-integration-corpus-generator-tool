@@ -31,6 +31,118 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "foobar", f.Value.(string))
 }
 
+func TestIsValidForDateField(t *testing.T) {
+	testCases := []struct {
+		scenario string
+		config   string
+		hasError bool
+	}{
+		{
+			scenario: "no range",
+			config:   "name: field",
+			hasError: false,
+		},
+		{
+			scenario: "zero period",
+			config:   "name: field\nrange:\n  period: 0",
+			hasError: false,
+		},
+		{
+			scenario: "positive period",
+			config:   "name: field\nrange:\n  period: 1",
+			hasError: false,
+		},
+		{
+			scenario: "negative period",
+			config:   "name: field\nrange:\n  period: -1",
+			hasError: false,
+		},
+		{
+			scenario: "form only",
+			config:   "name: field\nrange:\n  from: \"2006-01-02T15:04:05+07:00\"",
+			hasError: false,
+		},
+		{
+			scenario: "form and zero period",
+			config:   "name: field\nrange:\n  period: 0\n  from: \"2006-01-02T15:04:05+07:00\"",
+			hasError: false,
+		},
+		{
+			scenario: "form and positive period",
+			config:   "name: field\nrange:\n  period: 1\n  from: \"2006-01-02T15:04:05+07:00\"",
+			hasError: true,
+		},
+		{
+			scenario: "form and negative period",
+			config:   "name: field\nrange:\n  period: -1\n  from: \"2006-01-02T15:04:05+07:00\"",
+			hasError: true,
+		},
+		{
+			scenario: "to only",
+			config:   "name: field\nrange:\n  to: \"2006-01-02T15:04:05-07:00\"",
+			hasError: false,
+		},
+		{
+			scenario: "to and zero period",
+			config:   "name: field\nrange:\n  period: 0\n  to: \"2006-01-02T15:04:05-07:00\"",
+			hasError: false,
+		},
+		{
+			scenario: "to and positive period",
+			config:   "name: field\nrange:\n  period: 1\n  to: \"2006-01-02T15:04:05-07:00\"",
+			hasError: true,
+		},
+		{
+			scenario: "to and negative period",
+			config:   "name: field\nrange:\n  period: -1\n  to: \"2006-01-02T15:04:05-07:00\"",
+			hasError: true,
+		},
+		{
+			scenario: "from and to only",
+			config:   "name: field\nrange:\n  from: \"2006-01-02T15:04:05-07:00\"\n  to: \"2006-01-02T15:04:05+07:00\"",
+			hasError: false,
+		},
+		{
+			scenario: "from and to and zero period",
+			config:   "name: field\nrange:\n  period: 0\n  from: \"2006-01-02T15:04:05-07:00\"\n\n  to: \"2006-01-02T15:04:05+07:00\"",
+			hasError: false,
+		},
+		{
+			scenario: "from and to and positive period",
+			config:   "name: field\nrange:\n  period: 1\n  from: \"2006-01-02T15:04:05-07:00\"\n  to: \"2006-01-02T15:04:05+07:00\"",
+			hasError: true,
+		},
+		{
+			scenario: "from and to and negative period",
+			config:   "name: field\nrange:\n  period: -1\n  from: \"2006-01-02T15:04:05-07:00\"\n  to: \"2006-01-02T15:04:05+07:00\"",
+			hasError: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.scenario, func(t *testing.T) {
+			cfg, err := yaml.NewConfig([]byte(testCase.config))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var config ConfigField
+			err = cfg.Unpack(&config)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = config.ValidForDateField()
+			if testCase.hasError && err == nil {
+
+			}
+
+			if !testCase.hasError && err != nil {
+
+			}
+		})
+	}
+}
+
 func TestRange_MaxAsFloat64(t *testing.T) {
 	testCases := []struct {
 		scenario  string
@@ -260,7 +372,7 @@ func TestRange_MinAsInt64(t *testing.T) {
 }
 
 func TestRange_FromAsTime(t *testing.T) {
-	from, err := time.Parse("2006-01-02T15:04:05Z", "2023-11-23T08:35:38Z")
+	from, err := time.Parse("2006-01-02T15:04:05.999999999-07:00", "2023-11-23T08:35:38+00:00")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,13 +385,13 @@ func TestRange_FromAsTime(t *testing.T) {
 	}{
 		{
 			scenario:  "from nil",
-			rangeYaml: "to: 2023-11-23T08:35:38Z",
+			rangeYaml: "to: 2023-11-23T08:35:38+00:00",
 			expected:  time.Time{},
 			hasError:  true,
 		},
 		{
 			scenario:  "from not nil",
-			rangeYaml: "from: 2023-11-23T08:35:38Z",
+			rangeYaml: "from: 2023-11-23T08:35:38-00:00",
 			expected:  from,
 			hasError:  false,
 		},
@@ -313,7 +425,7 @@ func TestRange_FromAsTime(t *testing.T) {
 }
 
 func TestRange_ToAsTime(t *testing.T) {
-	to, err := time.Parse("2006-01-02T15:04:05Z", "2023-11-23T08:35:38Z")
+	to, err := time.Parse("2006-01-02T15:04:05.999999999-07:00", "2023-11-23T08:35:38-00:00")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,13 +438,13 @@ func TestRange_ToAsTime(t *testing.T) {
 	}{
 		{
 			scenario:  "to nil",
-			rangeYaml: "from: 2023-11-23T08:35:38Z",
+			rangeYaml: "from: 2023-11-23T08:35:38+00:00",
 			expected:  time.Time{},
 			hasError:  true,
 		},
 		{
 			scenario:  "to not nil",
-			rangeYaml: "to: 2023-11-23T08:35:38Z",
+			rangeYaml: "to: 2023-11-23T08:35:38-00:00",
 			expected:  to,
 			hasError:  false,
 		},

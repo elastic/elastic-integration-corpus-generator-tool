@@ -34,3 +34,5 @@
   type: double
 - name: agent.snapshot
   type: boolean  
+- name: timedate2
+  type: date

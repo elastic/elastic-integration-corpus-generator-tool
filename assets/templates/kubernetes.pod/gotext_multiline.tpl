@@ -1,9 +1,5 @@
 {{- $period := generate "metricset.period" }}
-{{- $timestamp := generate "timestamp" }}
-{{- $fulltimestamp := $timestamp.Format "2006-01-02T15:04:05.999999Z07:00" }}
-{{- $resttime := split ":" $fulltimestamp }}
-{{- $picktimedate := generate "timedate" }}
-{{- $timehour := generate "timehour" }}
+{{- $timestamp2 := generate "timedate2" }}
 {{- $agentId := generate "agent.id" }}
 {{- $agentVersion := generate "agent.version" }}
 {{- $agentName := generate "agent.name" }}
@@ -14,7 +10,7 @@
 {{- $pod_uId := uuidv4 }}
 {{- $rangeofid := generate "rangeofid" }}
 {{- $pct := generate "Percentage" }}
-{  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
+{ "@timestamp": "{{ $timestamp2 }}",
    "container":{
       "network":{
          "ingress":{
@@ -57,7 +53,7 @@
       },
       "pod":{
          "uid": "{{ $pod_uId }}",
-         "start_time": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
+         "start_time": "{{ $$timestamp2 }}",
          "memory":{
             "rss":{
                "bytes":"{{generate "Bytes"}}"
@@ -182,7 +178,7 @@
    "event":{
       "duration": "{{generate "event.duration"}}",
       "agent_id_status": "verified",
-      "ingested": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
+      "ingested": "{{$$timestamp2}}",
       "module":"kubernetes",
       "dataset":"kubernetes.pod"
    },

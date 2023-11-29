@@ -29,8 +29,8 @@ fields:
     period: "1h"
   - name: lastSnapshot
     range:
-      from: "2023-11-23T11:29:48"
-      to: "2023-12-13T01:39:58"
+      from: "2023-11-23T11:29:48-00:00"
+      to: "2023-12-13T01:39:58-00:00"
   - name: aws.dynamodb.metrics.AccountMaxReads.max
     fuzziness: 0.1
     range:

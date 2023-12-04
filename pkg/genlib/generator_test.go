@@ -7,6 +7,7 @@ import (
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 	"log"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 )
@@ -21,6 +22,7 @@ func TestMain(m *testing.M) {
 	InitGeneratorRandSeed(randSeed)
 	InitGeneratorTimeNow(timeNow)
 
+	os.Exit(m.Run())
 }
 
 func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
@@ -306,7 +308,7 @@ func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	template := []byte(`{{generate "Version"}} {{generate "AccountID"}} {{generate "InterfaceID"}} {{generate "SrcAddr"}} {{generate "DstAddr"}} {{generate "SrcPort"}} {{generate "DstPort"}} {{generate "Protocol"}}{{ $packets := generate "Packets" }} {{ $packets }} {{generate "Bytes"}} {{$start := generate "Start" }}{{$start.Format "2006-01-02T15:04:05.999999Z07:00" }} {{$end := generate "End" }}{{$end.Format "2006-01-02T15:04:05.999999Z07:00"}} {{generate "Action"}}{{ if eq $packets 0 }} NODATA {{ else }} {{generate "LogStatus"}} {{ end }}`)
+	template := []byte(`{{generate "Version"}} {{generate "AccountID"}} {{generate "InterfaceID"}} {{generate "SrcAddr"}} {{generate "DstAddr"}} {{generate "SrcPort"}} {{generate "DstPort"}} {{generate "Protocol"}}{{ $packets := generate "Packets" }} {{ $packets }} {{generate "Bytes"}} {{$start := generate "Start" }}{{$start.Format "22006-01-02T15:04:05.999999999Z07:00" }} {{$end := generate "End" }}{{$end.Format "2006-01-02T15:04:05.999999Z07:00"}} {{generate "Action"}}{{ if eq $packets 0 }} NODATA {{ else }} {{generate "LogStatus"}} {{ end }}`)
 	g, err := NewGeneratorWithTextTemplate(template, cfg, flds, uint64(b.N))
 	defer func() {
 		_ = g.Close()

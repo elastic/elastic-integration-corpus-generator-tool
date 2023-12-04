@@ -56,7 +56,7 @@ _GeneratorTextTemplateVPCFlowLogs-16      95.0 ± 0%
 
 ```
 
-If you are curios how those benchmarks translate to time needed for generating dataset, we ran some test runs monitoring the execution times.
+If you are curious how those benchmarks translate to time needed for generating dataset, we ran some test runs monitoring the execution times.
 We generated directly from the built binaries 20GB of "aws dynamodb 1.28.3" Schema C data.
 
 ```

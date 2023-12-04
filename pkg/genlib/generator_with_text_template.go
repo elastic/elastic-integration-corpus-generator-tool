@@ -75,7 +75,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEven
 	}
 
 	templateFns["generate"] = func(field string) any {
-		bindF, ok := fieldMap[field].(EmitF)
+		bindF, ok := fieldMap[field].(emitF)
 		if !ok {
 			close(errChan)
 			return nil

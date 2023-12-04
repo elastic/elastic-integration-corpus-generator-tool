@@ -48,8 +48,8 @@ const (
 	FieldTypeFlattened       = "flattened"
 	FieldTypeGeoPoint        = "geo_point"
 
-	FieldTypeTimeRange  = 3600 // seconds
-	FieldTypeTimeLayout = "2006-01-02T15:04:05.999999Z07:00"
+	FieldTypeDurationSpan = 1000 // milliseconds
+	FieldTypeTimeLayout   = "2006-01-02T15:04:05.999999Z07:00"
 )
 
 var (
@@ -61,8 +61,8 @@ var (
 // This is the emit function for the custom template engine where we stream content directly to the output buffer and no need a return value
 type emitFNotReturn func(state *genState, buf *bytes.Buffer) error
 
-// EmitF Typedef of the internal emit function
-type EmitF func(state *genState) any
+// emitF Typedef of the internal emit function
+type emitF func(state *genState) any
 
 type Generator interface {
 	Emit(buf *bytes.Buffer) error
@@ -338,22 +338,7 @@ func genNounsNWithReturn(n int) string {
 	return value
 }
 
-func randGeoPoint(buf *bytes.Buffer) error {
-	lat := customRand.Intn(181) - 90
-	var latD int
-	if lat != -90 && lat != 90 {
-		latD = customRand.Intn(100)
-	}
-	var longD int
-	long := customRand.Intn(361) - 180
-	if long != -180 && long != 180 {
-		longD = customRand.Intn(100)
-	}
-	_, err := fmt.Fprintf(buf, "%d.%d,%d.%d", lat, latD, long, longD)
-	return err
-}
-
-func randGeoPointWithReturn() string {
+func randGeoPoint() (int, int, int, int) {
 	lat := customRand.Intn(181) - 90
 	var latD int
 	if lat != -90 && lat != 90 {
@@ -365,7 +350,7 @@ func randGeoPointWithReturn() string {
 		longD = customRand.Intn(100)
 	}
 
-	return fmt.Sprintf("%d.%d,%d.%d", lat, latD, long, longD)
+	return lat, latD, long, longD
 }
 
 func bindConstantKeyword(field Field, fieldMap map[string]any) error {
@@ -396,19 +381,7 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 
 		fieldMap[field.Name] = emitFNotReturn
 	} else if len(field.Example) > 0 {
-
-		totWords := len(keywordRegex.Split(field.Example, -1))
-
-		var joiner string
-		if strings.Contains(field.Example, "\\.") {
-			joiner = "\\."
-		} else if strings.Contains(field.Example, "-") {
-			joiner = "-"
-		} else if strings.Contains(field.Example, "_") {
-			joiner = "_"
-		} else if strings.Contains(field.Example, " ") {
-			joiner = " "
-		}
+		totWords, joiner := totWordsAndJoiner(field.Example)
 
 		return bindJoinRand(field, totWords, joiner, fieldMap)
 	} else {
@@ -424,6 +397,22 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 	return nil
 }
 
+func totWordsAndJoiner(fieldExample string) (int, string) {
+	totWords := len(keywordRegex.Split(fieldExample, -1))
+
+	var joiner string
+	if strings.Contains(fieldExample, "\\.") {
+		joiner = "\\."
+	} else if strings.Contains(fieldExample, "-") {
+		joiner = "-"
+	} else if strings.Contains(fieldExample, "_") {
+		joiner = "_"
+	} else if strings.Contains(fieldExample, " ") {
+		joiner = " "
+	}
+
+	return totWords, joiner
+}
 func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
@@ -477,7 +466,9 @@ func bindBool(field Field, fieldMap map[string]any) error {
 func bindGeoPoint(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		return randGeoPoint(buf)
+		lat, latD, long, longD := randGeoPoint()
+		_, err := fmt.Fprintf(buf, "%d.%d,%d.%d", lat, latD, long, longD)
+		return err
 	}
 
 	fieldMap[field.Name] = emitFNotReturn
@@ -496,16 +487,13 @@ func bindWordN(field Field, n int, fieldMap map[string]any) error {
 }
 
 func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
+	if err := fieldCfg.ValidForDateField(); err != nil {
+		return err
+	}
+
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		var offset time.Duration
-		if fieldCfg.Period > 0 && state.totEvents > 0 {
-			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
-		} else {
-			offset = time.Duration(customRand.Intn(FieldTypeTimeRange)*-1) * time.Second
-		}
-
-		newTime := timeNowToBind.Add(offset)
+		newTime := nearTime(fieldCfg, state)
 
 		buf.WriteString(newTime.Format(FieldTypeTimeLayout))
 		return nil
@@ -514,13 +502,53 @@ func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) er
 	return nil
 }
 
+func nearTime(fieldCfg ConfigField, state *genState) time.Time {
+	var offset time.Duration
+	from, errFrom := fieldCfg.Range.FromAsTime()
+	to, errTo := fieldCfg.Range.ToAsTime()
+	if errFrom == nil && errTo == nil {
+		timeNowToBind = from
+		fieldCfg.Period = to.UTC().Sub(from.UTC())
+	}
+
+	if errFrom == nil && errTo != nil {
+		if from.UTC().After(timeNowToBind.UTC()) {
+			fieldCfg.Period = from.UTC().Sub(timeNowToBind.UTC())
+		} else {
+			fieldCfg.Period = timeNowToBind.UTC().Sub(from.UTC())
+		}
+
+	}
+
+	if errFrom != nil && errTo == nil {
+		if to.UTC().After(timeNowToBind.UTC()) {
+			fieldCfg.Period = to.UTC().Sub(timeNowToBind.UTC())
+		} else {
+			fieldCfg.Period = timeNowToBind.UTC().Sub(to.UTC())
+		}
+	}
+
+	if fieldCfg.Period > 0 && state.totEvents > 0 {
+		offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
+	} else if fieldCfg.Period < 0 && state.totEvents > 0 {
+		offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * (int64(state.totEvents - state.counter)))
+	} else {
+		offset = time.Duration(customRand.Intn(FieldTypeDurationSpan)) * time.Millisecond
+	}
+
+	newTime := timeNowToBind.Add(offset)
+
+	if state.totEvents <= 0 {
+		timeNowToBind = newTime
+	}
+
+	return newTime
+}
+
 func bindIP(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		i0 := customRand.Intn(255)
-		i1 := customRand.Intn(255)
-		i2 := customRand.Intn(255)
-		i3 := customRand.Intn(255)
+		i0, i1, i2, i3 := randIP()
 
 		_, err := fmt.Fprintf(buf, "%d.%d.%d.%d", i0, i1, i2, i3)
 		return err
@@ -712,14 +740,14 @@ func makeDynamicStub(boundF any) emitFNotReturn {
 	}
 }
 
-func makeDynamicStubWithReturn(boundF any) EmitF {
+func makeDynamicStubWithReturn(boundF any) emitF {
 	return func(state *genState) any {
-		return boundF.(EmitF)(state)
+		return boundF.(emitF)(state)
 	}
 }
 
 func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
@@ -736,7 +764,7 @@ func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 
 func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	if len(fieldCfg.Enum) > 0 {
-		var emitF EmitF
+		var emitF emitF
 		emitF = func(state *genState) any {
 			idx := customRand.Intn(len(fieldCfg.Enum))
 			return fieldCfg.Enum[idx]
@@ -744,23 +772,11 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 
 		fieldMap[field.Name] = emitF
 	} else if len(field.Example) > 0 {
-
-		totWords := len(keywordRegex.Split(field.Example, -1))
-
-		var joiner string
-		if strings.Contains(field.Example, "\\.") {
-			joiner = "\\."
-		} else if strings.Contains(field.Example, "-") {
-			joiner = "-"
-		} else if strings.Contains(field.Example, "_") {
-			joiner = "_"
-		} else if strings.Contains(field.Example, " ") {
-			joiner = " "
-		}
+		totWords, joiner := totWordsAndJoiner(field.Example)
 
 		return bindJoinRandWithReturn(field, totWords, joiner, fieldMap)
 	} else {
-		var emitF EmitF
+		var emitF emitF
 		emitF = func(state *genState) any {
 			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
 			return randomdata.Adjective() + randomdata.Noun()
@@ -772,7 +788,7 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 }
 
 func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		value := ""
 		for i := 0; i < N-1; i++ {
@@ -791,7 +807,7 @@ func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[stri
 }
 
 func bindStaticWithReturn(field Field, v any, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		return v
 	}
@@ -801,7 +817,7 @@ func bindStaticWithReturn(field Field, v any, fieldMap map[string]any) error {
 }
 
 func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		switch customRand.Int() % 2 {
 		case 0:
@@ -816,9 +832,10 @@ func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
 }
 
 func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
-		return randGeoPointWithReturn()
+		lat, latD, long, longD := randGeoPoint()
+		return fmt.Sprintf("%d.%d,%d.%d", lat, latD, long, longD)
 	}
 
 	fieldMap[field.Name] = emitF
@@ -827,7 +844,7 @@ func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
 }
 
 func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		return genNounsNWithReturn(customRand.Intn(n))
 	}
@@ -836,30 +853,23 @@ func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
 }
 
 func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
-	var emitF EmitF
-	emitF = func(state *genState) any {
-		var offset time.Duration
-		if fieldCfg.Period > 0 {
-			offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
-		} else {
-			offset = time.Duration(customRand.Intn(FieldTypeTimeRange)*-1) * time.Second
-		}
-
-		newTime := timeNowToBind.Add(offset)
-
-		return newTime
+	if err := fieldCfg.ValidForDateField(); err != nil {
+		return err
 	}
+
+	var emitF emitF
+	emitF = func(state *genState) any {
+		return nearTime(fieldCfg, state)
+	}
+
 	fieldMap[field.Name] = emitF
 	return nil
 }
 
 func bindIPWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
-		i0 := customRand.Intn(255)
-		i1 := customRand.Intn(255)
-		i2 := customRand.Intn(255)
-		i3 := customRand.Intn(255)
+		i0, i1, i2, i3 := randIP()
 
 		return fmt.Sprintf("%d.%d.%d.%d", i0, i1, i2, i3)
 	}
@@ -867,12 +877,19 @@ func bindIPWithReturn(field Field, fieldMap map[string]any) error {
 	fieldMap[field.Name] = emitF
 	return nil
 }
+func randIP() (int, int, int, int) {
+	i0 := customRand.Intn(255)
+	i1 := customRand.Intn(255)
+	i2 := customRand.Intn(255)
+	i3 := customRand.Intn(255)
 
+	return i0, i1, i2, i3
+}
 func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
 	if fieldCfg.Fuzziness <= 0 {
-		var emitF EmitF
+		var emitF emitF
 		emitF = func(state *genState) any {
 			return dummyFunc()
 		}
@@ -884,7 +901,7 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	min, _ := fieldCfg.Range.MinAsFloat64()
 	max, _ := fieldCfg.Range.MaxAsFloat64()
 
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		var dummyInt int64
 		if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
@@ -907,7 +924,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	dummyFunc := makeFloatFunc(fieldCfg, field)
 
 	if fieldCfg.Fuzziness <= 0 {
-		var emitF EmitF
+		var emitF emitF
 		emitF = func(state *genState) any {
 			return dummyFunc()
 		}
@@ -920,7 +937,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	min, _ := fieldCfg.Range.MinAsFloat64()
 	max, _ := fieldCfg.Range.MaxAsFloat64()
 
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		var dummyFloat float64
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
@@ -952,8 +969,8 @@ func bindCardinalityWithReturn(cfg Config, field Field, fieldMap map[string]any)
 	}
 
 	// We will wrap the function we just generated
-	boundFWithReturn := fieldMap[field.Name].(EmitF)
-	var emitF EmitF
+	boundFWithReturn := fieldMap[field.Name].(emitF)
+	var emitF emitF
 	emitF = func(state *genState) any {
 		var value any
 		// Have we rolled over once?  If not, generate a value and cache it.

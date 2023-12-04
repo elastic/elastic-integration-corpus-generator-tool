@@ -61,8 +61,8 @@ var (
 // This is the emit function for the custom template engine where we stream content directly to the output buffer and no need a return value
 type emitFNotReturn func(state *genState, buf *bytes.Buffer) error
 
-// EmitF Typedef of the internal emit function
-type EmitF func(state *genState) any
+// emitF Typedef of the internal emit function
+type emitF func(state *genState) any
 
 type Generator interface {
 	Emit(buf *bytes.Buffer) error
@@ -487,6 +487,10 @@ func bindWordN(field Field, n int, fieldMap map[string]any) error {
 }
 
 func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
+	if err := fieldCfg.ValidForDateField(); err != nil {
+		return err
+	}
+
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		newTime := nearTime(fieldCfg, state)
@@ -500,6 +504,30 @@ func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) er
 
 func nearTime(fieldCfg ConfigField, state *genState) time.Time {
 	var offset time.Duration
+	from, errFrom := fieldCfg.Range.FromAsTime()
+	to, errTo := fieldCfg.Range.ToAsTime()
+	if errFrom == nil && errTo == nil {
+		timeNowToBind = from
+		fieldCfg.Period = to.UTC().Sub(from.UTC())
+	}
+
+	if errFrom == nil && errTo != nil {
+		if from.UTC().After(timeNowToBind.UTC()) {
+			fieldCfg.Period = from.UTC().Sub(timeNowToBind.UTC())
+		} else {
+			fieldCfg.Period = timeNowToBind.UTC().Sub(from.UTC())
+		}
+
+	}
+
+	if errFrom != nil && errTo == nil {
+		if to.UTC().After(timeNowToBind.UTC()) {
+			fieldCfg.Period = to.UTC().Sub(timeNowToBind.UTC())
+		} else {
+			fieldCfg.Period = timeNowToBind.UTC().Sub(to.UTC())
+		}
+	}
+
 	if fieldCfg.Period > 0 && state.totEvents > 0 {
 		offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
 	} else if fieldCfg.Period < 0 && state.totEvents > 0 {
@@ -712,14 +740,14 @@ func makeDynamicStub(boundF any) emitFNotReturn {
 	}
 }
 
-func makeDynamicStubWithReturn(boundF any) EmitF {
+func makeDynamicStubWithReturn(boundF any) emitF {
 	return func(state *genState) any {
-		return boundF.(EmitF)(state)
+		return boundF.(emitF)(state)
 	}
 }
 
 func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
@@ -736,7 +764,7 @@ func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 
 func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	if len(fieldCfg.Enum) > 0 {
-		var emitF EmitF
+		var emitF emitF
 		emitF = func(state *genState) any {
 			idx := customRand.Intn(len(fieldCfg.Enum))
 			return fieldCfg.Enum[idx]
@@ -748,7 +776,7 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 
 		return bindJoinRandWithReturn(field, totWords, joiner, fieldMap)
 	} else {
-		var emitF EmitF
+		var emitF emitF
 		emitF = func(state *genState) any {
 			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
 			return randomdata.Adjective() + randomdata.Noun()
@@ -760,7 +788,7 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 }
 
 func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		value := ""
 		for i := 0; i < N-1; i++ {
@@ -779,7 +807,7 @@ func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[stri
 }
 
 func bindStaticWithReturn(field Field, v any, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		return v
 	}
@@ -789,7 +817,7 @@ func bindStaticWithReturn(field Field, v any, fieldMap map[string]any) error {
 }
 
 func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		switch customRand.Int() % 2 {
 		case 0:
@@ -804,7 +832,7 @@ func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
 }
 
 func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		lat, latD, long, longD := randGeoPoint()
 		return fmt.Sprintf("%d.%d,%d.%d", lat, latD, long, longD)
@@ -816,7 +844,7 @@ func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
 }
 
 func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		return genNounsNWithReturn(customRand.Intn(n))
 	}
@@ -825,7 +853,11 @@ func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
 }
 
 func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
-	var emitF EmitF
+	if err := fieldCfg.ValidForDateField(); err != nil {
+		return err
+	}
+
+	var emitF emitF
 	emitF = func(state *genState) any {
 		return nearTime(fieldCfg, state)
 	}
@@ -835,7 +867,7 @@ func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[stri
 }
 
 func bindIPWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		i0, i1, i2, i3 := randIP()
 
@@ -857,7 +889,7 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
 	if fieldCfg.Fuzziness <= 0 {
-		var emitF EmitF
+		var emitF emitF
 		emitF = func(state *genState) any {
 			return dummyFunc()
 		}
@@ -869,7 +901,7 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	min, _ := fieldCfg.Range.MinAsFloat64()
 	max, _ := fieldCfg.Range.MaxAsFloat64()
 
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		var dummyInt int64
 		if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
@@ -892,7 +924,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	dummyFunc := makeFloatFunc(fieldCfg, field)
 
 	if fieldCfg.Fuzziness <= 0 {
-		var emitF EmitF
+		var emitF emitF
 		emitF = func(state *genState) any {
 			return dummyFunc()
 		}
@@ -905,7 +937,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	min, _ := fieldCfg.Range.MinAsFloat64()
 	max, _ := fieldCfg.Range.MaxAsFloat64()
 
-	var emitF EmitF
+	var emitF emitF
 	emitF = func(state *genState) any {
 		var dummyFloat float64
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
@@ -937,8 +969,8 @@ func bindCardinalityWithReturn(cfg Config, field Field, fieldMap map[string]any)
 	}
 
 	// We will wrap the function we just generated
-	boundFWithReturn := fieldMap[field.Name].(EmitF)
-	var emitF EmitF
+	boundFWithReturn := fieldMap[field.Name].(emitF)
+	var emitF emitF
 	emitF = func(state *genState) any {
 		var value any
 		// Have we rolled over once?  If not, generate a value and cache it.

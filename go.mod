@@ -9,7 +9,7 @@ require (
 	github.com/elastic/go-ucfg v0.8.6
 	github.com/lithammer/shortuuid/v3 v3.0.7
 	github.com/spf13/afero v1.11.0
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/multierr v1.11.0

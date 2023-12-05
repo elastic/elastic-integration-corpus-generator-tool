@@ -17,32 +17,30 @@ fields:
     range:
       min: 1
       max: 4000000
-  - name: faults
+  - name: container.network.ingress.bytes
     range:
       min: 0
-      max: 500000
-  - name: kubernetes.container.rootfs.inodes.used
+      max: 15000
+  - name: container.network.egress.bytes
     range:
-      min: 1
-      max: 100000
+      min: 0
+      max: 10000
   - name: Bytes
     range:
       min: 1
       max: 3000000
   - name: rangeofid
     range:
-      min: 0
+      min: 9000
       max: 10000
   - name: Percentage
     range:
       min: 0
       max: 5000
     fuzziness: 0.005
-  - name: container.name
-    enum: ["web", "default-http-backend", "dnsmasq", "csi-driver", "web", "web", "web", "prometheus", "konnectivity-agent", "sidecar", "kubedns", "metrics-server-nanny", "web", "web", "fluentbit", "autoscaler", "gke-metrics-agent", "elastic-agent", "web", "kube-state-metrics", "metrics-server", "fluentbit", "elastic-agent", "web", "prometheus-to-sd-exporter"]
   - name: timedate
-    # Add more dates below in case you want your data to be spread
-    enum: ["2023-05-15" , "2023-05-16"]
+    # Add more dates below in case you want your data to be spread. Those are fixed because this is required in the nightly tests of Rally
+    enum: ["2023-05-15", "2023-05-16"]
   - name: timehour
     # Repeat or remove hours below to make data appear in specific hours. Below default enumaeration makes sure that data are spread throughout the 24 hours
     enum: ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23" ]  

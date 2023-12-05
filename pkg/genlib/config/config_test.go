@@ -31,6 +31,23 @@ func TestLoadConfig(t *testing.T) {
 	assert.Equal(t, "foobar", f.Value.(string))
 }
 
+func TestSetField(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	configFile := "/cfg.yml"
+
+	data := []byte(sampleConfigFile)
+	afero.WriteFile(fs, configFile, data, 0666)
+
+	cfg, err := LoadConfig(fs, configFile)
+	assert.Nil(t, err)
+
+	cfg.SetField("field", ConfigField{Value: "foobaz"})
+	f, ok := cfg.GetField("field")
+	assert.True(t, ok)
+	assert.Equal(t, "field", f.Name)
+	assert.Equal(t, "foobaz", f.Value.(string))
+}
+
 func TestIsValidForDateField(t *testing.T) {
 	testCases := []struct {
 		scenario string

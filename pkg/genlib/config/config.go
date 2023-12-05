@@ -154,3 +154,8 @@ func (c Config) GetField(fieldName string) (ConfigField, bool) {
 	v, ok := c.m[fieldName]
 	return v, ok
 }
+
+func (c Config) SetField(fieldName string, configField ConfigField) {
+	configField.Name = fieldName
+	c.m[fieldName] = configField
+}

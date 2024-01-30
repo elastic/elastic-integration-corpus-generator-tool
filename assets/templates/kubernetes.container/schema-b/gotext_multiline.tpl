@@ -11,8 +11,8 @@
 {{- $faults := generate "faults" }}
 {{- $pctmem := generate "PercentageMemory" }}
 {{- $pctcpu := generate "PercentageCPU" }}
-{{- $usage.nanoseconds := generate "usage.nanoseconds" -}}
-{{- $usage.nanocores := generate "usage.nanocores" -}}
+{{- $usage_nanoseconds := generate "usage.nanoseconds" -}}
+{{- $usage_nanocores := generate "usage.nanocores" -}}
 {{- $rangeofid := generate "rangeofid" -}}
 {{- $nodeid := div $rangeofid 110 -}}
 {{- $name :=  generate "container.name" }} 
@@ -74,12 +74,12 @@
          "cpu":{
             "usage":{
                "core":{
-                  "ns": {{mul $usage.nanoseconds 1000}}
+                  "ns": {{mul $usage_nanoseconds 1000}}
                },
                "node":{
                   "pct": {{divf $pctcpu 100}}
                },
-               "nanocores":{{mul $usage.nanocores 1000}},
+               "nanocores":{{mul $usage_nanocores 1000}},
                "limit":{
                   "pct": {{divf $pctcpu 100}}
                }

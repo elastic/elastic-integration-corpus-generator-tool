@@ -47,6 +47,7 @@ fields:
     range:
       min: 100000
       max: 9000000
+    cardinality: 10000
   - name: timedate
     # Add more dates below in case you want your data to be spread. Those are fixed because this is required in the nightly tests of Rally
     enum: ["2023-05-15", "2023-05-16"]

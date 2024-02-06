@@ -581,7 +581,7 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 	if fieldCfg.Counter {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-			var previous int64
+			previous := int64(1)
 			var dummyInt int64
 			var dummyFunc func() int64
 
@@ -672,7 +672,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 	if fieldCfg.Counter {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-			var previous float64
+			previous := float64(1)
 			var dummyFloat float64
 			var dummyFunc func() float64
 
@@ -974,7 +974,7 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 		var emitF emitF
 
 		emitF = func(state *genState) any {
-			var previous int64
+			previous := int64(1)
 			var dummyInt int64
 			var dummyFunc func() int64
 
@@ -1076,7 +1076,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 		var emitF emitF
 
 		emitF = func(state *genState) any {
-			var previous float64
+			previous := float64(1)
 			var dummyFloat float64
 			var dummyFunc func() float64
 
@@ -1114,11 +1114,10 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 		return nil
 	}
 
-	var emitF emitF
-
 	min, _ := fieldCfg.Range.MinAsFloat64()
 	max, _ := fieldCfg.Range.MaxAsFloat64()
 
+	var emitF emitF
 	emitF = func(state *genState) any {
 		var dummyFloat float64
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {

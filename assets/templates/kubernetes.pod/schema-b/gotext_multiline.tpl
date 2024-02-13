@@ -14,7 +14,7 @@
 {{- $nodeid := div $rangeofid 110 -}}
 {{- $pctmem := generate "PercentageMemory" }}
 {{- $pctcpu := generate "PercentageCPU" }}
-{{- $nanocores := generate "Nanocores" -}}
+{{- $nanocores := generate "Nanocores" | mul 1000 -}}
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
       "network":{
@@ -66,11 +66,11 @@
             "major_page_faults":0,
             "usage":{
                "node":{
-                  "pct": {{divf $pctmem 100}}
+                  "pct": {{$pctmem}}
                },
                "bytes": "{{generate "Bytes"}}",
                "limit":{
-                  "pct":{{divf $pctmem 100}}
+                  "pct":{{$pctmem}}
                }
             },
             "available":{
@@ -80,7 +80,7 @@
             "working_set":{
                "bytes": "{{generate "Bytes"}}",
                "limit":{
-                  "pct": {{divf $pctmem 100}}
+                  "pct": {{$pctmem}}
                }
             }
          },
@@ -89,11 +89,11 @@
          "cpu":{
             "usage":{
                "node":{
-                  "pct":{{divf $pctcpu 100}}
+                  "pct":{{$pctcpu}}
                },
-               "nanocores":{{mul $nanocores 1000}},
+               "nanocores":{{$nanocores}},
                "limit":{
-                  "pct":{{divf $pctcpu 100}}
+                  "pct":{{$pctcpu}}
                }
             }
          },

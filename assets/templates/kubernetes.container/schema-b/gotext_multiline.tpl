@@ -11,20 +11,20 @@
 {{- $faults := generate "faults" }}
 {{- $pctmem := generate "PercentageMemory" }}
 {{- $pctcpu := generate "PercentageCPU" }}
-{{- $usage_nanoseconds := generate "usage.nanoseconds" -}}
-{{- $usage_nanocores := generate "usage.nanocores" -}}
+{{- $usage_nanoseconds := generate "usage.nanoseconds" | mul 1000 -}}
+{{- $usage_nanocores := generate "usage.nanocores" | mul 1000 -}}
 {{- $rangeofid := generate "rangeofid" -}}
 {{- $nodeid := div $rangeofid 110 -}}
 {{- $name :=  generate "container.name" }} 
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
       "memory":{
-         "usage": {{divf $pctmem 100}}
+         "usage": {{$pctmem}}
       },
       "name":"{{ $name }}",
       "runtime":"containerd",
       "cpu":{
-         "usage": {{divf $pctcpu 100}}
+         "usage": {{$pctcpu}}
       },
       "id":"container-{{ $rangeofid }}"
    },
@@ -38,11 +38,11 @@
             "majorpagefaults": {{ $faults }},
             "usage":{
                "node":{
-                  "pct": {{divf $pctmem 100}}
+                  "pct": {{$pctmem}}
                },
                "bytes": {{generate "Bytes"}},
                "limit":{
-                  "pct": {{divf $pctmem 100}}
+                  "pct": {{$pctmem}}
                }
             },
             "available":{
@@ -51,7 +51,7 @@
             "workingset":{
                "bytes": {{generate "Bytes"}},
                "limit":{
-                  "pct": {{divf $pctmem 100}}
+                  "pct": {{$pctmem}}
                }
             },
             "pagefaults": "{{ $faults }}"
@@ -74,14 +74,14 @@
          "cpu":{
             "usage":{
                "core":{
-                  "ns": {{mul $usage_nanoseconds 1000}}
+                  "ns": {{$usage_nanoseconds}}
                },
                "node":{
-                  "pct": {{divf $pctcpu 100}}
+                  "pct": {{$pctcpu}}
                },
-               "nanocores":{{mul $usage_nanocores 1000}},
+               "nanocores":{{$usage_nanocores}},
                "limit":{
-                  "pct": {{divf $pctcpu 100}}
+                  "pct": {{$pctcpu}}
                }
             }
          },

@@ -33,11 +33,21 @@ fields:
     range:
       min: 9000
       max: 10000
-  - name: Percentage
+  - name: PercentageMemory
     range:
-      min: 0
-      max: 5000
+      min: 0.0
+      max: 1.0
     fuzziness: 0.005
+  - name: PercentageCPU
+    range:
+      min: 0.0
+      max: 1.0
+    fuzziness: 0.005
+  - name: Nanocores
+    range:
+      min: 100000
+      max: 9000000
+    cardinality: 10000
   - name: timedate
     # Add more dates below in case you want your data to be spread. Those are fixed because this is required in the nightly tests of Rally
     enum: ["2023-05-15", "2023-05-16"]

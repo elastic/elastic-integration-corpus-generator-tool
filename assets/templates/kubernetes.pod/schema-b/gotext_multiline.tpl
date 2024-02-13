@@ -12,7 +12,9 @@
 {{- $txbytes := generate "container.network.egress.bytes" }}
 {{- $rangeofid := generate "rangeofid" }}
 {{- $nodeid := div $rangeofid 110 -}}
-{{- $pct := generate "Percentage" }}
+{{- $pctmem := generate "PercentageMemory" }}
+{{- $pctcpu := generate "PercentageCPU" }}
+{{- $nanocores := generate "Nanocores" | mul 1000 -}}
 {  "@timestamp": "{{$picktimedate}}T{{$timehour}}:{{ $resttime._1 }}:{{ $resttime._2 }}:{{ $resttime._3}}",
    "container":{
       "network":{
@@ -64,11 +66,11 @@
             "major_page_faults":0,
             "usage":{
                "node":{
-                  "pct": "{{divf $pct 1000000}}"
+                  "pct": {{$pctmem}}
                },
                "bytes": "{{generate "Bytes"}}",
                "limit":{
-                  "pct":"{{divf $pct 1000000}}"
+                  "pct":{{$pctmem}}
                }
             },
             "available":{
@@ -78,7 +80,7 @@
             "working_set":{
                "bytes": "{{generate "Bytes"}}",
                "limit":{
-                  "pct": "{{divf $pct 1000000}}"
+                  "pct": {{$pctmem}}
                }
             }
          },
@@ -87,11 +89,11 @@
          "cpu":{
             "usage":{
                "node":{
-                  "pct":0
+                  "pct":{{$pctcpu}}
                },
-               "nanocores":0,
+               "nanocores":{{$nanocores}},
                "limit":{
-                  "pct":0
+                  "pct":{{$pctcpu}}
                }
             }
          },

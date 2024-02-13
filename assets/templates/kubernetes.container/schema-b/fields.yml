@@ -26,10 +26,19 @@
   type: long  
 - name: Ip
   type: ip
-- name: Percentage
-  type: double
 - name: rangeofid
   type: integer
+- name: PercentageMemory
+  type: double
+- name: PercentageCPU
+  type: double
+- name: usage
+  type: group
+  fields:
+    - name: nanoseconds
+      type: integer
+    - name: nanocores
+      type: integer
 - name: agent.snapshot
   type: boolean
 - name: container.name  

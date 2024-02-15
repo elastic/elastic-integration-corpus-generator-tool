@@ -401,8 +401,8 @@ func totWordsAndJoiner(fieldExample string) (int, string) {
 	totWords := len(keywordRegex.Split(fieldExample, -1))
 
 	var joiner string
-	if strings.Contains(fieldExample, "\\.") {
-		joiner = "\\."
+	if strings.Contains(fieldExample, ".") {
+		joiner = "."
 	} else if strings.Contains(fieldExample, "-") {
 		joiner = "-"
 	} else if strings.Contains(fieldExample, "_") {

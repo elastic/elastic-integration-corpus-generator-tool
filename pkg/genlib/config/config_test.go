@@ -160,6 +160,93 @@ func TestIsValidForDateField(t *testing.T) {
 	}
 }
 
+func TestIsValidCounter(t *testing.T) {
+	testCases := []struct {
+		scenario string
+		config   string
+		hasError bool
+	}{
+		{
+			scenario: "no range, no counter",
+			config:   "name: field",
+			hasError: false,
+		},
+		{
+			scenario: "range with both min and max, no counter",
+			config:   "name: field\nrange:\n  min: 1\n  max: 10",
+			hasError: false,
+		},
+		{
+			scenario: "range with min and no max, no counter",
+			config:   "name: field\nrange:\n  min: 1",
+			hasError: false,
+		},
+		{
+			scenario: "range with max and no min, no counter",
+			config:   "name: field\nrange:\n  max: 10",
+			hasError: false,
+		},
+		{
+			scenario: "with counter, no range",
+			config:   "name: field\ncounter: true",
+			hasError: false,
+		},
+		{
+			scenario: "range with both min and max, with counter",
+			config:   "name: field\nrange:\n  min: 1\n  max: 10\ncounter: true",
+			hasError: true,
+		},
+		{
+			scenario: "range with min and no max, with counter",
+			config:   "name: field\nrange:\n  min: 1\ncounter: true",
+			hasError: true,
+		},
+		{
+			scenario: "range with max and no min, with counter",
+			config:   "name: field\nrange:\n  max: 10\ncounter: true",
+			hasError: true,
+		},
+		{
+			scenario: "range with both min and max, with counter:false",
+			config:   "name: field\nrange:\n  min: 1\n  max: 10\ncounter: false",
+			hasError: false,
+		},
+		{
+			scenario: "range with min and no max, with counter:false",
+			config:   "name: field\nrange:\n  min: 1\ncounter: false",
+			hasError: false,
+		},
+		{
+			scenario: "range with max and no min, with counter:false",
+			config:   "name: field\nrange:\n  max: 10\ncounter: false",
+			hasError: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.scenario, func(t *testing.T) {
+			cfg, err := yaml.NewConfig([]byte(testCase.config))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var config ConfigField
+			err = cfg.Unpack(&config)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = config.ValidCounter()
+			if testCase.hasError && err == nil {
+
+			}
+
+			if !testCase.hasError && err != nil {
+
+			}
+		})
+	}
+}
+
 func TestRange_MaxAsFloat64(t *testing.T) {
 	testCases := []struct {
 		scenario  string

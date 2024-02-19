@@ -5,6 +5,9 @@ on:
     workflows: [ci]
     types: [completed]
 
+permissions:
+  contents: read
+
 jobs:
   otel-export-trace:
     runs-on: ubuntu-latest

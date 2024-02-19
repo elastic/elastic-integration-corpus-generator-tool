@@ -14,6 +14,7 @@ import (
 var rangeBoundNotSet = errors.New("range bound not set")
 var rangeTimeNotSet = errors.New("range time not set")
 var rangeInvalidConfig = errors.New("range defining both `period` and `from`/`to`")
+var counterInvalidConfig = errors.New("both `range` and `counter` defined")
 
 type TimeRange struct {
 	time.Time
@@ -46,11 +47,20 @@ type ConfigField struct {
 	Enum        []string      `config:"enum"`
 	ObjectKeys  []string      `config:"object_keys"`
 	Value       any           `config:"value"`
+	Counter     bool          `config:"counter"`
 }
 
 func (cf ConfigField) ValidForDateField() error {
 	if cf.Period.Abs() > 0 && (cf.Range.From != nil || cf.Range.To != nil) {
 		return rangeInvalidConfig
+	}
+
+	return nil
+}
+
+func (cf ConfigField) ValidCounter() error {
+	if cf.Counter && (cf.Range.Min != nil || cf.Range.Max != nil) {
+		return counterInvalidConfig
 	}
 
 	return nil

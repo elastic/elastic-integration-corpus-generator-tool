@@ -401,8 +401,8 @@ func totWordsAndJoiner(fieldExample string) (int, string) {
 	totWords := len(keywordRegex.Split(fieldExample, -1))
 
 	var joiner string
-	if strings.Contains(fieldExample, "\\.") {
-		joiner = "\\."
+	if strings.Contains(fieldExample, ".") {
+		joiner = "."
 	} else if strings.Contains(fieldExample, "-") {
 		joiner = "-"
 	} else if strings.Contains(fieldExample, "_") {
@@ -567,7 +567,48 @@ func fuzzyInt(previous int64, fuzziness, min, max float64) int64 {
 	return customRand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
 }
 
+func fuzzyIntCounter(previous int64, fuzziness float64) int64 {
+	lowerBound := float64(previous)
+	higherBound := float64(previous) * (1 + fuzziness)
+	return customRand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
+}
+
 func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
+	if err := fieldCfg.ValidCounter(); err != nil {
+		return err
+	}
+
+	if fieldCfg.Counter {
+		var emitFNotReturn emitFNotReturn
+		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+			previous := int64(1)
+			var dummyInt int64
+			var dummyFunc func() int64
+
+			if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
+				previous = previousDummyInt
+			}
+
+			if fieldCfg.Fuzziness <= 0 {
+				dummyFunc = makeIntCounterFunc(previous, field)
+
+				dummyInt = dummyFunc()
+			} else {
+				dummyInt = fuzzyIntCounter(previous, fieldCfg.Fuzziness)
+			}
+
+			state.prevCache[field.Name] = dummyInt
+			v := make([]byte, 0, 32)
+			v = strconv.AppendInt(v, dummyInt, 10)
+			buf.Write(v)
+			return nil
+		}
+
+		fieldMap[field.Name] = emitFNotReturn
+
+		return nil
+	}
+
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
 	if fieldCfg.Fuzziness <= 0 {
@@ -617,7 +658,46 @@ func fuzzyFloat(previous, fuzziness, min, max float64) float64 {
 	return lowerBound + customRand.Float64()*(higherBound-lowerBound)
 }
 
+func fuzzyFloatCounter(previous, fuzziness float64) float64 {
+	lowerBound := previous
+	higherBound := previous * (1 + fuzziness)
+	return lowerBound + customRand.Float64()*(higherBound-lowerBound)
+}
+
 func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
+	if err := fieldCfg.ValidCounter(); err != nil {
+		return err
+	}
+
+	if fieldCfg.Counter {
+		var emitFNotReturn emitFNotReturn
+		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+			previous := float64(1)
+			var dummyFloat float64
+			var dummyFunc func() float64
+
+			if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
+				previous = previousDummyFloat
+			}
+
+			if fieldCfg.Fuzziness <= 0 {
+				dummyFunc = makeFloatCounterFunc(previous, field)
+
+				dummyFloat = dummyFunc()
+			} else {
+				dummyFloat = fuzzyFloatCounter(previous, fieldCfg.Fuzziness)
+			}
+
+			state.prevCache[field.Name] = dummyFloat
+			_, err := fmt.Fprintf(buf, "%f", dummyFloat)
+			return err
+		}
+
+		fieldMap[field.Name] = emitFNotReturn
+
+		return nil
+	}
+
 	dummyFunc := makeFloatFunc(fieldCfg, field)
 
 	if fieldCfg.Fuzziness <= 0 {
@@ -886,6 +966,39 @@ func randIP() (int, int, int, int) {
 	return i0, i1, i2, i3
 }
 func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
+	if err := fieldCfg.ValidCounter(); err != nil {
+		return err
+	}
+
+	if fieldCfg.Counter {
+		var emitF emitF
+
+		emitF = func(state *genState) any {
+			previous := int64(1)
+			var dummyInt int64
+			var dummyFunc func() int64
+
+			if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
+				previous = previousDummyInt
+			}
+
+			if fieldCfg.Fuzziness <= 0 {
+				dummyFunc = makeIntCounterFunc(previous, field)
+
+				dummyInt = dummyFunc()
+			} else {
+				dummyInt = fuzzyIntCounter(previous, fieldCfg.Fuzziness)
+			}
+
+			state.prevCache[field.Name] = dummyInt
+			return dummyInt
+		}
+
+		fieldMap[field.Name] = emitF
+
+		return nil
+	}
+
 	dummyFunc := makeIntFunc(fieldCfg, field)
 
 	if fieldCfg.Fuzziness <= 0 {
@@ -920,7 +1033,74 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	return nil
 }
 
+func makeIntCounterFunc(previousDummyInt int64, field Field) func() int64 {
+	var dummyFunc func() int64
+
+	switch {
+	case len(field.Example) == 0:
+		dummyFunc = func() int64 { return previousDummyInt + customRand.Int63n(10) }
+	default:
+		totDigit := len(field.Example)
+		max := int64(math.Pow10(totDigit))
+		dummyFunc = func() int64 {
+			return previousDummyInt + customRand.Int63n(max)
+		}
+	}
+
+	return dummyFunc
+}
+
+func makeFloatCounterFunc(previousDummyFloat float64, field Field) func() float64 {
+	var dummyFunc func() float64
+
+	switch {
+	case len(field.Example) == 0:
+		dummyFunc = func() float64 { return previousDummyFloat + customRand.Float64()*10 }
+	default:
+		totDigit := len(field.Example)
+		max := math.Pow10(totDigit)
+		dummyFunc = func() float64 {
+			return previousDummyFloat + customRand.Float64()*max
+		}
+	}
+
+	return dummyFunc
+}
+
 func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
+	if err := fieldCfg.ValidCounter(); err != nil {
+		return err
+	}
+
+	if fieldCfg.Counter {
+		var emitF emitF
+
+		emitF = func(state *genState) any {
+			previous := float64(1)
+			var dummyFloat float64
+			var dummyFunc func() float64
+
+			if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
+				previous = previousDummyFloat
+			}
+
+			if fieldCfg.Fuzziness <= 0 {
+				dummyFunc = makeFloatCounterFunc(previous, field)
+
+				dummyFloat = dummyFunc()
+			} else {
+				dummyFloat = fuzzyFloatCounter(previous, fieldCfg.Fuzziness)
+			}
+
+			state.prevCache[field.Name] = dummyFloat
+			return dummyFloat
+		}
+
+		fieldMap[field.Name] = emitF
+
+		return nil
+	}
+
 	dummyFunc := makeFloatFunc(fieldCfg, field)
 
 	if fieldCfg.Fuzziness <= 0 {

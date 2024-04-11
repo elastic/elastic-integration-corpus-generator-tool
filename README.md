@@ -15,8 +15,7 @@ Want to explore use cases? See [usage](./docs/usage.md).
 
 # Maintainers
 
-[@aspacca](https://github.com/aspacca)
-[@endorama](https://github.com/endorama)
+[Observability Integrations Team](https://github.com/orgs/elastic/teams/obs-infraobs-integrations)
 
 # License
 

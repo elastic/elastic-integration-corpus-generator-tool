@@ -9,9 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Pallinder/go-randomdata"
-	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
-	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 	"math"
 	"regexp"
 	"strconv"
@@ -19,6 +16,10 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Pallinder/go-randomdata"
+	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
+	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 )
 
 var timeNowToBind time.Time
@@ -970,6 +971,22 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 		return err
 	}
 
+	if len(fieldCfg.Enum) > 0 {
+		var emitF emitF
+		emitF = func(state *genState) any {
+			idx := customRand.Intn(len(fieldCfg.Enum))
+			f, err := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
+			if err != nil {
+				return err
+			}
+			return int64(f)
+		}
+
+		fieldMap[field.Name] = emitF
+
+		return nil
+	}
+
 	if fieldCfg.Counter {
 		var emitF emitF
 
@@ -1070,6 +1087,23 @@ func makeFloatCounterFunc(previousDummyFloat float64, field Field) func() float6
 func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	if err := fieldCfg.ValidCounter(); err != nil {
 		return err
+	}
+
+	if len(fieldCfg.Enum) > 0 {
+		var emitF emitF
+		emitF = func(state *genState) any {
+			idx := customRand.Intn(len(fieldCfg.Enum))
+			f, err := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
+			if err != nil {
+				return err
+			}
+
+			return f
+		}
+
+		fieldMap[field.Name] = emitF
+
+		return nil
 	}
 
 	if fieldCfg.Counter {

@@ -976,7 +976,7 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 		idx := customRand.Intn(len(fieldCfg.Enum))
 		f, err := strconv.ParseInt(fieldCfg.Enum[idx], 10, 64)
 		if err != nil {
-			return fmt.Errorf("field %s enum value is not an integer: %w", fieldCfg.Name, err)
+			return fmt.Errorf("field %s enum value is not a long: %w", fieldCfg.Name, err)
 		}
 
 		emitF = func(state *genState) any {
@@ -1095,7 +1095,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 		idx := customRand.Intn(len(fieldCfg.Enum))
 		f, err := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
 		if err != nil {
-			return fmt.Errorf("field %s enum value is not a float: %w", fieldCfg.Name, err)
+			return fmt.Errorf("field %s enum value is not a double: %w", fieldCfg.Name, err)
 		}
 
 		emitF = func(state *genState) any {

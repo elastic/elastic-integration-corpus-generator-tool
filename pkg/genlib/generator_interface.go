@@ -973,13 +973,14 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF
+		idx := customRand.Intn(len(fieldCfg.Enum))
+		f, err := strconv.ParseInt(fieldCfg.Enum[idx], 10, 64)
+		if err != nil {
+			return fmt.Errorf("field %s enum value is not an integer: %w", fieldCfg.Name, err)
+		}
+
 		emitF = func(state *genState) any {
-			idx := customRand.Intn(len(fieldCfg.Enum))
-			f, err := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
-			if err != nil {
-				return err
-			}
-			return int64(f)
+			return f
 		}
 
 		fieldMap[field.Name] = emitF
@@ -1091,13 +1092,13 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF
-		emitF = func(state *genState) any {
-			idx := customRand.Intn(len(fieldCfg.Enum))
-			f, err := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
-			if err != nil {
-				return err
-			}
+		idx := customRand.Intn(len(fieldCfg.Enum))
+		f, err := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
+		if err != nil {
+			return fmt.Errorf("field %s enum value is not a float: %w", fieldCfg.Name, err)
+		}
 
+		emitF = func(state *genState) any {
 			return f
 		}
 

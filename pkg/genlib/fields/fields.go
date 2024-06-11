@@ -17,7 +17,7 @@ type Field struct {
 	Type       string
 	ObjectType string
 	Example    string
-	Value      string
+	Value      any
 }
 
 func (fields Fields) merge(fieldsToMerge ...Field) Fields {
@@ -32,7 +32,7 @@ func (fields Fields) merge(fieldsToMerge ...Field) Fields {
 				field.Example = currentField.Example
 			}
 
-			if currentField.Value > field.Value {
+			if currentField.Value != nil && field.Value == nil {
 				field.Value = currentField.Value
 			}
 

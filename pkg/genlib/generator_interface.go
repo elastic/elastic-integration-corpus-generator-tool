@@ -101,7 +101,7 @@ func newGenState() *genState {
 func bindField(cfg Config, field Field, fieldMap map[string]any, withReturn bool) error {
 
 	// Check for hardcoded field value
-	if len(field.Value) > 0 {
+	if field.Value != nil {
 		if withReturn {
 			return bindStaticWithReturn(field, field.Value, fieldMap)
 		} else {

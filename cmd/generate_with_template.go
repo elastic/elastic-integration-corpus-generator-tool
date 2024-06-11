@@ -24,11 +24,11 @@ func GenerateWithTemplateCmd() *cobra.Command {
 	generateWithTemplateCmd := &cobra.Command{
 		Use:   "generate-with-template template-path fields-definition-path",
 		Short: "Generate a corpus",
-		Long:  "Generate a bulk request corpus given a template path and a fields definition path",
+		Long:  "Generate a bulk request corpus given a template path. The fields definition path is optional as long as the config has fields definitions.",
 		Args: func(cmd *cobra.Command, args []string) error {
 			var errs []error
-			if len(args) != 2 {
-				return errors.New("you must pass the template path and the fields definition path")
+			if len(args) != 1 {
+				return errors.New("you must pass the template path, fields definitions path is optional")
 			}
 
 			templatePath = args[0]
@@ -36,9 +36,13 @@ func GenerateWithTemplateCmd() *cobra.Command {
 				errs = append(errs, errors.New("you must provide a not empty template path argument"))
 			}
 
-			fieldsDefinitionPath = args[1]
-			if fieldsDefinitionPath == "" {
-				errs = append(errs, errors.New("you must provide a not empty fields definition path argument"))
+			if len(args) > 1 {
+				fieldsDefinitionPath = args[1]
+				if fieldsDefinitionPath == "" {
+					errs = append(errs, errors.New("you must provide a not empty fields definition path argument"))
+				}
+			} else {
+				fmt.Println("Fields definition path not provided, using fields definitions from config")
 			}
 
 			if len(errs) > 0 {
@@ -54,6 +58,14 @@ func GenerateWithTemplateCmd() *cobra.Command {
 			cfg, err := config.LoadConfig(fs, configFile)
 			if err != nil {
 				return err
+			}
+
+			if !cfg.HasFieldsMappings() && fieldsDefinitionPath == "" {
+				return errors.New("fields types not found in config and fields definition path not provided")
+			}
+
+			if cfg.HasFieldsMappings() && fieldsDefinitionPath != "" {
+				return errors.New("fields types found in config and fields definition path provided, use only one")
 			}
 
 			fc, err := corpus.NewGeneratorWithTemplate(cfg, fs, location, templateType)

@@ -22,7 +22,7 @@ const (
 )
 
 func fieldValueWrapByType(field Field) string {
-	if len(field.Value) > 0 {
+	if field.Value != nil {
 		return ""
 	}
 

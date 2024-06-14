@@ -82,7 +82,8 @@ type genState struct {
 	// previous cardinality value cache; necessary for cardinality
 	prevCacheCardinality map[string][]any
 	// internal buffer pool to decrease load on GC
-	pool sync.Pool
+	pool         sync.Pool
+	counterReset bool
 }
 
 func newGenState() *genState {
@@ -99,7 +100,6 @@ func newGenState() *genState {
 }
 
 func bindField(cfg Config, field Field, fieldMap map[string]any, withReturn bool) error {
-
 	// Check for hardcoded field value
 	if len(field.Value) > 0 {
 		if withReturn {
@@ -194,7 +194,6 @@ func bindByType(cfg Config, field Field, fieldMap map[string]any) (err error) {
 }
 
 func bindByTypeWithReturn(cfg Config, field Field, fieldMap map[string]any) (err error) {
-
 	fieldCfg, _ := cfg.GetField(field.Name)
 
 	switch field.Type {
@@ -971,6 +970,18 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 		return err
 	}
 
+	if err := fieldCfg.ValidateCounterResetStrategy(); err != nil {
+		return err
+	}
+
+	if err := fieldCfg.ValidateCounterResetAfterN(); err != nil {
+		return err
+	}
+
+	if err := fieldCfg.ValidateCounterResetProbabilistic(); err != nil {
+		return err
+	}
+
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF
 		idx := customRand.Intn(len(fieldCfg.Enum))
@@ -1006,6 +1017,27 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 				dummyInt = dummyFunc()
 			} else {
 				dummyInt = fuzzyIntCounter(previous, fieldCfg.Fuzziness)
+			}
+
+			if fieldCfg.CounterReset != nil {
+				switch fieldCfg.CounterReset.Strategy {
+				case config.CounterResetStrategyRandom:
+					// 50% chance to reset
+					if customRand.Intn(2) == 0 {
+						dummyInt = 0
+					}
+				case config.CounterResetStrategyProbabilistic:
+					// Probability% chance to reset
+					if customRand.Intn(100) < int(*fieldCfg.CounterReset.Probability) {
+						dummyInt = 0
+					}
+				case config.CounterResetStrategyAfterN:
+					// Reset after N
+					if !state.counterReset && state.counter >= *fieldCfg.CounterReset.ResetAfterN {
+						dummyInt = 0
+						state.counterReset = true
+					}
+				}
 			}
 
 			state.prevCache[field.Name] = dummyInt

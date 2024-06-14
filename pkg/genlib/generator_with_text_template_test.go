@@ -755,6 +755,64 @@ func Test_FieldIPWithTextTemplate(t *testing.T) {
 	}
 }
 
+func Test_FieldLongCounterResetAfterN5WithTextTemplate(t *testing.T) {
+	fld := Field{
+		Name: "counter_reset_test",
+		Type: FieldTypeLong,
+	}
+
+	afterN := 5
+
+	template := []byte(`{{$counter_reset_test := generate "counter_reset_test"}}{"counter_reset_test":"{{$counter_reset_test}}"}`)
+	configYaml := []byte(fmt.Sprintf(`fields:
+- name: counter_reset_test
+  counter: true
+  counter_reset:
+    strategy: after_n
+    reset_after_n: %d`, afterN))
+	t.Logf("with template: %s", string(template))
+
+	cfg, err := config.LoadConfigFromYaml(configYaml)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+
+	var buf bytes.Buffer
+
+	nSpins := int64(10)
+
+	var shouldReset bool
+
+	for i := int64(0); i < nSpins; i++ {
+		if err := g.Emit(&buf); err != nil {
+			t.Fatal(err)
+		}
+
+		m := unmarshalJSONT[string](t, buf.Bytes())
+		buf.Reset()
+
+		if len(m) != 1 {
+			t.Errorf("Expected map size 1, got %d", len(m))
+		}
+
+		v, ok := m[fld.Name]
+		if !ok {
+			t.Errorf("Missing key %v", fld.Name)
+		}
+
+		if i >= int64(afterN) && !shouldReset {
+			if v != "0" {
+				t.Errorf("Expected counter to reset to 0, got %v", v)
+			}
+			shouldReset = true
+		}
+
+		t.Logf("counter value: %v", v)
+	}
+}
+
 func Test_FieldFloatsWithTextTemplate(t *testing.T) {
 	_testNumericWithTextTemplate[float64](t, FieldTypeDouble)
 	_testNumericWithTextTemplate[float32](t, FieldTypeFloat)

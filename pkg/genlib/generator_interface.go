@@ -98,6 +98,40 @@ func newGenState() *genState {
 	}
 }
 
+type patternFn func() string
+
+var patternGenerators = func() map[string]patternFn {
+	return map[string]patternFn{
+		"string": func() string {
+			return randomdata.Noun()
+		},
+		"ipv4": func() string {
+			return randomdata.IpV4Address()
+		},
+		"ipv6": func() string {
+			return randomdata.IpV6Address()
+		},
+		"port": func() string {
+			return fmt.Sprintf("%d", randomdata.Number(1024, 65535))
+		},
+	}
+}
+
+func replacePattern(pattern string) string {
+	// Regular expression to find {generator} patterns
+	re := regexp.MustCompile(`\{(.*?)}`)
+	matches := re.FindAllStringSubmatch(pattern, -1)
+
+	for _, match := range matches {
+		key := match[1]
+		if generator, exists := patternGenerators()[key]; exists {
+			pattern = strings.Replace(pattern, match[0], generator(), 1)
+		}
+	}
+
+	return pattern
+}
+
 func bindField(cfg Config, field Field, fieldMap map[string]any, withReturn bool) error {
 
 	// Check for hardcoded field value
@@ -844,6 +878,17 @@ func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 }
 
 func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
+	if fieldCfg.FormattingPattern != "" {
+		var emitF emitF
+		emitF = func(state *genState) any {
+			res := replacePattern(fieldCfg.FormattingPattern)
+			return res
+		}
+
+		fieldMap[field.Name] = emitF
+		return nil
+	}
+
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF
 		emitF = func(state *genState) any {

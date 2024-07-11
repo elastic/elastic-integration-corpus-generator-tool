@@ -214,13 +214,25 @@ func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPat
 		return "", errors.New("you must provide a non empty template content")
 	}
 
-	ctx := context.Background()
-	flds, err := fields.LoadFieldsWithTemplate(ctx, fieldsDefinitionPath)
-	if err != nil {
-		return "", err
+	var fieldsDefinitions Fields
+
+	// If fieldsDefinitionPath is not provided, we use the fields types from the config
+	if gc.config.HasFieldsMappings() && fieldsDefinitionPath == "" {
+		configFieldsDefinitions, err := gc.config.LoadFieldsMappings()
+		if err != nil {
+			return "", err
+		}
+
+		fieldsDefinitions = mapFields(configFieldsDefinitions)
+	} else {
+		ctx := context.Background()
+		fieldsDefinitions, err = fields.LoadFieldsWithTemplate(ctx, fieldsDefinitionPath)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	err = gc.eventsPayloadFromFields(template, flds, totEvents, timeNow, randSeed, nil, f)
+	err = gc.eventsPayloadFromFields(template, fieldsDefinitions, totEvents, timeNow, randSeed, nil, f)
 	if err != nil {
 		return "", err
 	}
@@ -241,4 +253,23 @@ func sanitizeFilename(s string) string {
 	s = strings.Replace(s, "/", "-", -1)
 	s = strings.Replace(s, "\\", "-", -1)
 	return s
+}
+
+// mapFields converts config fields mappings to generator fields.
+func mapFields(fieldDefinitions config.FieldsMappings) Fields {
+	fieldsDefinitions := make(Fields, 0, len(fieldDefinitions))
+
+	for _, f := range fieldDefinitions {
+		tempField := fields.Field{
+			Name:       f.Name,
+			Type:       f.Type,
+			ObjectType: f.ObjectType,
+			Example:    f.Example,
+			Value:      f.Value,
+		}
+
+		fieldsDefinitions = append(fieldsDefinitions, tempField)
+	}
+
+	return fieldsDefinitions
 }

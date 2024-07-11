@@ -2,6 +2,9 @@ package config
 
 import (
 	"errors"
+	"regexp"
+	"sort"
+	"strings"
 	"time"
 
 	"math"
@@ -38,8 +41,94 @@ type Config struct {
 	m map[string]ConfigField
 }
 
+// HasFieldsMappings checks if all fields have a type defined.
+// This is useful to determine if a fields definitions file is required.
+func (c Config) HasFieldsMappings() bool {
+	for _, f := range c.m {
+		if f.Type == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// FieldMapping represents the mapping of a field.
+// It defines the structure and properties of a field, including its name,
+// data type, associated object type, example value, and the actual value.
+type FieldMapping struct {
+	Name       string
+	Type       string
+	ObjectType string
+	Example    string
+	Value      any
+}
+
+// FieldsMappings is a collection of FieldMapping.
+type FieldsMappings []FieldMapping
+
+func (f FieldsMappings) Len() int           { return len(f) }
+func (f FieldsMappings) Less(i, j int) bool { return f[i].Name < f[j].Name }
+func (f FieldsMappings) Swap(i, j int)      { f[i], f[j] = f[j], f[i] }
+
+func normaliseFields(fields FieldsMappings) (FieldsMappings, error) {
+	sort.Sort(fields)
+	normalisedFields := make(FieldsMappings, 0, len(fields))
+	for _, field := range fields {
+		if !strings.Contains(field.Name, "*") {
+			normalisedFields = append(normalisedFields, field)
+			continue
+		}
+
+		normalizationPattern := strings.NewReplacer(".", "\\.", "*", ".+").Replace(field.Name)
+		re, err := regexp.Compile(normalizationPattern)
+		if err != nil {
+			return nil, err
+		}
+
+		hasMatch := false
+		for _, otherField := range fields {
+			if otherField.Name == field.Name {
+				continue
+			}
+
+			if re.MatchString(otherField.Name) {
+				hasMatch = true
+				break
+			}
+		}
+
+		if !hasMatch {
+			normalisedFields = append(normalisedFields, field)
+		}
+	}
+
+	sort.Sort(normalisedFields)
+	return normalisedFields, nil
+}
+
+// LoadFieldsMappings creates the fields mappings from the config itself.
+// It has to be called after the config is loaded.
+func (c Config) LoadFieldsMappings() (FieldsMappings, error) {
+	var mappings FieldsMappings
+
+	for _, f := range c.m {
+		mappings = append(mappings, FieldMapping{
+			Name:       f.Name,
+			Type:       f.Type,
+			ObjectType: f.ObjectType,
+			Example:    f.Example,
+			Value:      f.Value,
+		})
+	}
+
+	return normaliseFields(mappings)
+}
+
 type ConfigField struct {
 	Name        string        `config:"name"`
+	Type        string        `config:"type"`
+	ObjectType  string        `config:"object_type"`
+	Example     string        `config:"example"`
 	Fuzziness   float64       `config:"fuzziness"`
 	Range       Range         `config:"range"`
 	Cardinality int           `config:"cardinality"`

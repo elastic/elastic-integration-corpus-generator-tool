@@ -777,13 +777,14 @@ func Test_FieldLongCounterResetAfterN5WithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 40)
 
 	var buf bytes.Buffer
 
-	nSpins := int64(10)
+	nSpins := int64(40)
 
-	var shouldReset bool
+	var resetCount int64
+	expectedResetCount := nSpins / int64(afterN) // 8
 
 	for i := int64(0); i < nSpins; i++ {
 		if err := g.Emit(&buf); err != nil {
@@ -802,14 +803,18 @@ func Test_FieldLongCounterResetAfterN5WithTextTemplate(t *testing.T) {
 			t.Errorf("Missing key %v", fld.Name)
 		}
 
-		if i >= int64(afterN) && !shouldReset {
+		if i%int64(afterN) == 0 {
 			if v != "0" {
 				t.Errorf("Expected counter to reset to 0, got %v", v)
 			}
-			shouldReset = true
+			resetCount++
 		}
 
 		t.Logf("counter value: %v", v)
+	}
+
+	if resetCount != expectedResetCount {
+		t.Errorf("Expected counter to reset %d times, got %d", expectedResetCount, resetCount)
 	}
 }
 

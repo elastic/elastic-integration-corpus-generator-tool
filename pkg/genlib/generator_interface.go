@@ -1033,9 +1033,8 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 					}
 				case config.CounterResetStrategyAfterN:
 					// Reset after N
-					if !state.counterReset && state.counter >= *fieldCfg.CounterReset.ResetAfterN {
+					if state.counter%*fieldCfg.CounterReset.ResetAfterN == 0 {
 						dummyInt = 0
-						state.counterReset = true
 					}
 				}
 			}

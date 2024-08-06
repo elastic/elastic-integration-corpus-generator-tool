@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
@@ -98,38 +99,33 @@ func newGenState() *genState {
 	}
 }
 
-type patternFn func() string
+// replacePattern replaces placeholders in a pattern with random data.
+func replacePattern(pattern string) string {
+	options := strings.Split(pattern, "|")
+	chosenOption := options[rand.Intn(len(options))]
 
-var patternGenerators = func() map[string]patternFn {
-	return map[string]patternFn{
-		"string": func() string {
+	replacements := map[string]func() string{
+		"{string}": func() string {
 			return randomdata.Noun()
 		},
-		"ipv4": func() string {
+		"{ipv4}": func() string {
 			return randomdata.IpV4Address()
 		},
-		"ipv6": func() string {
+		"{ipv6}": func() string {
 			return randomdata.IpV6Address()
 		},
-		"port": func() string {
+		"{port}": func() string {
 			return fmt.Sprintf("%d", randomdata.Number(1024, 65535))
 		},
 	}
-}
 
-func replacePattern(pattern string) string {
-	// Regular expression to find {generator} patterns
-	re := regexp.MustCompile(`\{(.*?)}`)
-	matches := re.FindAllStringSubmatch(pattern, -1)
-
-	for _, match := range matches {
-		key := match[1]
-		if generator, exists := patternGenerators()[key]; exists {
-			pattern = strings.Replace(pattern, match[0], generator(), 1)
+	for placeholder, replacementFunc := range replacements {
+		if strings.Contains(chosenOption, placeholder) {
+			chosenOption = strings.Replace(chosenOption, placeholder, replacementFunc(), -1)
 		}
 	}
 
-	return pattern
+	return chosenOption
 }
 
 func bindField(cfg Config, field Field, fieldMap map[string]any, withReturn bool) error {

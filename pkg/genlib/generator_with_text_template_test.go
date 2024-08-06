@@ -815,7 +815,7 @@ func Test_FieldKeywordFormattingPatternHostIPWithTextTemplate(t *testing.T) {
 	configYaml := []byte(`fields:
 - name: hostIP
   cardinality: 25
-  formatting_pattern: "{ipv4}:{port}"`)
+  formatting_pattern: "{ipv4}:{port}|{ipv6}"`)
 	t.Logf("with template: %s", string(template))
 
 	cfg, err := config.LoadConfigFromYaml(configYaml)
@@ -827,7 +827,7 @@ func Test_FieldKeywordFormattingPatternHostIPWithTextTemplate(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	ipv4PortRegex := regexp.MustCompile(`^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}$`)
+	ipRegex := regexp.MustCompile(`^((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5})|(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}))$`)
 
 	nSpins := int64(10)
 
@@ -848,7 +848,7 @@ func Test_FieldKeywordFormattingPatternHostIPWithTextTemplate(t *testing.T) {
 			t.Errorf("Missing key %v", fld.Name)
 		}
 
-		if !ipv4PortRegex.MatchString(v) {
+		if !ipRegex.MatchString(v) {
 			t.Errorf("Generated pattern %v does not match expected format", v)
 		}
 	}

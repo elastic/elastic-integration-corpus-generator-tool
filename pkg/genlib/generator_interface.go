@@ -82,8 +82,7 @@ type genState struct {
 	// previous cardinality value cache; necessary for cardinality
 	prevCacheCardinality map[string][]any
 	// internal buffer pool to decrease load on GC
-	pool         sync.Pool
-	counterReset bool
+	pool sync.Pool
 }
 
 func newGenState() *genState {

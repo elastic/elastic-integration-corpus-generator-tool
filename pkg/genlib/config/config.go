@@ -48,7 +48,47 @@ type ConfigField struct {
 	ObjectKeys        []string      `config:"object_keys"`
 	Value             any           `config:"value"`
 	Counter           bool          `config:"counter"`
+	CounterReset      *CounterReset `config:"counter_reset"`
 	FormattingPattern string        `config:"formatting_pattern"`
+}
+
+const (
+	CounterResetStrategyRandom        string = "random"
+	CounterResetStrategyProbabilistic string = "probabilistic"
+	CounterResetStrategyAfterN        string = "after_n"
+)
+
+type CounterReset struct {
+	Strategy    string  `config:"strategy"`
+	Probability *uint64 `config:"probability"`
+	ResetAfterN *uint64 `config:"reset_after_n"`
+}
+
+func (cf ConfigField) ValidateCounterResetStrategy() error {
+	if cf.Counter && cf.CounterReset != nil &&
+		cf.CounterReset.Strategy != CounterResetStrategyRandom &&
+		cf.CounterReset.Strategy != CounterResetStrategyProbabilistic &&
+		cf.CounterReset.Strategy != CounterResetStrategyAfterN {
+		return errors.New("counter_reset strategy must be one of 'random', 'probabilistic', 'after_n'")
+	}
+
+	return nil
+}
+
+func (cf ConfigField) ValidateCounterResetAfterN() error {
+	if cf.Counter && cf.CounterReset != nil && cf.CounterReset.Strategy == CounterResetStrategyAfterN && cf.CounterReset.ResetAfterN == nil {
+		return errors.New("counter_reset after_n requires 'reset_after_n' value to be set")
+	}
+
+	return nil
+}
+
+func (cf ConfigField) ValidateCounterResetProbabilistic() error {
+	if cf.Counter && cf.CounterReset != nil && cf.CounterReset.Strategy == CounterResetStrategyProbabilistic && cf.CounterReset.Probability == nil {
+		return errors.New("counter_reset probabilistic requires 'probability' value to be set")
+	}
+
+	return nil
 }
 
 func (cf ConfigField) ValidForDateField() error {

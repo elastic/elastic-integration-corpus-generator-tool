@@ -99,7 +99,6 @@ func newGenState() *genState {
 }
 
 func bindField(cfg Config, field Field, fieldMap map[string]any, withReturn bool) error {
-
 	// Check for hardcoded field value
 	if len(field.Value) > 0 {
 		if withReturn {
@@ -194,7 +193,6 @@ func bindByType(cfg Config, field Field, fieldMap map[string]any) (err error) {
 }
 
 func bindByTypeWithReturn(cfg Config, field Field, fieldMap map[string]any) (err error) {
-
 	fieldCfg, _ := cfg.GetField(field.Name)
 
 	switch field.Type {
@@ -971,6 +969,18 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 		return err
 	}
 
+	if err := fieldCfg.ValidateCounterResetStrategy(); err != nil {
+		return err
+	}
+
+	if err := fieldCfg.ValidateCounterResetAfterN(); err != nil {
+		return err
+	}
+
+	if err := fieldCfg.ValidateCounterResetProbabilistic(); err != nil {
+		return err
+	}
+
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF
 		idx := customRand.Intn(len(fieldCfg.Enum))
@@ -1006,6 +1016,26 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 				dummyInt = dummyFunc()
 			} else {
 				dummyInt = fuzzyIntCounter(previous, fieldCfg.Fuzziness)
+			}
+
+			if fieldCfg.CounterReset != nil {
+				switch fieldCfg.CounterReset.Strategy {
+				case config.CounterResetStrategyRandom:
+					// 50% chance to reset
+					if customRand.Intn(2) == 0 {
+						dummyInt = 0
+					}
+				case config.CounterResetStrategyProbabilistic:
+					// Probability% chance to reset
+					if customRand.Intn(100) < int(*fieldCfg.CounterReset.Probability) {
+						dummyInt = 0
+					}
+				case config.CounterResetStrategyAfterN:
+					// Reset after N
+					if state.counter%*fieldCfg.CounterReset.ResetAfterN == 0 {
+						dummyInt = 0
+					}
+				}
 			}
 
 			state.prevCache[field.Name] = dummyInt
@@ -1090,6 +1120,18 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 		return err
 	}
 
+	if err := fieldCfg.ValidateCounterResetStrategy(); err != nil {
+		return err
+	}
+
+	if err := fieldCfg.ValidateCounterResetAfterN(); err != nil {
+		return err
+	}
+
+	if err := fieldCfg.ValidateCounterResetProbabilistic(); err != nil {
+		return err
+	}
+
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF
 		idx := customRand.Intn(len(fieldCfg.Enum))
@@ -1125,6 +1167,26 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 				dummyFloat = dummyFunc()
 			} else {
 				dummyFloat = fuzzyFloatCounter(previous, fieldCfg.Fuzziness)
+			}
+
+			if fieldCfg.CounterReset != nil {
+				switch fieldCfg.CounterReset.Strategy {
+				case config.CounterResetStrategyRandom:
+					// 50% chance to reset
+					if customRand.Intn(2) == 0 {
+						dummyFloat = 0
+					}
+				case config.CounterResetStrategyProbabilistic:
+					// Probability% chance to reset
+					if customRand.Intn(100) < int(*fieldCfg.CounterReset.Probability) {
+						dummyFloat = 0
+					}
+				case config.CounterResetStrategyAfterN:
+					// Reset after N
+					if state.counter%*fieldCfg.CounterReset.ResetAfterN == 0 {
+						dummyFloat = 0
+					}
+				}
 			}
 
 			state.prevCache[field.Name] = dummyFloat

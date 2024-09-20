@@ -19,7 +19,7 @@ For each config entry the following fields are available:
   - `strategy` *mandatory*: defines the reset strategy. Possible values are:
       - `"random"`: resets the counter at random intervals.
       - `"probabilistic"`: resets the counter based on a probability.
-      - `"after_n"`: resets the counter after a specific number each iteration.
+      - `"after_n"`: resets the counter after a specific number of iterations.
   - `probability` *required when strategy is "probabilistic"*: an integer between 1 and 100 representing the percentage chance of reset for each generated value.
   - `reset_after_n` *required when strategy is "after_n"*: an integer specifying the number of values to generate before resetting the counter.
 

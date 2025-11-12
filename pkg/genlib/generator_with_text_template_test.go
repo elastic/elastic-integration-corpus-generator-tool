@@ -33,6 +33,8 @@ func Test_CardinalityWithTextTemplate(t *testing.T) {
 
 	test_CardinalityTWithTextTemplate[string](t, FieldTypeKeyword)
 	test_CardinalityTWithTextTemplate[int32](t, FieldTypeInteger)
+	test_CardinalityTWithTextTemplate[int64](t, FieldTypeLong)
+	test_CardinalityTWithTextTemplate[uint64](t, FieldTypeUnsignedLong)
 	test_CardinalityTWithTextTemplate[float64](t, FieldTypeFloat)
 	test_CardinalityTWithTextTemplate[string](t, FieldTypeGeoPoint)
 	test_CardinalityTWithTextTemplate[string](t, FieldTypeIP)
@@ -49,7 +51,7 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 	}
 
 	template := []byte(`{"alpha":"{{generate "alpha"}}", "beta":"{{generate "beta"}}"}`)
-	if ty == FieldTypeInteger || ty == FieldTypeFloat {
+	if ty == FieldTypeInteger || ty == FieldTypeLong || ty == FieldTypeUnsignedLong || ty == FieldTypeFloat {
 		template = []byte(`{"alpha":{{generate "alpha"}}, "beta":{{generate "beta"}}}`)
 	}
 

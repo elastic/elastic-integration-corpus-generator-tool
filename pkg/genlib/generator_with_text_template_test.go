@@ -32,7 +32,7 @@ func Test_EmptyCaseWithTextTemplate(t *testing.T) {
 func Test_CardinalityWithTextTemplate(t *testing.T) {
 
 	test_CardinalityTWithTextTemplate[string](t, FieldTypeKeyword)
-	test_CardinalityTWithTextTemplate[int](t, FieldTypeInteger)
+	test_CardinalityTWithTextTemplate[int32](t, FieldTypeInteger)
 	test_CardinalityTWithTextTemplate[float64](t, FieldTypeFloat)
 	test_CardinalityTWithTextTemplate[string](t, FieldTypeGeoPoint)
 	test_CardinalityTWithTextTemplate[string](t, FieldTypeIP)
@@ -850,7 +850,7 @@ func Test_FieldFloatsWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldIntegersWithTextTemplate(t *testing.T) {
-	_testNumericWithTextTemplate[int](t, FieldTypeInteger)
+	_testNumericWithTextTemplate[int32](t, FieldTypeInteger)
 	_testNumericWithTextTemplate[int64](t, FieldTypeLong)
 	_testNumericWithTextTemplate[uint64](t, FieldTypeUnsignedLong)
 }

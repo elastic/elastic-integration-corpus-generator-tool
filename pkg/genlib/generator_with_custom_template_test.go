@@ -197,7 +197,7 @@ func Test_EmptyCaseWithCustomTemplate(t *testing.T) {
 func Test_CardinalityWithCustomTemplate(t *testing.T) {
 
 	test_CardinalityTWithCustomTemplate[string](t, FieldTypeKeyword)
-	test_CardinalityTWithCustomTemplate[int](t, FieldTypeInteger)
+	test_CardinalityTWithCustomTemplate[int32](t, FieldTypeInteger)
 	test_CardinalityTWithCustomTemplate[float64](t, FieldTypeFloat)
 	test_CardinalityTWithCustomTemplate[string](t, FieldTypeGeoPoint)
 	test_CardinalityTWithCustomTemplate[string](t, FieldTypeIP)
@@ -950,7 +950,7 @@ func Test_FieldFloatsWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldIntegersWithCustomTemplate(t *testing.T) {
-	_testNumericWithCustomTemplate[int](t, FieldTypeInteger)
+	_testNumericWithCustomTemplate[int32](t, FieldTypeInteger)
 	_testNumericWithCustomTemplate[int64](t, FieldTypeLong)
 	_testNumericWithCustomTemplate[uint64](t, FieldTypeUnsignedLong)
 }

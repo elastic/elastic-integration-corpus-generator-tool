@@ -43,9 +43,26 @@ func Test_CardinalityWithTextTemplate(t *testing.T) {
 func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 	maxCardinality := 1000
 
+	getTypeRange := func() (int64, int64) {
+		rangeMin := rand.Int63n(100)
+		rangeMax := rand.Int63n(10000-rangeMin) + rangeMin
+		return rangeMin, rangeMax
+	}
+
 	template := []byte(`{"alpha":"{{generate "alpha"}}", "beta":"{{generate "beta"}}"}`)
 	if ty == FieldTypeInteger || ty == FieldTypeFloat {
 		template = []byte(`{"alpha":{{generate "alpha"}}, "beta":{{generate "beta"}}}`)
+	}
+
+	getRange := func(cardinality int) (int64, int64, error) {
+		for i := 0; i < 11; i++ {
+			rangeMin, rangeMax := getTypeRange()
+			// ensure we have the double of the range for the asked cardinality so to reduce flakiness
+			if uint64(rangeMax/2-rangeMin/2+1) >= uint64(cardinality) {
+				return rangeMin, rangeMax, nil
+			}
+		}
+		return 0, 0, fmt.Errorf("insufficient range for cardinality %d", cardinality)
 	}
 
 	fldAlpha := Field{
@@ -62,13 +79,17 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 
 		for cardinality := 1; cardinality < maxCardinality; cardinality *= 10 {
 			t.Run(strconv.Itoa(cardinality), func(t *testing.T) {
+				// we need enough range also for beta which has 2x cardinality
+				rangeMin, rangeMax, err := getRange(2 * cardinality)
+				if err != nil {
+					t.Error(err.Error())
+					return
+				}
+
 				rangeTrailing := ""
 				if ty == FieldTypeFloat {
 					rangeTrailing = "."
 				}
-
-				rangeMin := rand.Intn(100)
-				rangeMax := rand.Intn(10000-rangeMin) + rangeMin
 
 				// Add the range to get some variety in integers
 				tmpl := "fields:\n  - name: alpha\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s\n"

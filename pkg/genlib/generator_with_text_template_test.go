@@ -40,6 +40,8 @@ func Test_CardinalityWithTextTemplate(t *testing.T) {
 }
 
 func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
+	maxCardinality := 1000
+
 	template := []byte(`{"alpha":"{{generate "alpha"}}", "beta":"{{generate "beta"}}"}`)
 	if ty == FieldTypeInteger || ty == FieldTypeFloat {
 		template = []byte(`{"alpha":{{generate "alpha"}}, "beta":{{generate "beta"}}}`)
@@ -55,12 +57,7 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 	}
 
 	t.Logf("for type %s, with template: %s", ty, string(template))
-	// It's cardinality per mille, so a bit confusing :shrug:
-	for cardinality := 1000; cardinality >= 10; cardinality /= 10 {
-
-		currentCardinality := 1000
-		currentCardinality /= cardinality
-
+	for cardinality := 1; cardinality < maxCardinality; cardinality *= 10 {
 		rangeTrailing := ""
 		if ty == FieldTypeFloat {
 			rangeTrailing = "."
@@ -73,7 +70,7 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 		tmpl := "fields:\n  - name: alpha\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
 		tmpl += "  - name: beta\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s"
 
-		yaml := []byte(fmt.Sprintf(tmpl, currentCardinality, rangeMin, rangeTrailing, rangeMax, rangeTrailing, currentCardinality*2, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
+		yaml := []byte(fmt.Sprintf(tmpl, cardinality, rangeMin, rangeTrailing, rangeMax, rangeTrailing, 2*cardinality, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
 
 		cfg, err := config.LoadConfigFromYaml(yaml)
 		if err != nil {
@@ -116,12 +113,12 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 			vmapBeta[v] = vmapBeta[v] + 1
 		}
 
-		if len(vmapAlpha) != 1000/cardinality {
-			t.Errorf("Expected cardinality of %d got %d", 1000/cardinality, len(vmapAlpha))
+		if len(vmapAlpha) != cardinality {
+			t.Errorf("Expected cardinality of %d got %d - range (%v, %v)", cardinality, len(vmapAlpha), rangeMin, rangeMax)
 		}
 
-		if len(vmapBeta) != 2000/cardinality {
-			t.Errorf("Expected cardinality of %d got %d", 2000/cardinality, len(vmapBeta))
+		if len(vmapBeta) != 2*cardinality {
+			t.Errorf("Expected cardinality of %d got %d - range (%v, %v)", 2*cardinality, len(vmapBeta), rangeMin, rangeMax)
 		}
 	}
 }

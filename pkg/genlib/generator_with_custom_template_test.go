@@ -196,6 +196,8 @@ func Test_EmptyCaseWithCustomTemplate(t *testing.T) {
 func Test_CardinalityWithCustomTemplate(t *testing.T) {
 
 	test_CardinalityTWithCustomTemplate[string](t, FieldTypeKeyword)
+	test_CardinalityTWithCustomTemplate[int8](t, FieldTypeByte)
+	test_CardinalityTWithCustomTemplate[int16](t, FieldTypeShort)
 	test_CardinalityTWithCustomTemplate[int32](t, FieldTypeInteger)
 	test_CardinalityTWithCustomTemplate[int64](t, FieldTypeLong)
 	test_CardinalityTWithCustomTemplate[uint64](t, FieldTypeUnsignedLong)
@@ -215,7 +217,7 @@ func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
 	}
 
 	template := []byte(`{"alpha":"{{.alpha}}", "beta":"{{.beta}}"}`)
-	if ty == FieldTypeInteger || ty == FieldTypeLong || ty == FieldTypeUnsignedLong || ty == FieldTypeFloat {
+	if ty == FieldTypeByte || ty == FieldTypeShort || ty == FieldTypeInteger || ty == FieldTypeLong || ty == FieldTypeUnsignedLong || ty == FieldTypeFloat {
 		template = []byte(`{"alpha":{{.alpha}}, "beta":{{.beta}}}`)
 	}
 
@@ -951,6 +953,8 @@ func Test_FieldFloatsWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldIntegersWithCustomTemplate(t *testing.T) {
+	_testNumericWithCustomTemplate[int8](t, FieldTypeByte)
+	_testNumericWithCustomTemplate[int16](t, FieldTypeShort)
 	_testNumericWithCustomTemplate[int32](t, FieldTypeInteger)
 	_testNumericWithCustomTemplate[int64](t, FieldTypeLong)
 	_testNumericWithCustomTemplate[uint64](t, FieldTypeUnsignedLong)

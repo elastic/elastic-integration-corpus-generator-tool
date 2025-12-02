@@ -42,6 +42,8 @@ const (
 	FieldTypeFloat           = "float"
 	FieldTypeHalfFloat       = "half_float"
 	FieldTypeScaledFloat     = "scaled_float"
+	FieldTypeByte            = "byte"
+	FieldTypeShort           = "short"
 	FieldTypeInteger         = "integer"
 	FieldTypeLong            = "long"
 	FieldTypeUnsignedLong    = "unsigned_long"
@@ -177,7 +179,7 @@ func bindByType(cfg Config, field Field, fieldMap map[string]any) (err error) {
 		err = bindIP(field, fieldMap)
 	case FieldTypeDouble, FieldTypeFloat, FieldTypeHalfFloat, FieldTypeScaledFloat:
 		err = bindDouble(fieldCfg, field, fieldMap)
-	case FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong: // TODO: generate > 63 bit values for unsigned_long
+	case FieldTypeByte, FieldTypeShort, FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong: // TODO: generate > 63 bit values for unsigned_long
 		err = bindLong(fieldCfg, field, fieldMap)
 	case FieldTypeConstantKeyword:
 		err = bindConstantKeyword(field, fieldMap)
@@ -206,7 +208,7 @@ func bindByTypeWithReturn(cfg Config, field Field, fieldMap map[string]any) (err
 		err = bindIPWithReturn(field, fieldMap)
 	case FieldTypeDouble, FieldTypeFloat, FieldTypeHalfFloat, FieldTypeScaledFloat:
 		err = bindDoubleWithReturn(fieldCfg, field, fieldMap)
-	case FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong: // TODO: generate > 63 bit values for unsigned_long
+	case FieldTypeByte, FieldTypeShort, FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong: // TODO: generate > 63 bit values for unsigned_long
 		err = bindLongWithReturn(fieldCfg, field, fieldMap)
 	case FieldTypeConstantKeyword:
 		err = bindConstantKeywordWithReturn(field, fieldMap)

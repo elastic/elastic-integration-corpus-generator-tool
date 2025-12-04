@@ -62,6 +62,25 @@ var (
 	keywordRegex         = regexp.MustCompile("(\\.|-|_|\\s){1,1}")
 )
 
+// getIntTypeBounds returns the min and max values for a given integer field type
+func getIntTypeBounds(fieldType string) (min int64, max int64) {
+	switch fieldType {
+	case FieldTypeByte:
+		return math.MinInt8, math.MaxInt8
+	case FieldTypeShort:
+		return math.MinInt16, math.MaxInt16
+	case FieldTypeInteger:
+		return math.MinInt32, math.MaxInt32
+	case FieldTypeLong:
+		return math.MinInt64, math.MaxInt64
+	case FieldTypeUnsignedLong:
+		return 0, math.MaxInt64 // TODO: generate > 63 bit values for unsigned_long
+	default:
+		// Default to long bounds
+		return math.MinInt64, math.MaxInt64
+	}
+}
+
 // This is the emit function for the custom template engine where we stream content directly to the output buffer and no need a return value
 type emitFNotReturn func(state *genState, buf *bytes.Buffer) error
 
@@ -253,19 +272,61 @@ func makeFloatFunc(r *rand.Rand, fieldCfg ConfigField, field Field) func() float
 	return dummyFunc
 }
 
-func makeIntFunc(r *rand.Rand, fieldCfg ConfigField, field Field) func() int64 {
-	minValue, _ := fieldCfg.Range.MinAsInt64()
-	maxValue, err := fieldCfg.Range.MaxAsInt64()
-	// maxValue not set, let's set it to 0 for the sake of the switch above
-	if err != nil {
-		maxValue = 0
+func makeIntFunc(r *rand.Rand, fieldCfg ConfigField, field Field) (func() int64, error) {
+	typeMin, typeMax := getIntTypeBounds(field.Type)
+
+	minValue, err := fieldCfg.Range.MinAsInt64()
+	if err != nil || minValue < typeMin {
+		minValue = typeMin
 	}
+
+	maxValue, err := fieldCfg.Range.MaxAsInt64()
+	if err != nil || maxValue > typeMax {
+		maxValue = typeMax
+	}
+
+	if minValue > maxValue {
+		return nil, fmt.Errorf("invalid range: min %d greater than max %d", minValue, maxValue)
+	}
+
+	// reinterprets bits (two's complement)
+	umin := uint64(minValue)
+	umax := uint64(maxValue)
+	// done in uint64, wraps mode 2^64
+	span := umax - umin
 
 	var dummyFunc func() int64
 
 	switch {
-	case maxValue > 0:
-		dummyFunc = func() int64 { return r.Int63n(maxValue-minValue) + minValue }
+	case span > 0:
+		// number of distinct values in the range, in uint64
+		n := span + 1
+
+		// uint64 overflow, no rejections needed
+		if n == 0 {
+			dummyFunc = func() int64 {
+				// uniform in [min, max]
+				return int64(r.Uint64())
+			}
+			break
+		}
+
+		// the largest multiple of n that fits in a uint64
+		limit := ^uint64(0) - (^uint64(0) % n)
+
+		dummyFunc = func() int64 {
+			for {
+				// uniform in [0, 2^64)
+				u := r.Uint64()
+				// accept only values in a multiple of n
+				if u < limit {
+					// uniform in [0, n)
+					x := u % n
+					// uniform in [min, max]
+					return int64(umin + x)
+				}
+			}
+		}
 	case len(field.Example) == 0:
 		dummyFunc = func() int64 { return r.Int63n(10) }
 	default:
@@ -276,7 +337,7 @@ func makeIntFunc(r *rand.Rand, fieldCfg ConfigField, field Field) func() int64 {
 		}
 	}
 
-	return dummyFunc
+	return dummyFunc, nil
 }
 
 func bindObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
@@ -617,7 +678,10 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 	if fieldCfg.Fuzziness <= 0 {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-			dummyFunc := makeIntFunc(state.rand, fieldCfg, field)
+			dummyFunc, err := makeIntFunc(state.rand, fieldCfg, field)
+			if err != nil {
+				return err
+			}
 			v := make([]byte, 0, 32)
 			v = strconv.AppendInt(v, dummyFunc(), 10)
 			buf.Write(v)
@@ -634,7 +698,10 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		dummyFunc := makeIntFunc(state.rand, fieldCfg, field)
+		dummyFunc, err := makeIntFunc(state.rand, fieldCfg, field)
+		if err != nil {
+			return err
+		}
 		var dummyInt int64
 		if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
 			if previousDummyInt == 0 {
@@ -1058,7 +1125,10 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	if fieldCfg.Fuzziness <= 0 {
 		var emitF emitF
 		emitF = func(state *genState) any {
-			dummyFunc := makeIntFunc(state.rand, fieldCfg, field)
+			dummyFunc, err := makeIntFunc(state.rand, fieldCfg, field)
+			if err != nil {
+				panic(err)
+			}
 			return dummyFunc()
 		}
 
@@ -1071,7 +1141,10 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 
 	var emitF emitF
 	emitF = func(state *genState) any {
-		dummyFunc := makeIntFunc(state.rand, fieldCfg, field)
+		dummyFunc, err := makeIntFunc(state.rand, fieldCfg, field)
+		if err != nil {
+			panic(err)
+		}
 		var dummyInt int64
 		if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
 			if previousDummyInt == 0 {

@@ -17,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Pallinder/go-randomdata"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 )
@@ -378,24 +377,24 @@ func bindDynamicObject(cfg Config, field Field, fieldMap map[string]any) error {
 func genNounsN(n int, buf *bytes.Buffer) {
 
 	for i := 0; i < n-1; i++ {
-		buf.WriteString(randomdata.Noun())
+		buf.WriteString(customRand.Noun())
 		buf.WriteByte(' ')
 	}
 
-	// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-	buf.WriteString(randomdata.Adjective())
-	buf.WriteString(randomdata.Noun())
+	// customRand.Adjective() + customRand.Noun() -> 364 * 527 (~190k) different values
+	buf.WriteString(customRand.Adjective())
+	buf.WriteString(customRand.Noun())
 }
 
 func genNounsNWithReturn(n int) string {
 	value := ""
 	for i := 0; i < n-1; i++ {
-		value += randomdata.Noun() + " "
+		value += customRand.Noun() + " "
 	}
 
-	// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-	value += randomdata.Adjective()
-	value += randomdata.Noun()
+	// customRand.Adjective() + customRand.Noun() -> 364 * 527 (~190k) different values
+	value += customRand.Adjective()
+	value += customRand.Noun()
 
 	return value
 }
@@ -420,8 +419,8 @@ func bindConstantKeyword(field Field, fieldMap map[string]any) error {
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
-			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-			value = randomdata.Adjective() + randomdata.Noun()
+			// customRand.Adjective() + customRand.Noun() -> 364 * 527 (~190k) different values
+			value = customRand.Adjective() + customRand.Noun()
 			state.prevCache[field.Name] = value
 		}
 		buf.WriteString(value)
@@ -449,8 +448,8 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 	} else {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-			buf.WriteString(randomdata.Adjective() + randomdata.Noun())
+			// customRand.Adjective() + customRand.Noun() -> 364 * 527 (~190k) different values
+			buf.WriteString(customRand.Adjective() + customRand.Noun())
 			return nil
 		}
 
@@ -479,12 +478,12 @@ func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]any) er
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		for i := 0; i < N-1; i++ {
-			buf.WriteString(randomdata.Noun())
+			buf.WriteString(customRand.Noun())
 			buf.WriteString(joiner)
 		}
-		// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-		buf.WriteString(randomdata.Adjective())
-		buf.WriteString(randomdata.Noun())
+		// customRand.Adjective() + customRand.Noun() -> 364 * 527 (~190k) different values
+		buf.WriteString(customRand.Adjective())
+		buf.WriteString(customRand.Noun())
 		return nil
 	}
 
@@ -896,8 +895,8 @@ func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 	emitF = func(state *genState) any {
 		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
-			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-			value = randomdata.Adjective() + randomdata.Noun()
+			// customRand.Adjective() + customRand.Noun() -> 364 * 527 (~190k) different values
+			value = customRand.Adjective() + customRand.Noun()
 			state.prevCache[field.Name] = value
 		}
 		return value
@@ -923,8 +922,8 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 	} else {
 		var emitF emitF
 		emitF = func(state *genState) any {
-			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-			return randomdata.Adjective() + randomdata.Noun()
+			// customRand.Adjective() + customRand.Noun() -> 364 * 527 (~190k) different values
+			return customRand.Adjective() + customRand.Noun()
 		}
 
 		fieldMap[field.Name] = emitF
@@ -937,12 +936,12 @@ func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[stri
 	emitF = func(state *genState) any {
 		value := ""
 		for i := 0; i < N-1; i++ {
-			value += randomdata.Noun() + joiner
+			value += customRand.Noun() + joiner
 		}
 
-		// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-		value += randomdata.Adjective()
-		value += randomdata.Noun()
+		// customRand.Adjective() + customRand.Noun() -> 364 * 527 (~190k) different values
+		value += customRand.Adjective()
+		value += customRand.Noun()
 
 		return value
 	}

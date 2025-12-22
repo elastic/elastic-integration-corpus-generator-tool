@@ -7,10 +7,10 @@ package genlib
 import (
 	"bytes"
 	"errors"
-	"github.com/Masterminds/sprig/v3"
 	"io"
-	"math/rand"
 	"text/template"
+
+	"github.com/Masterminds/sprig/v3"
 )
 
 var generateOnFieldNotInFieldsYaml = errors.New("generate called on a field not present in fields yaml definition")
@@ -71,7 +71,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEven
 			return "NoAZ"
 		}
 
-		return azs[rand.Intn(len(azs))]
+		return azs[customRand.Intn(len(azs))]
 	}
 
 	templateFns["generate"] = func(field string) any {

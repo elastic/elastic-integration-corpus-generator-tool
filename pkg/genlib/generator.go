@@ -7,14 +7,64 @@ package genlib
 import (
 	"bytes"
 	"fmt"
-	"github.com/Pallinder/go-randomdata"
-	"github.com/lithammer/shortuuid/v3"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/Pallinder/go-randomdata"
+	"github.com/lithammer/shortuuid/v3"
 )
 
-var customRand *rand.Rand
+// syncRand wraps rand.Rand and randomdata for thread safety
+type syncRand struct {
+	mu   sync.Mutex
+	rand *rand.Rand
+}
+
+func (sr *syncRand) Intn(n int) int {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	return sr.rand.Intn(n)
+}
+
+func (sr *syncRand) Int63n(n int64) int64 {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	return sr.rand.Int63n(n)
+}
+
+func (sr *syncRand) Float64() float64 {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	return sr.rand.Float64()
+}
+
+func (sr *syncRand) Uint64() uint64 {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	return sr.rand.Uint64()
+}
+
+func (sr *syncRand) Int() int {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	return sr.rand.Int()
+}
+
+func (sr *syncRand) Noun() string {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	return randomdata.Noun()
+}
+
+func (sr *syncRand) Adjective() string {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	return randomdata.Adjective()
+}
+
+var customRand *syncRand
 
 const (
 	textTemplateEngine = iota
@@ -90,7 +140,7 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 			N := 5
 			for ii := 0; ii < N; ii++ {
 				// Fire or skip
-				if rand.Int()%2 == 0 {
+				if customRand.Int()%2 == 0 {
 					continue
 				}
 
@@ -100,10 +150,10 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 
 				var try int
 				const maxTries = 10
-				rNoun := randomdata.Noun()
+				rNoun := customRand.Noun()
 				_, ok := dupes[rNoun]
 				for ; ok && try < maxTries; try++ {
-					rNoun = randomdata.Noun()
+					rNoun = customRand.Noun()
 					_, ok = dupes[rNoun]
 				}
 
@@ -181,6 +231,8 @@ func InitGeneratorTimeNow(timeNow time.Time) {
 // InitGeneratorRandSeed sets rand seed
 func InitGeneratorRandSeed(randSeed int64) {
 	// set rand and randomdata seed to --seed flag (custom or 1)
-	customRand = rand.New(rand.NewSource(randSeed))
-	randomdata.CustomRand(customRand)
+	customRand = &syncRand{
+		rand: rand.New(rand.NewSource(randSeed)),
+	}
+	randomdata.CustomRand(customRand.rand)
 }

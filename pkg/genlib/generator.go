@@ -7,14 +7,13 @@ package genlib
 import (
 	"bytes"
 	"fmt"
-	"github.com/Pallinder/go-randomdata"
-	"github.com/lithammer/shortuuid/v3"
 	"math/rand"
 	"strings"
 	"time"
-)
 
-var customRand *rand.Rand
+	"github.com/Pallinder/go-randomdata"
+	"github.com/lithammer/shortuuid/v3"
+)
 
 const (
 	textTemplateEngine = iota
@@ -53,15 +52,15 @@ func fieldValueWrapByType(field Field) string {
 	}
 }
 
-func generateCustomTemplateFromField(cfg Config, fields Fields) ([]byte, []Field) {
-	return generateTemplateFromField(cfg, fields, customTemplateEngine)
+func generateCustomTemplateFromField(cfg Config, fields Fields, r *rand.Rand) ([]byte, []Field) {
+	return generateTemplateFromField(cfg, fields, customTemplateEngine, r)
 }
 
-func generateTextTemplateFromField(cfg Config, fields Fields) ([]byte, []Field) {
-	return generateTemplateFromField(cfg, fields, textTemplateEngine)
+func generateTextTemplateFromField(cfg Config, fields Fields, r *rand.Rand) ([]byte, []Field) {
+	return generateTemplateFromField(cfg, fields, textTemplateEngine, r)
 }
 
-func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([]byte, []Field) {
+func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, r *rand.Rand) ([]byte, []Field) {
 	if len(fields) == 0 {
 		return nil, nil
 	}
@@ -90,7 +89,7 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 			N := 5
 			for ii := 0; ii < N; ii++ {
 				// Fire or skip
-				if rand.Int()%2 == 0 {
+				if r.Int()%2 == 0 {
 					continue
 				}
 
@@ -165,11 +164,12 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int) ([
 	return templateBuffer.Bytes(), objectKeysField
 }
 
-func NewGenerator(cfg Config, flds Fields, totEvents uint64) (Generator, error) {
-	template, objectKeysField := generateCustomTemplateFromField(cfg, flds)
+func NewGenerator(cfg Config, flds Fields, totEvents uint64, randSeed int64) (Generator, error) {
+	r := rand.New(rand.NewSource(randSeed))
+	template, objectKeysField := generateCustomTemplateFromField(cfg, flds, r)
 	flds = append(flds, objectKeysField...)
 
-	return NewGeneratorWithCustomTemplate(template, cfg, flds, totEvents)
+	return NewGeneratorWithCustomTemplate(template, cfg, flds, totEvents, randSeed)
 }
 
 // InitGeneratorTimeNow sets base timeNow for `date` field
@@ -180,7 +180,6 @@ func InitGeneratorTimeNow(timeNow time.Time) {
 
 // InitGeneratorRandSeed sets rand seed
 func InitGeneratorRandSeed(randSeed int64) {
-	// set rand and randomdata seed to --seed flag (custom or 1)
-	customRand = rand.New(rand.NewSource(randSeed))
-	randomdata.CustomRand(customRand)
+	// set randomdata seed to --seed flag (custom or 1)
+	randomdata.CustomRand(rand.New(rand.NewSource(randSeed)))
 }

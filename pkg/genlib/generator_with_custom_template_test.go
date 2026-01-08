@@ -197,7 +197,11 @@ func Test_EmptyCaseWithCustomTemplate(t *testing.T) {
 func Test_CardinalityWithCustomTemplate(t *testing.T) {
 
 	test_CardinalityTWithCustomTemplate[string](t, FieldTypeKeyword)
-	test_CardinalityTWithCustomTemplate[int](t, FieldTypeInteger)
+	test_CardinalityTWithCustomTemplate[int8](t, FieldTypeByte)
+	test_CardinalityTWithCustomTemplate[int16](t, FieldTypeShort)
+	test_CardinalityTWithCustomTemplate[int32](t, FieldTypeInteger)
+	test_CardinalityTWithCustomTemplate[int64](t, FieldTypeLong)
+	test_CardinalityTWithCustomTemplate[uint64](t, FieldTypeUnsignedLong)
 	test_CardinalityTWithCustomTemplate[float64](t, FieldTypeFloat)
 	test_CardinalityTWithCustomTemplate[string](t, FieldTypeGeoPoint)
 	test_CardinalityTWithCustomTemplate[string](t, FieldTypeIP)
@@ -205,9 +209,46 @@ func Test_CardinalityWithCustomTemplate(t *testing.T) {
 }
 
 func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
+	maxCardinality := 1000
+
+	getTypeRange := func() (int64, int64) {
+		rangeMin := rand.Int63n(100)
+		rangeMax := rand.Int63n(10000-rangeMin) + rangeMin
+		return rangeMin, rangeMax
+	}
+
 	template := []byte(`{"alpha":"{{.alpha}}", "beta":"{{.beta}}"}`)
-	if ty == FieldTypeInteger || ty == FieldTypeFloat {
+	if ty == FieldTypeByte || ty == FieldTypeShort || ty == FieldTypeInteger || ty == FieldTypeLong || ty == FieldTypeUnsignedLong || ty == FieldTypeFloat {
 		template = []byte(`{"alpha":{{.alpha}}, "beta":{{.beta}}}`)
+	}
+
+	if ty == FieldTypeByte || ty == FieldTypeShort || ty == FieldTypeInteger || ty == FieldTypeLong || ty == FieldTypeUnsignedLong {
+		typeMin, typeMax := getIntTypeBounds(ty)
+		halfRange := typeMax/2 - typeMin/2
+
+		if int(halfRange/2) < maxCardinality {
+			maxCardinality = int(halfRange / 2)
+		}
+
+		getTypeRange = func() (int64, int64) {
+			rangeMin := typeMin + rand.Int63n(halfRange/2)
+			rangeMax := typeMax - rand.Int63n(halfRange/2)
+			return rangeMin, rangeMax
+		}
+	}
+
+	getRange := func(cardinality int) (int64, int64, error) {
+		for i := 0; i < 11; i++ {
+			rangeMin, rangeMax := getTypeRange()
+			umin := uint64(rangeMin)
+			umax := uint64(rangeMax)
+			span := umax - umin
+			// ensure we have the double of the range for the asked cardinality so to reduce flakiness
+			if span >= 2*uint64(cardinality) {
+				return rangeMin, rangeMax, nil
+			}
+		}
+		return 0, 0, fmt.Errorf("insufficient range for cardinality %d", cardinality)
 	}
 
 	fldAlpha := Field{
@@ -219,73 +260,78 @@ func test_CardinalityTWithCustomTemplate[T any](t *testing.T, ty string) {
 		Type: ty,
 	}
 
-	t.Logf("for type %s, with template: %s", ty, string(template))
-	for cardinality := 1000; cardinality >= 10; cardinality /= 10 {
+	t.Run(ty, func(t *testing.T) {
+		t.Parallel()
 
-		currentCardinality := 1000
-		currentCardinality /= cardinality
+		for cardinality := 1; cardinality < maxCardinality; cardinality *= 10 {
+			t.Run(strconv.Itoa(cardinality), func(t *testing.T) {
+				// we need enough range also for beta which has 2x cardinality
+				rangeMin, rangeMax, err := getRange(2 * cardinality)
+				if err != nil {
+					t.Error(err.Error())
+					return
+				}
 
-		rangeTrailing := ""
-		if ty == FieldTypeFloat {
-			rangeTrailing = "."
+				rangeTrailing := ""
+				if ty == FieldTypeFloat {
+					rangeTrailing = "."
+				}
+
+				// Add the range to get some variety in integers
+				tmpl := "fields:\n  - name: alpha\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
+				tmpl += "  - name: beta\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s"
+
+				yaml := []byte(fmt.Sprintf(tmpl, cardinality, rangeMin, rangeTrailing, rangeMax, rangeTrailing, 2*cardinality, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
+				cfg, err := config.LoadConfigFromYaml(yaml)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				nSpins := 16384
+				g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(len(template)*nSpins*1024))
+
+				vmapAlpha := make(map[any]int)
+				vmapBeta := make(map[any]int)
+
+				for i := 0; i < nSpins; i++ {
+
+					var buf bytes.Buffer
+					if err := g.Emit(&buf); err != nil {
+						t.Fatal(err)
+					}
+
+					m := unmarshalJSONT[T](t, buf.Bytes())
+
+					if len(m) != 2 {
+						t.Errorf("Expected map size 2, got %d", len(m))
+					}
+
+					v, ok := m[fldAlpha.Name]
+
+					if !ok {
+						t.Errorf("Missing key %v", fldAlpha.Name)
+					}
+
+					vmapAlpha[v] = vmapAlpha[v] + 1
+
+					v, ok = m[fldBeta.Name]
+
+					if !ok {
+						t.Errorf("Missing key %v", fldBeta.Name)
+					}
+
+					vmapBeta[v] = vmapBeta[v] + 1
+				}
+
+				if len(vmapAlpha) != cardinality {
+					t.Errorf("Expected cardinality of %d got %d - range (%v, %v)", cardinality, len(vmapAlpha), rangeMin, rangeMax)
+				}
+				if len(vmapBeta) != 2*cardinality {
+					t.Errorf("Expected cardinality of %d got %d - range (%v, %v)", 2*cardinality, len(vmapBeta), rangeMin, rangeMax)
+				}
+			})
 		}
-
-		rangeMin := rand.Intn(100)
-		rangeMax := rand.Intn(10000-rangeMin) + rangeMin
-
-		// Add the range to get some variety in integers
-		tmpl := "fields:\n  - name: alpha\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s\n"
-		tmpl += "  - name: beta\n    cardinality: %d\n    range:\n      min: %d%s\n      max: %d%s"
-
-		yaml := []byte(fmt.Sprintf(tmpl, currentCardinality, rangeMin, rangeTrailing, rangeMax, rangeTrailing, currentCardinality*2, rangeMin, rangeTrailing, rangeMax, rangeTrailing))
-		cfg, err := config.LoadConfigFromYaml(yaml)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		nSpins := 16384
-		g := makeGeneratorWithCustomTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(len(template)*nSpins*1024))
-
-		vmapAlpha := make(map[any]int)
-		vmapBeta := make(map[any]int)
-
-		for i := 0; i < nSpins; i++ {
-
-			var buf bytes.Buffer
-			if err := g.Emit(&buf); err != nil {
-				t.Fatal(err)
-			}
-
-			m := unmarshalJSONT[T](t, buf.Bytes())
-
-			if len(m) != 2 {
-				t.Errorf("Expected map size 2, got %d", len(m))
-			}
-
-			v, ok := m[fldAlpha.Name]
-
-			if !ok {
-				t.Errorf("Missing key %v", fldAlpha.Name)
-			}
-
-			vmapAlpha[v] = vmapAlpha[v] + 1
-
-			v, ok = m[fldBeta.Name]
-
-			if !ok {
-				t.Errorf("Missing key %v", fldBeta.Name)
-			}
-
-			vmapBeta[v] = vmapBeta[v] + 1
-		}
-
-		if len(vmapAlpha) != 1000/cardinality {
-			t.Errorf("Expected cardinality of %d got %d", 1000/cardinality, len(vmapAlpha))
-		}
-		if len(vmapBeta) != 2000/cardinality {
-			t.Errorf("Expected cardinality of %d got %d", 2000/cardinality, len(vmapBeta))
-		}
-	}
+	})
 }
 
 func Test_FieldBoolWithCustomTemplate(t *testing.T) {
@@ -926,7 +972,9 @@ func Test_FieldFloatsWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldIntegersWithCustomTemplate(t *testing.T) {
-	_testNumericWithCustomTemplate[int](t, FieldTypeInteger)
+	_testNumericWithCustomTemplate[int8](t, FieldTypeByte)
+	_testNumericWithCustomTemplate[int16](t, FieldTypeShort)
+	_testNumericWithCustomTemplate[int32](t, FieldTypeInteger)
 	_testNumericWithCustomTemplate[int64](t, FieldTypeLong)
 	_testNumericWithCustomTemplate[uint64](t, FieldTypeUnsignedLong)
 }
@@ -937,12 +985,13 @@ func _testNumericWithCustomTemplate[T any](t *testing.T, ty string) {
 		Type: ty,
 	}
 
-	template := []byte(`{"alpha":{{.alpha}}}`)
-	t.Logf("with template: %s", string(template))
-	nSpins := rand.Intn(1024) + 1
-	for i := 0; i < nSpins; i++ {
-		testSingleTWithCustomTemplate[T](t, fld, nil, template)
-	}
+	t.Run(ty, func(t *testing.T) {
+		template := []byte(`{"alpha":{{.alpha}}}`)
+		nSpins := rand.Intn(1024) + 1
+		for i := 0; i < nSpins; i++ {
+			testSingleTWithCustomTemplate[T](t, fld, nil, template)
+		}
+	})
 }
 
 func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, template []byte) T {

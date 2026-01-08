@@ -30,7 +30,7 @@ func fieldValueWrapByType(field Field) string {
 		return "\""
 	case FieldTypeDouble, FieldTypeFloat, FieldTypeHalfFloat, FieldTypeScaledFloat:
 		return ""
-	case FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong:
+	case FieldTypeByte, FieldTypeShort, FieldTypeInteger, FieldTypeLong, FieldTypeUnsignedLong:
 		return ""
 	case FieldTypeConstantKeyword:
 		return "\""

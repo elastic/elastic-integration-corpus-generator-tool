@@ -3,13 +3,14 @@ package genlib
 import (
 	"bytes"
 	"fmt"
-	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"math/rand"
 	"net"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 )
 
 func Test_ParseTemplate(t *testing.T) {
@@ -177,7 +178,8 @@ func Test_ParseTemplate(t *testing.T) {
 }
 
 func Test_EmptyCaseWithCustomTemplate(t *testing.T) {
-	template, _ := generateCustomTemplateFromField(Config{}, []Field{})
+	r := rand.New(rand.NewSource(rand.Int63()))
+	template, _ := generateCustomTemplateFromField(Config{}, []Field{}, r)
 	t.Logf("with template: %s", string(template))
 	g := makeGeneratorWithCustomTemplate(t, Config{}, []Field{}, template, 0)
 
@@ -980,7 +982,7 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 }
 
 func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) Generator {
-	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields, totEvents)
+	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields, totEvents, rand.Int63())
 
 	if err != nil {
 		t.Fatal(err)

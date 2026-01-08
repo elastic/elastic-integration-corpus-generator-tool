@@ -7,10 +7,10 @@ package genlib
 import (
 	"bytes"
 	"errors"
-	"github.com/Masterminds/sprig/v3"
 	"io"
-	"math/rand"
 	"text/template"
+
+	"github.com/Masterminds/sprig/v3"
 )
 
 var generateOnFieldNotInFieldsYaml = errors.New("generate called on a field not present in fields yaml definition")
@@ -48,9 +48,9 @@ var awsAZs map[string][]string = map[string][]string{
 	"us-west-2":      {"us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"},
 }
 
-func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEvents uint64) (*GeneratorWithTextTemplate, error) {
+func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEvents uint64, randSeed int64) (*GeneratorWithTextTemplate, error) {
 	// Preprocess the fields, generating appropriate bound function
-	state := newGenState()
+	state := newGenState(randSeed)
 	fieldMap := make(map[string]any)
 	for _, field := range fields {
 		if err := bindField(cfg, field, fieldMap, true); err != nil {
@@ -71,7 +71,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEven
 			return "NoAZ"
 		}
 
-		return azs[rand.Intn(len(azs))]
+		return azs[state.rand.Intn(len(azs))]
 	}
 
 	templateFns["generate"] = func(field string) any {

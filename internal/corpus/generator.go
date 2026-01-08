@@ -113,12 +113,12 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 	var evgen genlib.Generator
 	var err error
 	if len(template) == 0 {
-		evgen, err = genlib.NewGenerator(gc.config, fields, totEvents)
+		evgen, err = genlib.NewGenerator(gc.config, fields, totEvents, randSeed)
 	} else {
 		if gc.templateType == templateTypeCustom {
-			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields, totEvents)
+			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields, totEvents, randSeed)
 		} else if gc.templateType == templateTypeGoText {
-			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields, totEvents)
+			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields, totEvents, randSeed)
 		} else {
 			return ErrNotValidTemplate
 		}

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
@@ -71,6 +72,8 @@ type Generator interface {
 }
 
 type genState struct {
+	// random number generator
+	rand *rand.Rand
 	// event counter
 	counter uint64
 	// total events
@@ -85,7 +88,7 @@ type genState struct {
 	pool sync.Pool
 }
 
-func newGenState() *genState {
+func newGenState(randSeed int64) *genState {
 	return &genState{
 		prevCache:            make(map[string]any),
 		prevCacheForDup:      make(map[string]map[any]struct{}),
@@ -95,6 +98,7 @@ func newGenState() *genState {
 				return new(bytes.Buffer)
 			},
 		},
+		rand: rand.New(rand.NewSource(randSeed)),
 	}
 }
 
@@ -221,7 +225,7 @@ func bindByTypeWithReturn(cfg Config, field Field, fieldMap map[string]any) (err
 	return
 }
 
-func makeFloatFunc(fieldCfg ConfigField, field Field) func() float64 {
+func makeFloatFunc(r *rand.Rand, fieldCfg ConfigField, field Field) func() float64 {
 	minValue, _ := fieldCfg.Range.MinAsFloat64()
 	maxValue, err := fieldCfg.Range.MaxAsFloat64()
 	// maxValue not set, let's set it to 0 for the sake of the switch above
@@ -233,21 +237,21 @@ func makeFloatFunc(fieldCfg ConfigField, field Field) func() float64 {
 
 	switch {
 	case maxValue > 0:
-		dummyFunc = func() float64 { return minValue + customRand.Float64()*(maxValue-minValue) }
+		dummyFunc = func() float64 { return minValue + r.Float64()*(maxValue-minValue) }
 	case len(field.Example) == 0:
-		dummyFunc = func() float64 { return customRand.Float64() * 10 }
+		dummyFunc = func() float64 { return r.Float64() * 10 }
 	default:
 		totDigit := len(field.Example)
 		max := math.Pow10(totDigit)
 		dummyFunc = func() float64 {
-			return customRand.Float64() * max
+			return r.Float64() * max
 		}
 	}
 
 	return dummyFunc
 }
 
-func makeIntFunc(fieldCfg ConfigField, field Field) func() int64 {
+func makeIntFunc(r *rand.Rand, fieldCfg ConfigField, field Field) func() int64 {
 	minValue, _ := fieldCfg.Range.MinAsInt64()
 	maxValue, err := fieldCfg.Range.MaxAsInt64()
 	// maxValue not set, let's set it to 0 for the sake of the switch above
@@ -259,14 +263,14 @@ func makeIntFunc(fieldCfg ConfigField, field Field) func() int64 {
 
 	switch {
 	case maxValue > 0:
-		dummyFunc = func() int64 { return customRand.Int63n(maxValue-minValue) + minValue }
+		dummyFunc = func() int64 { return r.Int63n(maxValue-minValue) + minValue }
 	case len(field.Example) == 0:
-		dummyFunc = func() int64 { return customRand.Int63n(10) }
+		dummyFunc = func() int64 { return r.Int63n(10) }
 	default:
 		totDigit := len(field.Example)
 		max := int64(math.Pow10(totDigit))
 		dummyFunc = func() int64 {
-			return customRand.Int63n(max)
+			return r.Int63n(max)
 		}
 	}
 
@@ -337,16 +341,16 @@ func genNounsNWithReturn(n int) string {
 	return value
 }
 
-func randGeoPoint() (int, int, int, int) {
-	lat := customRand.Intn(181) - 90
+func randGeoPoint(r *rand.Rand) (int, int, int, int) {
+	lat := r.Intn(181) - 90
 	var latD int
 	if lat != -90 && lat != 90 {
-		latD = customRand.Intn(100)
+		latD = r.Intn(100)
 	}
 	var longD int
-	long := customRand.Intn(361) - 180
+	long := r.Intn(361) - 180
 	if long != -180 && long != 180 {
-		longD = customRand.Intn(100)
+		longD = r.Intn(100)
 	}
 
 	return lat, latD, long, longD
@@ -373,7 +377,7 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 	if len(fieldCfg.Enum) > 0 {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-			idx := customRand.Intn(len(fieldCfg.Enum))
+			idx := state.rand.Intn(len(fieldCfg.Enum))
 			buf.WriteString(fieldCfg.Enum[idx])
 			return nil
 		}
@@ -449,7 +453,7 @@ func bindStatic(field Field, v any, fieldMap map[string]any) error {
 func bindBool(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		switch customRand.Int() % 2 {
+		switch state.rand.Int() % 2 {
 		case 0:
 			buf.WriteString("false")
 		case 1:
@@ -465,7 +469,7 @@ func bindBool(field Field, fieldMap map[string]any) error {
 func bindGeoPoint(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		lat, latD, long, longD := randGeoPoint()
+		lat, latD, long, longD := randGeoPoint(state.rand)
 		_, err := fmt.Fprintf(buf, "%d.%d,%d.%d", lat, latD, long, longD)
 		return err
 	}
@@ -477,7 +481,7 @@ func bindGeoPoint(field Field, fieldMap map[string]any) error {
 func bindWordN(field Field, n int, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		genNounsN(customRand.Intn(n), buf)
+		genNounsN(state.rand.Intn(n), buf)
 		return nil
 	}
 
@@ -532,7 +536,7 @@ func nearTime(fieldCfg ConfigField, state *genState) time.Time {
 	} else if fieldCfg.Period < 0 && state.totEvents > 0 {
 		offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * (int64(state.totEvents - state.counter)))
 	} else {
-		offset = time.Duration(customRand.Intn(FieldTypeDurationSpan)) * time.Millisecond
+		offset = time.Duration(state.rand.Intn(FieldTypeDurationSpan)) * time.Millisecond
 	}
 
 	newTime := timeNowToBind.Add(offset)
@@ -547,7 +551,7 @@ func nearTime(fieldCfg ConfigField, state *genState) time.Time {
 func bindIP(field Field, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		i0, i1, i2, i3 := randIP()
+		i0, i1, i2, i3 := randIP(state.rand)
 
 		_, err := fmt.Fprintf(buf, "%d.%d.%d.%d", i0, i1, i2, i3)
 		return err
@@ -558,18 +562,18 @@ func bindIP(field Field, fieldMap map[string]any) error {
 	return nil
 }
 
-func fuzzyInt(previous int64, fuzziness, min, max float64) int64 {
+func fuzzyInt(r *rand.Rand, previous int64, fuzziness, min, max float64) int64 {
 	lowerBound := float64(previous) * (1 - fuzziness)
 	higherBound := float64(previous) * (1 + fuzziness)
 	lowerBound = math.Max(lowerBound, min)
 	higherBound = math.Min(higherBound, max)
-	return customRand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
+	return r.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
 }
 
-func fuzzyIntCounter(previous int64, fuzziness float64) int64 {
+func fuzzyIntCounter(r *rand.Rand, previous int64, fuzziness float64) int64 {
 	lowerBound := float64(previous)
 	higherBound := float64(previous) * (1 + fuzziness)
-	return customRand.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
+	return r.Int63n(int64(math.Ceil(higherBound-lowerBound))) + int64(lowerBound)
 }
 
 func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
@@ -589,11 +593,11 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 			}
 
 			if fieldCfg.Fuzziness <= 0 {
-				dummyFunc = makeIntCounterFunc(previous, field)
+				dummyFunc = makeIntCounterFunc(state.rand, previous, field)
 
 				dummyInt = dummyFunc()
 			} else {
-				dummyInt = fuzzyIntCounter(previous, fieldCfg.Fuzziness)
+				dummyInt = fuzzyIntCounter(state.rand, previous, fieldCfg.Fuzziness)
 			}
 
 			state.prevCache[field.Name] = dummyInt
@@ -608,11 +612,10 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 		return nil
 	}
 
-	dummyFunc := makeIntFunc(fieldCfg, field)
-
 	if fieldCfg.Fuzziness <= 0 {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+			dummyFunc := makeIntFunc(state.rand, fieldCfg, field)
 			v := make([]byte, 0, 32)
 			v = strconv.AppendInt(v, dummyFunc(), 10)
 			buf.Write(v)
@@ -629,12 +632,13 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		dummyFunc := makeIntFunc(state.rand, fieldCfg, field)
 		var dummyInt int64
 		if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
 			if previousDummyInt == 0 {
 				previousDummyInt = 1
 			}
-			dummyInt = fuzzyInt(previousDummyInt, fieldCfg.Fuzziness, min, max)
+			dummyInt = fuzzyInt(state.rand, previousDummyInt, fieldCfg.Fuzziness, min, max)
 		} else {
 			dummyInt = dummyFunc()
 		}
@@ -649,18 +653,18 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 	return nil
 }
 
-func fuzzyFloat(previous, fuzziness, min, max float64) float64 {
+func fuzzyFloat(r *rand.Rand, previous, fuzziness, min, max float64) float64 {
 	lowerBound := previous * (1 - fuzziness)
 	higherBound := previous * (1 + fuzziness)
 	lowerBound = math.Max(lowerBound, min)
 	higherBound = math.Min(higherBound, max)
-	return lowerBound + customRand.Float64()*(higherBound-lowerBound)
+	return lowerBound + r.Float64()*(higherBound-lowerBound)
 }
 
-func fuzzyFloatCounter(previous, fuzziness float64) float64 {
+func fuzzyFloatCounter(r *rand.Rand, previous, fuzziness float64) float64 {
 	lowerBound := previous
 	higherBound := previous * (1 + fuzziness)
-	return lowerBound + customRand.Float64()*(higherBound-lowerBound)
+	return lowerBound + r.Float64()*(higherBound-lowerBound)
 }
 
 func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
@@ -680,11 +684,11 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 			}
 
 			if fieldCfg.Fuzziness <= 0 {
-				dummyFunc = makeFloatCounterFunc(previous, field)
+				dummyFunc = makeFloatCounterFunc(state.rand, previous, field)
 
 				dummyFloat = dummyFunc()
 			} else {
-				dummyFloat = fuzzyFloatCounter(previous, fieldCfg.Fuzziness)
+				dummyFloat = fuzzyFloatCounter(state.rand, previous, fieldCfg.Fuzziness)
 			}
 
 			state.prevCache[field.Name] = dummyFloat
@@ -697,11 +701,10 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 		return nil
 	}
 
-	dummyFunc := makeFloatFunc(fieldCfg, field)
-
 	if fieldCfg.Fuzziness <= 0 {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+			dummyFunc := makeFloatFunc(state.rand, fieldCfg, field)
 			dummyFloat := dummyFunc()
 			_, err := fmt.Fprintf(buf, "%f", dummyFloat)
 			return err
@@ -716,9 +719,10 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		dummyFunc := makeFloatFunc(state.rand, fieldCfg, field)
 		var dummyFloat float64
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
-			dummyFloat = fuzzyFloat(previousDummyFloat, fieldCfg.Fuzziness, min, max)
+			dummyFloat = fuzzyFloat(state.rand, previousDummyFloat, fieldCfg.Fuzziness, min, max)
 		} else {
 			dummyFloat = dummyFunc()
 		}
@@ -845,7 +849,7 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF
 		emitF = func(state *genState) any {
-			idx := customRand.Intn(len(fieldCfg.Enum))
+			idx := state.rand.Intn(len(fieldCfg.Enum))
 			return fieldCfg.Enum[idx]
 		}
 
@@ -898,7 +902,7 @@ func bindStaticWithReturn(field Field, v any, fieldMap map[string]any) error {
 func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF emitF
 	emitF = func(state *genState) any {
-		switch customRand.Int() % 2 {
+		switch state.rand.Int() % 2 {
 		case 0:
 			return false
 		default:
@@ -913,7 +917,7 @@ func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
 func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF emitF
 	emitF = func(state *genState) any {
-		lat, latD, long, longD := randGeoPoint()
+		lat, latD, long, longD := randGeoPoint(state.rand)
 		return fmt.Sprintf("%d.%d,%d.%d", lat, latD, long, longD)
 	}
 
@@ -925,7 +929,7 @@ func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
 func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
 	var emitF emitF
 	emitF = func(state *genState) any {
-		return genNounsNWithReturn(customRand.Intn(n))
+		return genNounsNWithReturn(state.rand.Intn(n))
 	}
 	fieldMap[field.Name] = emitF
 	return nil
@@ -948,7 +952,7 @@ func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[stri
 func bindIPWithReturn(field Field, fieldMap map[string]any) error {
 	var emitF emitF
 	emitF = func(state *genState) any {
-		i0, i1, i2, i3 := randIP()
+		i0, i1, i2, i3 := randIP(state.rand)
 
 		return fmt.Sprintf("%d.%d.%d.%d", i0, i1, i2, i3)
 	}
@@ -956,11 +960,11 @@ func bindIPWithReturn(field Field, fieldMap map[string]any) error {
 	fieldMap[field.Name] = emitF
 	return nil
 }
-func randIP() (int, int, int, int) {
-	i0 := customRand.Intn(255)
-	i1 := customRand.Intn(255)
-	i2 := customRand.Intn(255)
-	i3 := customRand.Intn(255)
+func randIP(r *rand.Rand) (int, int, int, int) {
+	i0 := r.Intn(255)
+	i1 := r.Intn(255)
+	i2 := r.Intn(255)
+	i3 := r.Intn(255)
 
 	return i0, i1, i2, i3
 }
@@ -981,20 +985,22 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 		return err
 	}
 
-	if len(fieldCfg.Enum) > 0 {
-		var emitF emitF
-		idx := customRand.Intn(len(fieldCfg.Enum))
-		f, err := strconv.ParseInt(fieldCfg.Enum[idx], 10, 64)
+	// check that all the enum values are valid longs, if any
+	for i, v := range fieldCfg.Enum {
+		_, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
-			return fmt.Errorf("field %s enum value is not a long: %w", fieldCfg.Name, err)
+			return fmt.Errorf("field %s enum value #%d is not a long: %w", fieldCfg.Name, i, err)
 		}
+	}
 
-		emitF = func(state *genState) any {
+	if len(fieldCfg.Enum) > 0 {
+		emitF := func(state *genState) any {
+			idx := state.rand.Intn(len(fieldCfg.Enum))
+			f, _ := strconv.ParseInt(fieldCfg.Enum[idx], 10, 64)
 			return f
 		}
 
 		fieldMap[field.Name] = emitF
-
 		return nil
 	}
 
@@ -1011,23 +1017,23 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 			}
 
 			if fieldCfg.Fuzziness <= 0 {
-				dummyFunc = makeIntCounterFunc(previous, field)
+				dummyFunc = makeIntCounterFunc(state.rand, previous, field)
 
 				dummyInt = dummyFunc()
 			} else {
-				dummyInt = fuzzyIntCounter(previous, fieldCfg.Fuzziness)
+				dummyInt = fuzzyIntCounter(state.rand, previous, fieldCfg.Fuzziness)
 			}
 
 			if fieldCfg.CounterReset != nil {
 				switch fieldCfg.CounterReset.Strategy {
 				case config.CounterResetStrategyRandom:
 					// 50% chance to reset
-					if customRand.Intn(2) == 0 {
+					if state.rand.Intn(2) == 0 {
 						dummyInt = 0
 					}
 				case config.CounterResetStrategyProbabilistic:
 					// Probability% chance to reset
-					if customRand.Intn(100) < int(*fieldCfg.CounterReset.Probability) {
+					if state.rand.Intn(100) < int(*fieldCfg.CounterReset.Probability) {
 						dummyInt = 0
 					}
 				case config.CounterResetStrategyAfterN:
@@ -1047,11 +1053,10 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 		return nil
 	}
 
-	dummyFunc := makeIntFunc(fieldCfg, field)
-
 	if fieldCfg.Fuzziness <= 0 {
 		var emitF emitF
 		emitF = func(state *genState) any {
+			dummyFunc := makeIntFunc(state.rand, fieldCfg, field)
 			return dummyFunc()
 		}
 
@@ -1064,12 +1069,13 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 
 	var emitF emitF
 	emitF = func(state *genState) any {
+		dummyFunc := makeIntFunc(state.rand, fieldCfg, field)
 		var dummyInt int64
 		if previousDummyInt, ok := state.prevCache[field.Name].(int64); ok {
 			if previousDummyInt == 0 {
 				previousDummyInt = 1
 			}
-			dummyInt = fuzzyInt(previousDummyInt, fieldCfg.Fuzziness, min, max)
+			dummyInt = fuzzyInt(state.rand, previousDummyInt, fieldCfg.Fuzziness, min, max)
 		} else {
 			dummyInt = dummyFunc()
 		}
@@ -1081,34 +1087,34 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	return nil
 }
 
-func makeIntCounterFunc(previousDummyInt int64, field Field) func() int64 {
+func makeIntCounterFunc(r *rand.Rand, previousDummyInt int64, field Field) func() int64 {
 	var dummyFunc func() int64
 
 	switch {
 	case len(field.Example) == 0:
-		dummyFunc = func() int64 { return previousDummyInt + customRand.Int63n(10) }
+		dummyFunc = func() int64 { return previousDummyInt + r.Int63n(10) }
 	default:
 		totDigit := len(field.Example)
 		max := int64(math.Pow10(totDigit))
 		dummyFunc = func() int64 {
-			return previousDummyInt + customRand.Int63n(max)
+			return previousDummyInt + r.Int63n(max)
 		}
 	}
 
 	return dummyFunc
 }
 
-func makeFloatCounterFunc(previousDummyFloat float64, field Field) func() float64 {
+func makeFloatCounterFunc(r *rand.Rand, previousDummyFloat float64, field Field) func() float64 {
 	var dummyFunc func() float64
 
 	switch {
 	case len(field.Example) == 0:
-		dummyFunc = func() float64 { return previousDummyFloat + customRand.Float64()*10 }
+		dummyFunc = func() float64 { return previousDummyFloat + r.Float64()*10 }
 	default:
 		totDigit := len(field.Example)
 		max := math.Pow10(totDigit)
 		dummyFunc = func() float64 {
-			return previousDummyFloat + customRand.Float64()*max
+			return previousDummyFloat + r.Float64()*max
 		}
 	}
 
@@ -1132,20 +1138,22 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 		return err
 	}
 
-	if len(fieldCfg.Enum) > 0 {
-		var emitF emitF
-		idx := customRand.Intn(len(fieldCfg.Enum))
-		f, err := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
+	// check that all the enum values are valid doubles, if any
+	for i, v := range fieldCfg.Enum {
+		_, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			return fmt.Errorf("field %s enum value is not a double: %w", fieldCfg.Name, err)
+			return fmt.Errorf("field %s enum value #%d is not a double: %w", fieldCfg.Name, i, err)
 		}
+	}
 
-		emitF = func(state *genState) any {
+	if len(fieldCfg.Enum) > 0 {
+		emitF := func(state *genState) any {
+			idx := state.rand.Intn(len(fieldCfg.Enum))
+			f, _ := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
 			return f
 		}
 
 		fieldMap[field.Name] = emitF
-
 		return nil
 	}
 
@@ -1162,23 +1170,23 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 			}
 
 			if fieldCfg.Fuzziness <= 0 {
-				dummyFunc = makeFloatCounterFunc(previous, field)
+				dummyFunc = makeFloatCounterFunc(state.rand, previous, field)
 
 				dummyFloat = dummyFunc()
 			} else {
-				dummyFloat = fuzzyFloatCounter(previous, fieldCfg.Fuzziness)
+				dummyFloat = fuzzyFloatCounter(state.rand, previous, fieldCfg.Fuzziness)
 			}
 
 			if fieldCfg.CounterReset != nil {
 				switch fieldCfg.CounterReset.Strategy {
 				case config.CounterResetStrategyRandom:
 					// 50% chance to reset
-					if customRand.Intn(2) == 0 {
+					if state.rand.Intn(2) == 0 {
 						dummyFloat = 0
 					}
 				case config.CounterResetStrategyProbabilistic:
 					// Probability% chance to reset
-					if customRand.Intn(100) < int(*fieldCfg.CounterReset.Probability) {
+					if state.rand.Intn(100) < int(*fieldCfg.CounterReset.Probability) {
 						dummyFloat = 0
 					}
 				case config.CounterResetStrategyAfterN:
@@ -1198,11 +1206,10 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 		return nil
 	}
 
-	dummyFunc := makeFloatFunc(fieldCfg, field)
-
 	if fieldCfg.Fuzziness <= 0 {
 		var emitF emitF
 		emitF = func(state *genState) any {
+			dummyFunc := makeFloatFunc(state.rand, fieldCfg, field)
 			return dummyFunc()
 		}
 
@@ -1216,9 +1223,10 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 
 	var emitF emitF
 	emitF = func(state *genState) any {
+		dummyFunc := makeFloatFunc(state.rand, fieldCfg, field)
 		var dummyFloat float64
 		if previousDummyFloat, ok := state.prevCache[field.Name].(float64); ok {
-			dummyFloat = fuzzyFloat(previousDummyFloat, fieldCfg.Fuzziness, min, max)
+			dummyFloat = fuzzyFloat(state.rand, previousDummyFloat, fieldCfg.Fuzziness, min, max)
 		} else {
 			dummyFloat = dummyFunc()
 		}

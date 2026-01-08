@@ -82,12 +82,12 @@ func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) 
 
 }
 
-func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, totEvents uint64) (*GeneratorWithCustomTemplate, error) {
+func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, totEvents uint64, randSeed int64) (*GeneratorWithCustomTemplate, error) {
 	// Parse the template and extract relevant information
 	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
 
 	// Preprocess the fields, generating appropriate emit functions
-	state := newGenState()
+	state := newGenState(randSeed)
 	fieldMap := make(map[string]any)
 	fieldTypes := make(map[string]string)
 	for _, field := range fields {

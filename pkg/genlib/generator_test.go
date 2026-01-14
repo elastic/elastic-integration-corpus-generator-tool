@@ -20,7 +20,6 @@ func TestMain(m *testing.M) {
 	log.Printf("rand seed generator initialised with value `%d`\n", randSeed)
 	log.Printf("time now generator initialised with value `%s`\n", timeNow.UTC().Format(time.RFC3339Nano))
 
-	InitGeneratorRandSeed(randSeed)
 	InitGeneratorTimeNow(timeNow)
 
 	os.Exit(m.Run())
@@ -30,8 +29,8 @@ func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
 	flds, _, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
-	r := rand.New(rand.NewSource(rand.Int63()))
-	template, objectKeysField := generateCustomTemplateFromField(Config{}, flds, r)
+	state := newGenState(rand.Int63())
+	template, objectKeysField := generateCustomTemplateFromField(Config{}, flds, state)
 	flds = append(flds, objectKeysField...)
 	g, err := NewGeneratorWithCustomTemplate(template, Config{}, flds, uint64(b.N), rand.Int63())
 	defer func() {
@@ -58,8 +57,8 @@ func Benchmark_GeneratorTextTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
 	flds, _, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")
 
-	r := rand.New(rand.NewSource(rand.Int63()))
-	template, objectKeysField := generateTextTemplateFromField(Config{}, flds, r)
+	state := newGenState(rand.Int63())
+	template, objectKeysField := generateTextTemplateFromField(Config{}, flds, state)
 	flds = append(flds, objectKeysField...)
 
 	g, err := NewGeneratorWithTextTemplate(template, Config{}, flds, uint64(b.N), rand.Int63())

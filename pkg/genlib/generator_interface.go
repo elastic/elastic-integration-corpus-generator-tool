@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Pallinder/go-randomdata"
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 )
@@ -94,7 +94,8 @@ type Generator interface {
 
 type genState struct {
 	// random number generator
-	rand *rand.Rand
+	rand  *rand.Rand
+	faker *gofakeit.Faker
 	// event counter
 	counter uint64
 	// total events
@@ -119,7 +120,8 @@ func newGenState(randSeed int64) *genState {
 				return new(bytes.Buffer)
 			},
 		},
-		rand: rand.New(rand.NewSource(randSeed)),
+		rand:  rand.New(rand.NewSource(randSeed)),
+		faker: gofakeit.New(uint64(randSeed)),
 	}
 }
 
@@ -379,28 +381,24 @@ func bindDynamicObject(cfg Config, field Field, fieldMap map[string]any) error {
 	return nil
 }
 
-func genNounsN(n int, buf *bytes.Buffer) {
-
+func genNounsN(state *genState, n int, buf *bytes.Buffer) {
 	for i := 0; i < n-1; i++ {
-		buf.WriteString(randomdata.Noun())
+		buf.WriteString(state.faker.Noun())
 		buf.WriteByte(' ')
 	}
-
-	// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-	buf.WriteString(randomdata.Adjective())
-	buf.WriteString(randomdata.Noun())
+	// gofakeit.Adjective() + gofakeit.Noun() -> many different values
+	buf.WriteString(state.faker.Adjective())
+	buf.WriteString(state.faker.Noun())
 }
 
-func genNounsNWithReturn(n int) string {
+func genNounsNWithReturn(state *genState, n int) string {
 	value := ""
 	for i := 0; i < n-1; i++ {
-		value += randomdata.Noun() + " "
+		value += state.faker.Noun() + " "
 	}
-
-	// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-	value += randomdata.Adjective()
-	value += randomdata.Noun()
-
+	// gofakeit.Adjective() + gofakeit.Noun() -> many different values
+	value += state.faker.Adjective()
+	value += state.faker.Noun()
 	return value
 }
 
@@ -424,8 +422,8 @@ func bindConstantKeyword(field Field, fieldMap map[string]any) error {
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
-			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-			value = randomdata.Adjective() + randomdata.Noun()
+			// gofakeit.Adjective() + gofakeit.Noun() -> many different values
+			value = state.faker.Adjective() + state.faker.Noun()
 			state.prevCache[field.Name] = value
 		}
 		buf.WriteString(value)
@@ -453,11 +451,10 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 	} else {
 		var emitFNotReturn emitFNotReturn
 		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-			buf.WriteString(randomdata.Adjective() + randomdata.Noun())
+			// gofakeit.Adjective() + gofakeit.Noun() -> many different values
+			buf.WriteString(state.faker.Adjective() + state.faker.Noun())
 			return nil
 		}
-
 		fieldMap[field.Name] = emitFNotReturn
 	}
 	return nil
@@ -483,17 +480,15 @@ func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]any) er
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		for i := 0; i < N-1; i++ {
-			buf.WriteString(randomdata.Noun())
+			buf.WriteString(state.faker.Noun())
 			buf.WriteString(joiner)
 		}
-		// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-		buf.WriteString(randomdata.Adjective())
-		buf.WriteString(randomdata.Noun())
+		// gofakeit.Adjective() + gofakeit.Noun() -> many different values
+		buf.WriteString(state.faker.Adjective())
+		buf.WriteString(state.faker.Noun())
 		return nil
 	}
-
 	fieldMap[field.Name] = emitFNotReturn
-
 	return nil
 }
 
@@ -544,7 +539,7 @@ func bindGeoPoint(field Field, fieldMap map[string]any) error {
 func bindWordN(field Field, n int, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
-		genNounsN(state.rand.Intn(n), buf)
+		genNounsN(state, state.rand.Intn(n), buf)
 		return nil
 	}
 
@@ -903,13 +898,12 @@ func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 	emitF = func(state *genState) any {
 		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
-			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-			value = randomdata.Adjective() + randomdata.Noun()
+			// gofakeit.Adjective() + gofakeit.Noun() -> many different values
+			value = state.faker.Adjective() + state.faker.Noun()
 			state.prevCache[field.Name] = value
 		}
 		return value
 	}
-
 	fieldMap[field.Name] = emitF
 	return nil
 }
@@ -930,10 +924,9 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 	} else {
 		var emitF emitF
 		emitF = func(state *genState) any {
-			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-			return randomdata.Adjective() + randomdata.Noun()
+			// gofakeit.Adjective() + gofakeit.Noun() -> many different values
+			return state.faker.Adjective() + state.faker.Noun()
 		}
-
 		fieldMap[field.Name] = emitF
 	}
 	return nil
@@ -944,16 +937,13 @@ func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[stri
 	emitF = func(state *genState) any {
 		value := ""
 		for i := 0; i < N-1; i++ {
-			value += randomdata.Noun() + joiner
+			value += state.faker.Noun() + joiner
 		}
-
-		// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
-		value += randomdata.Adjective()
-		value += randomdata.Noun()
-
+		// gofakeit.Adjective() + gofakeit.Noun() -> many different values
+		value += state.faker.Adjective()
+		value += state.faker.Noun()
 		return value
 	}
-
 	fieldMap[field.Name] = emitF
 	return nil
 }
@@ -998,7 +988,7 @@ func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
 func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
 	var emitF emitF
 	emitF = func(state *genState) any {
-		return genNounsNWithReturn(state.rand.Intn(n))
+		return genNounsNWithReturn(state, state.rand.Intn(n))
 	}
 	fieldMap[field.Name] = emitF
 	return nil

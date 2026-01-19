@@ -19,6 +19,10 @@ func TestVersionCmd_default(t *testing.T) {
 	b := new(bytes.Buffer)
 	cmd.SetOut(b)
 
+	version.Tag = ""
+	version.SourceDateEpoch = ""
+	version.CommitHash = "undefined"
+
 	err := cmd.Execute()
 	require.Nil(t, err)
 

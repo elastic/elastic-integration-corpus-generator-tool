@@ -1,114 +1,481 @@
-# Fields generation configuration
+# Fields Configuration
 
-Fields generation configuration are applied to fields defined in Fields definition file to tweak how the data is generated.
+Fields configuration allows you to customize how data is generated for each field. This guide covers all available configuration options with examples.
 
-They must be added to a file named `configs.yml` in the assets template folder of a data stream.
+## Table of Contents
 
-## Config entries definition
+- [Overview](#overview)
+- [Configuration File Format](#configuration-file-format)
+- [Configuration Options](#configuration-options)
+  - [name](#name)
+  - [value](#value)
+  - [enum](#enum)
+  - [range](#range)
+  - [fuzziness](#fuzziness)
+  - [cardinality](#cardinality)
+  - [counter](#counter)
+  - [counter_reset](#counter_reset)
+  - [period](#period)
+  - [object_keys](#object_keys)
+- [Complete Example](#complete-example)
+- [Common Patterns](#common-patterns)
 
-The config file is a yaml file consisting of root level `fields` object that's an array of config entry.
+## Overview
 
-For each config entry the following fields are available:
-- `name` *mandatory*: dotted path field, matching an entry in [Fields definition](./glossary.md#fields-definition)
-- `fuzziness` *optional (`long` and `double` type only)*: when generating data you could want generated values to change in a known interval. Fuzziness allow to specify the maximum delta a generated value can have from the previous value (for the same field), as a delta percentage that will be applied below and above the previous value; value must be between 0.0 and 1.0, where 0 is 0% and 1 is 100%. When not specified there is no constraint on the generated values, boundaries will be defined by the underlying field type. For example, `fuzziness: 0.1`, assuming a `double` field type and with first value generated `10.`, will generate the second value in the range between `9.` and `11.`. Assuming the second value generated will be `10.5`, the third one will be generated in the range between `9.45` and `11.55`, and so on.
-- `range` *optional (`long` and `double` type only)*: value will be generated between `min` and `max`. If `fuzziness` is defined, the value will be generated within a delta defined by `fuzziness` from the previous value. In any case (`fuzziness` or not) the value would not escape the `min`/`max` bounds.
-- `range` *optional (`date` type only)*: value will be generated between `from` and `to`. Only one between `from` and `to` can be set, in this case the dates will be generated between `from`/`to` and `time.Now()`. Progressive order of the generated dates is always assured regardless the interval involving `from`, `to` and `time.Now()` is positive or negative. If both at least one of `from` or `to` and `period` settings are defined an error will be returned and the generator will stop. The format of the date must be parsable by the following golang date format: `2006-01-02T15:04:05.999999999-07:00`. 
-- `cardinality` *optional*: exact number of different values to generate for the field; note that this setting may not be respected if not enough events are generated. For example, `cardinality: 1000` with `100` generated events would produce `100` different values, not `1000`. Similarly, the setting may not be respected if other settings prevents it. For example, `cardinality: 10` with an `enum` list of only 5 strings would produce `5` different values, not `10`. Or `cardinality: 10` for a `long` with `range.min: 1` and `range.max: 5` would produce `5` different values, not `10`. 
-- `counter` *optional (`long` and  `double` type only)*: if set to `true` values will be generated only ever-increasing. If `fuzziness` is not defined, the positive delta from the previous value will be totally random and unbounded. For example, assuming `counter: true`, assuming a `int` field type and with first value generated `10.`, will generate the second value with any random value greater than `10`, like `11` or `987615243`. If `fuzziness` is defined, the value will be generated within a positive delta defined by `fuzziness` from the previous value. For example, `fuzziness: 0.1`, assuming `counter: true` , assuming a `double` field type and with first value generated `10.`, will generate the second value in the range between `10.` and `11.`. Assuming the second value generated will be `10.5`, the third one will be generated in the range between `10.5` and `11.55`, and so on. If both `counter: true` and at least one of `range.min` or `range.max` settings are defined an error will be returned and the generator will stop.
-- `counter_reset` *optional (only applicable when `counter: true`)*: configures how and when the counter should reset. It has the following sub-fields:
-  - `strategy` *mandatory*: defines the reset strategy. Possible values are:
-      - `"random"`: resets the counter at random intervals.
-      - `"probabilistic"`: resets the counter based on a probability.
-      - `"after_n"`: resets the counter after a specific number of iterations.
-  - `probability` *required when strategy is "probabilistic"*: an integer between 1 and 100 representing the percentage chance of reset for each generated value.
-  - `reset_after_n` *required when strategy is "after_n"*: an integer specifying the number of values to generate before resetting the counter.
+Configuration files (`configs.yml`) let you control:
 
-Note: The `counter_reset` configuration is only applicable when `counter` is set to `true`. 
-- `period` *optional (`date` type only)*: values will be evenly generated between `time.Now()` and `time.Now().Add(period)`, where period is expressed as `time.Duration`. It accepts also a negative duration: in this case  values will be evenly generated between `time.Now().Add(period)` and `time.Now()`. If both `period` and at least one of `range.from` or `range.to` settings are defined an error will be returned and the generator will stop.
-- `object_keys` *optional (`object` type only)*: list of field names to generate in a object field type; if not specified a random number of field names will be generated in the object filed type
-- `value` *optional*: hardcoded value to set for the field (any `cardinality` will be ignored)
-- `enum` *optional (`keyword` type only)*: list of strings to randomly chose from a value to set for the field (any `cardinality` will be applied limited to the size of the `enum` values)
+- **What values** are generated (fixed values, enums, ranges)
+- **How values change** over time (fuzziness, counters)
+- **How many unique values** exist (cardinality)
+- **When dates occur** (periods, date ranges)
 
-If you have an `object` type field that you defined one or multiple `object_keys` for, you can reference them as a root level field with their own customisation. Beware that if a `cardinality` is set for the `object` type field, cardinality will be ignored for the children `object_keys` fields.
+## Configuration File Format
 
-## Example configuration
+Configuration files are YAML with a root `fields` array:
 
 ```yaml
 fields:
-  - name: timestamp
-    period: "1h"
-  - name: lastSnapshot
+  - name: field_name
+    # configuration options...
+  - name: another_field
+    # configuration options...
+```
+
+Place the file as `configs.yml` in your template folder, or specify a path with `--config-file`.
+
+## Configuration Options
+
+### `name`
+
+**Required.** The dotted path to the field, matching an entry in `fields.yml`.
+
+```yaml
+fields:
+  - name: host.name
+  - name: aws.dynamodb.metrics.ReadCapacity.avg
+  - name: data_stream.type
+```
+
+### `value`
+
+Set a fixed value for the field. Overrides all other generation logic.
+
+**Applies to:** All field types
+
+```yaml
+fields:
+  # String value
+  - name: data_stream.type
+    value: metrics
+
+  # Numeric value
+  - name: version
+    value: 2
+
+  # Boolean value
+  - name: enabled
+    value: true
+
+  # Array value (for indexed access in templates)
+  - name: instance_types
+    value: ["t2.micro", "t2.small", "t2.medium", "t2.large"]
+```
+
+**Template usage with array values:**
+
+```yaml
+# configs.yml
+fields:
+  - name: instance_type_index
     range:
-      from: "2023-11-23T11:29:48-00:00"
-      to: "2023-12-13T01:39:58-00:00"
-  - name: aws.dynamodb.metrics.AccountMaxReads.max
+      min: 0
+      max: 3
+  - name: instance_types
+    value: ["t2.micro", "t2.small", "t2.medium", "t2.large"]
+```
+
+```text
+{{- $idx := generate "instance_type_index" -}}
+{{- $types := generate "instance_types" -}}
+{"instance_type": "{{ index $types $idx }}"}
+```
+
+### `enum`
+
+Randomly select from a list of allowed values.
+
+**Applies to:** `keyword` type
+
+```yaml
+fields:
+  # Equal probability
+  - name: log.level
+    enum: ["DEBUG", "INFO", "WARN", "ERROR"]
+
+  # Weighted probability (repeat values)
+  - name: http.response.status_code
+    # 80% 200, 10% 400, 10% 500
+    enum: ["200", "200", "200", "200", "200", "200", "200", "200", "400", "500"]
+
+  # Combined with cardinality
+  - name: action
+    enum: ["ACCEPT", "REJECT"]
+    cardinality: 2  # Only these 2 values
+```
+
+### `range`
+
+Constrain generated values within bounds.
+
+**Applies to:** `long`, `double`, `date` types
+
+#### Numeric Range
+
+```yaml
+fields:
+  # Integer range
+  - name: http.response.status_code
+    range:
+      min: 100
+      max: 599
+
+  # Floating-point range
+  - name: cpu.percent
+    range:
+      min: 0.0
+      max: 100.0
+
+  # One-sided range
+  - name: bytes
+    range:
+      min: 0  # No upper bound
+```
+
+#### Date Range
+
+```yaml
+fields:
+  # Specific date range
+  - name: event.created
+    range:
+      from: "2024-01-01T00:00:00-00:00"
+      to: "2024-01-31T23:59:59-00:00"
+
+  # From a date to now
+  - name: last_seen
+    range:
+      from: "2024-01-01T00:00:00-00:00"
+      # 'to' defaults to time.Now()
+
+  # From now to a future date
+  - name: expires_at
+    range:
+      to: "2025-12-31T23:59:59-00:00"
+      # 'from' defaults to time.Now()
+```
+
+**Date format:** `2006-01-02T15:04:05.999999999-07:00`
+
+**Note:** Cannot combine `range` with `period` for date fields.
+
+### `fuzziness`
+
+Control how much consecutive values can change. Creates smoother, more realistic data progressions.
+
+**Applies to:** `long`, `double` types
+
+**Value:** Decimal between 0.0 and 1.0 (percentage)
+
+```yaml
+fields:
+  # CPU usage changes by max 10% between events
+  - name: cpu.percent
     fuzziness: 0.1
     range:
       min: 0
       max: 100
-  - name: aws.dynamodb.metrics.AccountMaxTableLevelReads.max
+
+  # Network bytes with 5% variation
+  - name: network.bytes
     fuzziness: 0.05
-    range:
-      min: 0
-      max: 50
-    cardinality: 20
-  - name: aws.dynamodb.metrics.AccountProvisionedReadCapacityUtilization.avg
-    fuzziness: 0.1
-  - name: aws.cloudwatch.namespace
-    cardinality: 1000
+```
+
+**How it works:**
+
+1. First value: `10.0`
+2. With `fuzziness: 0.1`, next value is between `9.0` and `11.0`
+3. If next value is `10.5`, following value is between `9.45` and `11.55`
+
+**Combined with range:** Values stay within range bounds even with fuzziness.
+
+### `cardinality`
+
+Limit the number of unique values generated for a field.
+
+**Applies to:** All field types
+
+```yaml
+fields:
+  # Only 100 unique host names
+  - name: host.name
+    cardinality: 100
+
+  # Only 10 unique IP addresses
+  - name: source.ip
+    cardinality: 10
+
+  # Combined with enum (cardinality limited by enum size)
+  - name: region
+    enum: ["us-east-1", "us-west-2", "eu-west-1"]
+    cardinality: 3
+```
+
+**Important:** Cardinality may not be respected if:
+- Not enough events are generated
+- Other settings prevent it (e.g., small enum list)
+- Range is too narrow
+
+### `counter`
+
+Generate ever-increasing values (monotonic counters).
+
+**Applies to:** `long`, `double` types
+
+```yaml
+fields:
+  # Unbounded counter
+  - name: request.count
+    counter: true
+
+  # Counter with controlled growth (fuzziness)
+  - name: bytes.total
+    counter: true
+    fuzziness: 0.1  # Increases by max 10% each time
+```
+
+**Note:** Cannot combine `counter: true` with `range.min` or `range.max`.
+
+### `counter_reset`
+
+Configure how and when counters reset to zero.
+
+**Applies to:** Fields with `counter: true`
+
+#### Random Reset
+
+Reset at random intervals:
+
+```yaml
+fields:
+  - name: bytes.total
+    counter: true
+    counter_reset:
+      strategy: "random"
+```
+
+#### Probabilistic Reset
+
+Reset based on probability for each event:
+
+```yaml
+fields:
+  - name: bytes.total
+    counter: true
+    counter_reset:
+      strategy: "probabilistic"
+      probability: 5  # 5% chance to reset each event
+```
+
+#### Reset After N Events
+
+Reset after a specific number of events:
+
+```yaml
+fields:
+  - name: bytes.total
+    counter: true
+    counter_reset:
+      strategy: "after_n"
+      reset_after_n: 100  # Reset every 100 events
+```
+
+### `period`
+
+Generate dates within a duration from the current time.
+
+**Applies to:** `date` type
+
+```yaml
+fields:
+  # Last hour
+  - name: "@timestamp"
+    period: "-1h"
+
+  # Next 24 hours
+  - name: scheduled_at
+    period: "24h"
+
+  # Last 7 days
+  - name: event.created
+    period: "-168h"  # 7 * 24 hours
+```
+
+**Format:** Go duration string (e.g., `"1h"`, `"30m"`, `"24h"`, `"-1h"`)
+
+**Note:** Cannot combine `period` with `range.from` or `range.to`.
+
+### `object_keys`
+
+Specify keys to generate in object-type fields.
+
+**Applies to:** `object` type
+
+```yaml
+fields:
+  # Define object keys
   - name: aws.dimensions.*
     object_keys:
       - TableName
       - Operation
+      - Region
+
+  # Configure individual keys
+  - name: aws.dimensions.TableName
+    enum: ["users", "orders", "products"]
+
+  - name: aws.dimensions.Operation
+    enum: ["GetItem", "PutItem", "Query", "Scan"]
+
+  - name: aws.dimensions.Region
+    cardinality: 5
+```
+
+**Note:** If `cardinality` is set on the parent object, it overrides cardinality on child keys.
+
+## Complete Example
+
+```yaml
+# configs.yml - AWS DynamoDB metrics configuration
+fields:
+  # Fixed values
   - name: data_stream.type
     value: metrics
   - name: data_stream.dataset
     value: aws.dynamodb
   - name: data_stream.namespace
     value: default
+
+  # Date configuration
+  - name: "@timestamp"
+    period: "-1h"
+
+  # Cardinality for realistic distribution
+  - name: aws.cloudwatch.namespace
+    cardinality: 1000
+  - name: host.name
+    cardinality: 50
+
+  # Numeric ranges with fuzziness
+  - name: aws.dynamodb.metrics.AccountMaxReads.max
+    fuzziness: 0.1
+    range:
+      min: 0
+      max: 100
+
+  - name: aws.dynamodb.metrics.AccountMaxTableLevelReads.max
+    fuzziness: 0.05
+    range:
+      min: 0
+      max: 50
+    cardinality: 20
+
+  # Object with specific keys
+  - name: aws.dimensions.*
+    object_keys:
+      - TableName
+      - Operation
+
   - name: aws.dimensions.TableName
-    enum: ["table1", "table2"]
+    enum: ["users", "orders", "products", "inventory"]
+
   - name: aws.dimensions.Operation
-    cardinality: 2
+    cardinality: 5
+
+  # Counter with reset
+  - name: aws.dynamodb.metrics.ConsumedReadCapacityUnits.sum
+    counter: true
+    fuzziness: 0.1
+    counter_reset:
+      strategy: "after_n"
+      reset_after_n: 1000
 ```
 
-Related [fields definition](./writing-templates.md#fieldsyml---fields-definition)
+## Common Patterns
+
+### Simulate Multiple Hosts
+
 ```yaml
-- name: timestamp
-  type: date
-- name: lastSnapshot
-  type: date
-- name: data_stream.type
-  type: constant_keyword
-- name: data_stream.dataset
-  type: constant_keyword
-- name: data_stream.namespace
-  type: constant_keyword
-- name: aws
-  type: group
-  fields:
-    - name: dimensions
-      type: group
-      fields:
-        - name: Operation
-          type: keyword
-        - name: TableName
-          type: keyword
-    - name: dynamodb
-      type: group
-      fields:
-        - name: metrics
-          type: group
-          fields:
-            - name: AccountProvisionedReadCapacityUtilization.avg
-              type: double
-            - name: AccountMaxReads.max
-              type: long
-            - name: AccountMaxTableLevelReads.max
-              type: long
-    - name: cloudwatch
-      type: group
-      fields:
-        - name: namespace
-          type: keyword
+fields:
+  - name: host.name
+    cardinality: 100  # 100 unique hosts
+  - name: host.ip
+    cardinality: 100  # Match host count
 ```
+
+### Weighted Distribution
+
+```yaml
+fields:
+  - name: log.level
+    # 70% INFO, 20% WARN, 10% ERROR
+    enum: ["INFO", "INFO", "INFO", "INFO", "INFO", "INFO", "INFO", "WARN", "WARN", "ERROR"]
+```
+
+### Time-Series Metrics
+
+```yaml
+fields:
+  - name: "@timestamp"
+    period: "-1h"
+  - name: cpu.percent
+    range:
+      min: 0
+      max: 100
+    fuzziness: 0.1  # Smooth changes
+```
+
+### Cumulative Counters
+
+```yaml
+fields:
+  - name: network.bytes.total
+    counter: true
+    fuzziness: 0.05
+    counter_reset:
+      strategy: "after_n"
+      reset_after_n: 1440  # Reset daily (assuming 1 event/minute)
+```
+
+### Correlated Fields
+
+Use array values with index for correlation:
+
+```yaml
+fields:
+  - name: region_index
+    range:
+      min: 0
+      max: 2
+    cardinality: 3
+  - name: regions
+    value: ["us-east-1", "us-west-2", "eu-west-1"]
+  - name: endpoints
+    value: ["api.us-east.example.com", "api.us-west.example.com", "api.eu.example.com"]
+```
+
+## See Also
+
+- [Field Types](./field-types.md) - Supported Elasticsearch field types
+- [Writing Templates](./writing-templates.md) - Use configured fields in templates
+- [Cardinality](./cardinality.md) - Deep dive into cardinality
+- [Dimensionality](./dimensionality.md) - Configure object fields

@@ -48,11 +48,12 @@ func NewGenerator(config Config, fs afero.Fs, location string) (GeneratorCorpus,
 func NewGeneratorWithTemplate(config Config, fs afero.Fs, location, templateType string) (GeneratorCorpus, error) {
 
 	var templateTypeValue int
-	if templateType == "placeholder" {
+	switch templateType {
+	case "placeholder":
 		templateTypeValue = templateTypeCustom
-	} else if templateType == "gotext" {
+	case "gotext":
 		templateTypeValue = templateTypeGoText
-	} else {
+	default:
 		return GeneratorCorpus{}, ErrNotValidTemplate
 	}
 
@@ -115,11 +116,12 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 	if len(template) == 0 {
 		evgen, err = genlib.NewGenerator(gc.config, fields, totEvents, randSeed)
 	} else {
-		if gc.templateType == templateTypeCustom {
+		switch gc.templateType {
+		case templateTypeCustom:
 			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields, totEvents, randSeed)
-		} else if gc.templateType == templateTypeGoText {
+		case templateTypeGoText:
 			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields, totEvents, randSeed)
-		} else {
+		default:
 			return ErrNotValidTemplate
 		}
 
@@ -236,9 +238,9 @@ func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPat
 // used as a bulkPayloadFilename.
 // NOTE: does not prevent command injection or ensure complete escaping of input
 func sanitizeFilename(s string) string {
-	s = strings.Replace(s, " ", "-", -1)
-	s = strings.Replace(s, ":", "-", -1)
-	s = strings.Replace(s, "/", "-", -1)
-	s = strings.Replace(s, "\\", "-", -1)
+	s = strings.ReplaceAll(s, " ", "-")
+	s = strings.ReplaceAll(s, ":", "-")
+	s = strings.ReplaceAll(s, "/", "-")
+	s = strings.ReplaceAll(s, "\\", "-")
 	return s
 }

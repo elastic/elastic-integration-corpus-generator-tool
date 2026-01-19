@@ -38,7 +38,7 @@ func TestCacheDir_valueFromEnv(t *testing.T) {
 	settings.Init()
 
 	expected := "foobar"
-	os.Setenv("ELASTIC_INTEGRATION_CORPUS_CACHE_DIR", expected)
+	_ = os.Setenv("ELASTIC_INTEGRATION_CORPUS_CACHE_DIR", expected)
 	got := settings.CacheDir()
 
 	assert.Equal(t, expected, got)
@@ -67,7 +67,7 @@ func TestConfigDir_valueFromEnv(t *testing.T) {
 	settings.Init()
 
 	expected := "foobar"
-	os.Setenv("ELASTIC_INTEGRATION_CORPUS_CONFIG_DIR", expected)
+	_ = os.Setenv("ELASTIC_INTEGRATION_CORPUS_CONFIG_DIR", expected)
 	got := settings.ConfigDir()
 
 	assert.Equal(t, expected, got)
@@ -96,7 +96,7 @@ func TestDataDir_valueFromEnv(t *testing.T) {
 	settings.Init()
 
 	expected := "foobar"
-	os.Setenv("ELASTIC_INTEGRATION_CORPUS_DATA_DIR", expected)
+	_ = os.Setenv("ELASTIC_INTEGRATION_CORPUS_DATA_DIR", expected)
 	got := settings.DataDir()
 
 	assert.Equal(t, expected, got)

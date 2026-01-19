@@ -142,11 +142,17 @@ func getFieldsFilesAndDataStreamType(ctx context.Context, baseURL, integration, 
 	}
 
 	body, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, "", err
+	}
 	if err = json.Unmarshal(body, &downloadPayload); err != nil {
 		return nil, "", err
 	}
 
 	downloadURL, err := makeDownloadURL(baseURL, downloadPayload.Download)
+	if err != nil {
+		return nil, "", err
+	}
 	r, err = getFromURL(ctx, downloadURL.String())
 	defer func(r io.ReadCloser) {
 		if r != nil {

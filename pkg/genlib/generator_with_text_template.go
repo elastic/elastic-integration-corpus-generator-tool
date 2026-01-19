@@ -13,7 +13,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 )
 
-var generateOnFieldNotInFieldsYaml = errors.New("generate called on a field not present in fields yaml definition")
+var errGenerateOnFieldNotInFieldsYaml = errors.New("generate called on a field not present in fields yaml definition")
 
 // GeneratorWithTextTemplate
 type GeneratorWithTextTemplate struct {
@@ -114,7 +114,7 @@ func (gen *GeneratorWithTextTemplate) emit(buf *bytes.Buffer) error {
 	if gen.totEvents == 0 || gen.state.counter < gen.totEvents {
 		select {
 		case <-gen.errChan:
-			return generateOnFieldNotInFieldsYaml
+			return errGenerateOnFieldNotInFieldsYaml
 		default:
 			err := gen.tpl.Execute(buf, nil)
 			if err != nil {

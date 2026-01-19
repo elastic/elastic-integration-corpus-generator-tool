@@ -503,7 +503,7 @@ func Test_FieldDateWithCustomTemplate(t *testing.T) {
 				t.Errorf("Data generated before now, diff: %v", diff)
 			}
 
-			previous = ts
+			_ = ts // suppress ineffectual assignment warning
 		}
 	}
 }

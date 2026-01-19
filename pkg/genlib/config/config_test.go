@@ -20,7 +20,7 @@ func TestLoadConfig(t *testing.T) {
 	configFile := "/cfg.yml"
 
 	data := []byte(sampleConfigFile)
-	afero.WriteFile(fs, configFile, data, 0666)
+	_ = afero.WriteFile(fs, configFile, data, 0666)
 
 	cfg, err := LoadConfig(fs, configFile)
 	assert.Nil(t, err)
@@ -36,7 +36,7 @@ func TestSetField(t *testing.T) {
 	configFile := "/cfg.yml"
 
 	data := []byte(sampleConfigFile)
-	afero.WriteFile(fs, configFile, data, 0666)
+	_ = afero.WriteFile(fs, configFile, data, 0666)
 
 	cfg, err := LoadConfig(fs, configFile)
 	assert.Nil(t, err)
@@ -148,14 +148,7 @@ func TestIsValidForDateField(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = config.ValidForDateField()
-			if testCase.hasError && err == nil {
-
-			}
-
-			if !testCase.hasError && err != nil {
-
-			}
+			_ = config.ValidForDateField()
 		})
 	}
 }
@@ -235,14 +228,7 @@ func TestIsValidCounter(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = config.ValidCounter()
-			if testCase.hasError && err == nil {
-
-			}
-
-			if !testCase.hasError && err != nil {
-
-			}
+			_ = config.ValidCounter()
 		})
 	}
 }

@@ -59,7 +59,7 @@ const (
 var (
 	replacer             = strings.NewReplacer(".*", "")
 	fieldNormalizerRegex = regexp.MustCompile("[^a-zA-Z0-9]")
-	keywordRegex         = regexp.MustCompile("(\\.|-|_|\\s){1,1}")
+	keywordRegex         = regexp.MustCompile(`(\.|-|_|\s){1,1}`)
 )
 
 // getIntTypeBounds returns the min and max values for a given integer field type
@@ -158,33 +158,9 @@ func bindField(cfg Config, field Field, fieldMap map[string]any, withReturn bool
 	}
 }
 
-// Check for dupes O(n)
-func isDupeByteSlice(va []bytes.Buffer, dst []byte) bool {
-	var dupe bool
-	for _, b := range va {
-		if bytes.Equal(dst, b.Bytes()) {
-			dupe = true
-			break
-		}
-	}
-	return dupe
-}
-
 func isDupeAny(va map[any]struct{}, dst any) bool {
 	_, ok := va[dst]
 	return ok
-}
-
-// Check for dupes O(n)
-func isDupeInterface(va []any, dst any) bool {
-	var dupe bool
-	for _, b := range va {
-		if b == dst {
-			dupe = true
-			break
-		}
-	}
-	return dupe
 }
 
 func bindByType(cfg Config, field Field, fieldMap map[string]any) (err error) {
@@ -420,7 +396,7 @@ func randGeoPoint(r *rand.Rand) (int, int, int, int) {
 }
 
 func bindConstantKeyword(field Field, fieldMap map[string]any) error {
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
@@ -438,7 +414,7 @@ func bindConstantKeyword(field Field, fieldMap map[string]any) error {
 
 func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	if len(fieldCfg.Enum) > 0 {
-		var emitFNotReturn emitFNotReturn
+		var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 			idx := state.rand.Intn(len(fieldCfg.Enum))
 			buf.WriteString(fieldCfg.Enum[idx])
@@ -451,7 +427,7 @@ func bindKeyword(fieldCfg ConfigField, field Field, fieldMap map[string]any) err
 
 		return bindJoinRand(field, totWords, joiner, fieldMap)
 	} else {
-		var emitFNotReturn emitFNotReturn
+		var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
 			buf.WriteString(randomdata.Adjective() + randomdata.Noun())
@@ -480,7 +456,7 @@ func totWordsAndJoiner(fieldExample string) (int, string) {
 	return totWords, joiner
 }
 func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]any) error {
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		for i := 0; i < N-1; i++ {
 			buf.WriteString(randomdata.Noun())
@@ -503,7 +479,7 @@ func bindStatic(field Field, v any, fieldMap map[string]any) error {
 		return err
 	}
 
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		buf.Write(vstr)
 		return nil
@@ -514,7 +490,7 @@ func bindStatic(field Field, v any, fieldMap map[string]any) error {
 }
 
 func bindBool(field Field, fieldMap map[string]any) error {
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		switch state.rand.Int() % 2 {
 		case 0:
@@ -530,7 +506,7 @@ func bindBool(field Field, fieldMap map[string]any) error {
 }
 
 func bindGeoPoint(field Field, fieldMap map[string]any) error {
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		lat, latD, long, longD := randGeoPoint(state.rand)
 		_, err := fmt.Fprintf(buf, "%d.%d,%d.%d", lat, latD, long, longD)
@@ -542,7 +518,7 @@ func bindGeoPoint(field Field, fieldMap map[string]any) error {
 }
 
 func bindWordN(field Field, n int, fieldMap map[string]any) error {
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		genNounsN(state.rand.Intn(n), buf)
 		return nil
@@ -557,7 +533,7 @@ func bindNearTime(fieldCfg ConfigField, field Field, fieldMap map[string]any) er
 		return err
 	}
 
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		newTime := nearTime(fieldCfg, state)
 
@@ -612,7 +588,7 @@ func nearTime(fieldCfg ConfigField, state *genState) time.Time {
 }
 
 func bindIP(field Field, fieldMap map[string]any) error {
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		i0, i1, i2, i3 := randIP(state.rand)
 
@@ -645,8 +621,8 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 	}
 
 	if fieldCfg.Counter {
-		var emitFNotReturn emitFNotReturn
-		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
+	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 			previous := int64(1)
 			var dummyInt int64
 			var dummyFunc func() int64
@@ -676,8 +652,8 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 	}
 
 	if fieldCfg.Fuzziness <= 0 {
-		var emitFNotReturn emitFNotReturn
-		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
+	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 			dummyFunc, err := makeIntFunc(state.rand, fieldCfg, field)
 			if err != nil {
 				return err
@@ -696,7 +672,7 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 	min, _ := fieldCfg.Range.MinAsFloat64()
 	max, _ := fieldCfg.Range.MaxAsFloat64()
 
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		dummyFunc, err := makeIntFunc(state.rand, fieldCfg, field)
 		if err != nil {
@@ -742,8 +718,8 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 	}
 
 	if fieldCfg.Counter {
-		var emitFNotReturn emitFNotReturn
-		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
+	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 			previous := float64(1)
 			var dummyFloat float64
 			var dummyFunc func() float64
@@ -771,8 +747,8 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 	}
 
 	if fieldCfg.Fuzziness <= 0 {
-		var emitFNotReturn emitFNotReturn
-		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
+	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 			dummyFunc := makeFloatFunc(state.rand, fieldCfg, field)
 			dummyFloat := dummyFunc()
 			_, err := fmt.Fprintf(buf, "%f", dummyFloat)
@@ -786,7 +762,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 	min, _ := fieldCfg.Range.MinAsFloat64()
 	max, _ := fieldCfg.Range.MaxAsFloat64()
 
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		dummyFunc := makeFloatFunc(state.rand, fieldCfg, field)
 		var dummyFloat float64
@@ -825,7 +801,7 @@ func bindCardinality(cfg Config, field Field, fieldMap map[string]any) error {
 		return errors.New("cannot bind cardinality")
 	}
 
-	var emitFNotReturn emitFNotReturn
+	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 		// Have we rolled over once?  If not, generate a value and cache it.
 		if len(state.prevCacheCardinality[field.Name]) < cardinality {
@@ -899,7 +875,7 @@ func makeDynamicStubWithReturn(boundF any) emitF {
 }
 
 func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		value, ok := state.prevCache[field.Name].(string)
 		if !ok {
@@ -916,8 +892,8 @@ func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 
 func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	if len(fieldCfg.Enum) > 0 {
-		var emitF emitF
-		emitF = func(state *genState) any {
+		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
+	emitF = func(state *genState) any {
 			idx := state.rand.Intn(len(fieldCfg.Enum))
 			return fieldCfg.Enum[idx]
 		}
@@ -928,8 +904,8 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 
 		return bindJoinRandWithReturn(field, totWords, joiner, fieldMap)
 	} else {
-		var emitF emitF
-		emitF = func(state *genState) any {
+		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
+	emitF = func(state *genState) any {
 			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
 			return randomdata.Adjective() + randomdata.Noun()
 		}
@@ -940,7 +916,7 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 }
 
 func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[string]any) error {
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		value := ""
 		for i := 0; i < N-1; i++ {
@@ -959,7 +935,7 @@ func bindJoinRandWithReturn(field Field, N int, joiner string, fieldMap map[stri
 }
 
 func bindStaticWithReturn(field Field, v any, fieldMap map[string]any) error {
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		return v
 	}
@@ -969,7 +945,7 @@ func bindStaticWithReturn(field Field, v any, fieldMap map[string]any) error {
 }
 
 func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		switch state.rand.Int() % 2 {
 		case 0:
@@ -984,7 +960,7 @@ func bindBoolWithReturn(field Field, fieldMap map[string]any) error {
 }
 
 func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		lat, latD, long, longD := randGeoPoint(state.rand)
 		return fmt.Sprintf("%d.%d,%d.%d", lat, latD, long, longD)
@@ -996,7 +972,7 @@ func bindGeoPointWithReturn(field Field, fieldMap map[string]any) error {
 }
 
 func bindWordNWithReturn(field Field, n int, fieldMap map[string]any) error {
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		return genNounsNWithReturn(state.rand.Intn(n))
 	}
@@ -1009,7 +985,7 @@ func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[stri
 		return err
 	}
 
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		return nearTime(fieldCfg, state)
 	}
@@ -1019,7 +995,7 @@ func bindNearTimeWithReturn(fieldCfg ConfigField, field Field, fieldMap map[stri
 }
 
 func bindIPWithReturn(field Field, fieldMap map[string]any) error {
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		i0, i1, i2, i3 := randIP(state.rand)
 
@@ -1063,7 +1039,8 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	}
 
 	if len(fieldCfg.Enum) > 0 {
-		emitF := func(state *genState) any {
+		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
+	emitF = func(state *genState) any {
 			idx := state.rand.Intn(len(fieldCfg.Enum))
 			f, _ := strconv.ParseInt(fieldCfg.Enum[idx], 10, 64)
 			return f
@@ -1074,9 +1051,8 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	}
 
 	if fieldCfg.Counter {
-		var emitF emitF
-
-		emitF = func(state *genState) any {
+		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
+	emitF = func(state *genState) any {
 			previous := int64(1)
 			var dummyInt int64
 			var dummyFunc func() int64
@@ -1123,8 +1099,8 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	}
 
 	if fieldCfg.Fuzziness <= 0 {
-		var emitF emitF
-		emitF = func(state *genState) any {
+		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
+	emitF = func(state *genState) any {
 			dummyFunc, err := makeIntFunc(state.rand, fieldCfg, field)
 			if err != nil {
 				panic(err)
@@ -1139,7 +1115,7 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	min, _ := fieldCfg.Range.MinAsFloat64()
 	max, _ := fieldCfg.Range.MaxAsFloat64()
 
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		dummyFunc, err := makeIntFunc(state.rand, fieldCfg, field)
 		if err != nil {
@@ -1222,7 +1198,8 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	}
 
 	if len(fieldCfg.Enum) > 0 {
-		emitF := func(state *genState) any {
+		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
+	emitF = func(state *genState) any {
 			idx := state.rand.Intn(len(fieldCfg.Enum))
 			f, _ := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
 			return f
@@ -1233,9 +1210,8 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	}
 
 	if fieldCfg.Counter {
-		var emitF emitF
-
-		emitF = func(state *genState) any {
+		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
+	emitF = func(state *genState) any {
 			previous := float64(1)
 			var dummyFloat float64
 			var dummyFunc func() float64
@@ -1282,8 +1258,8 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	}
 
 	if fieldCfg.Fuzziness <= 0 {
-		var emitF emitF
-		emitF = func(state *genState) any {
+		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
+	emitF = func(state *genState) any {
 			dummyFunc := makeFloatFunc(state.rand, fieldCfg, field)
 			return dummyFunc()
 		}
@@ -1296,7 +1272,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	min, _ := fieldCfg.Range.MinAsFloat64()
 	max, _ := fieldCfg.Range.MaxAsFloat64()
 
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		dummyFunc := makeFloatFunc(state.rand, fieldCfg, field)
 		var dummyFloat float64
@@ -1330,7 +1306,7 @@ func bindCardinalityWithReturn(cfg Config, field Field, fieldMap map[string]any)
 
 	// We will wrap the function we just generated
 	boundFWithReturn := fieldMap[field.Name].(emitF)
-	var emitF emitF
+	var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
 	emitF = func(state *genState) any {
 		var value any
 		// Have we rolled over once?  If not, generate a value and cache it.

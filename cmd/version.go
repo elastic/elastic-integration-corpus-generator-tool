@@ -33,7 +33,7 @@ func VersionCmd() *cobra.Command {
 			sb.WriteString(fmt.Sprintf("(source date: %s)", version.SourceTimeFormatted()))
 
 			// NOTE: allow replacing stdout for testing
-			fmt.Fprint(cmd.OutOrStdout(), sb.String())
+			_, _ = fmt.Fprint(cmd.OutOrStdout(), sb.String())
 
 			return nil
 		},

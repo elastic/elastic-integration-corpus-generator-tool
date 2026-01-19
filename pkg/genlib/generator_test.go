@@ -181,7 +181,6 @@ func Benchmark_GeneratorCustomTemplateVPCFlowLogs(b *testing.B) {
   enum: ["NODATA", "OK", "SKIPDATA"]
 `
 	cfg, err := config.LoadConfigFromYaml([]byte(configYaml))
-
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -306,7 +305,6 @@ func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
   enum: ["OK", "SKIPDATA"]
 `
 	cfg, err := config.LoadConfigFromYaml([]byte(configYaml))
-
 	if err != nil {
 		b.Fatal(err)
 	}

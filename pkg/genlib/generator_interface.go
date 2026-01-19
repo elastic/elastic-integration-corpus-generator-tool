@@ -63,7 +63,7 @@ var (
 )
 
 // getIntTypeBounds returns the min and max values for a given integer field type
-func getIntTypeBounds(fieldType string) (min int64, max int64) {
+func getIntTypeBounds(fieldType string) (min, max int64) {
 	switch fieldType {
 	case FieldTypeByte:
 		return math.MinInt8, math.MaxInt8
@@ -164,7 +164,6 @@ func isDupeAny(va map[any]struct{}, dst any) bool {
 }
 
 func bindByType(cfg Config, field Field, fieldMap map[string]any) (err error) {
-
 	fieldCfg, _ := cfg.GetField(field.Name)
 
 	switch field.Type {
@@ -341,7 +340,6 @@ func bindObject(cfg Config, fieldCfg ConfigField, field Field, fieldMap map[stri
 }
 
 func bindDynamicObject(cfg Config, field Field, fieldMap map[string]any) error {
-
 	// Temporary fieldMap which we pass to the bind function,
 	// then extract the generated emitFunction for use in the stub.
 	dynMap := make(map[string]any)
@@ -356,7 +354,6 @@ func bindDynamicObject(cfg Config, field Field, fieldMap map[string]any) error {
 }
 
 func genNounsN(n int, buf *bytes.Buffer) {
-
 	for i := 0; i < n-1; i++ {
 		buf.WriteString(randomdata.Noun())
 		buf.WriteByte(' ')
@@ -455,6 +452,7 @@ func totWordsAndJoiner(fieldExample string) (int, string) {
 
 	return totWords, joiner
 }
+
 func bindJoinRand(field Field, N int, joiner string, fieldMap map[string]any) error {
 	var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
 	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
@@ -559,7 +557,6 @@ func nearTime(fieldCfg ConfigField, state *genState) time.Time {
 		} else {
 			fieldCfg.Period = timeNowToBind.UTC().Sub(from.UTC())
 		}
-
 	}
 
 	if errFrom != nil && errTo == nil {
@@ -622,7 +619,7 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 
 	if fieldCfg.Counter {
 		var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 			previous := int64(1)
 			var dummyInt int64
 			var dummyFunc func() int64
@@ -653,7 +650,7 @@ func bindLong(fieldCfg ConfigField, field Field, fieldMap map[string]any) error 
 
 	if fieldCfg.Fuzziness <= 0 {
 		var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 			dummyFunc, err := makeIntFunc(state.rand, fieldCfg, field)
 			if err != nil {
 				return err
@@ -719,7 +716,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 
 	if fieldCfg.Counter {
 		var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 			previous := float64(1)
 			var dummyFloat float64
 			var dummyFunc func() float64
@@ -748,7 +745,7 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 
 	if fieldCfg.Fuzziness <= 0 {
 		var emitFNotReturn emitFNotReturn //nolint:staticcheck // explicit type needed for type assertion
-	emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
+		emitFNotReturn = func(state *genState, buf *bytes.Buffer) error {
 			dummyFunc := makeFloatFunc(state.rand, fieldCfg, field)
 			dummyFloat := dummyFunc()
 			_, err := fmt.Fprintf(buf, "%f", dummyFloat)
@@ -782,7 +779,6 @@ func bindDouble(fieldCfg ConfigField, field Field, fieldMap map[string]any) erro
 }
 
 func bindCardinality(cfg Config, field Field, fieldMap map[string]any) error {
-
 	fieldCfg, _ := cfg.GetField(field.Name)
 	cardinality := fieldCfg.Cardinality
 
@@ -893,7 +889,7 @@ func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
-	emitF = func(state *genState) any {
+		emitF = func(state *genState) any {
 			idx := state.rand.Intn(len(fieldCfg.Enum))
 			return fieldCfg.Enum[idx]
 		}
@@ -905,7 +901,7 @@ func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[strin
 		return bindJoinRandWithReturn(field, totWords, joiner, fieldMap)
 	} else {
 		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
-	emitF = func(state *genState) any {
+		emitF = func(state *genState) any {
 			// randomdata.Adjective() + randomdata.Noun() -> 364 * 527 (~190k) different values
 			return randomdata.Adjective() + randomdata.Noun()
 		}
@@ -1005,6 +1001,7 @@ func bindIPWithReturn(field Field, fieldMap map[string]any) error {
 	fieldMap[field.Name] = emitF
 	return nil
 }
+
 func randIP(r *rand.Rand) (int, int, int, int) {
 	i0 := r.Intn(255)
 	i1 := r.Intn(255)
@@ -1013,6 +1010,7 @@ func randIP(r *rand.Rand) (int, int, int, int) {
 
 	return i0, i1, i2, i3
 }
+
 func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
 	if err := fieldCfg.ValidCounter(); err != nil {
 		return err
@@ -1040,7 +1038,7 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
-	emitF = func(state *genState) any {
+		emitF = func(state *genState) any {
 			idx := state.rand.Intn(len(fieldCfg.Enum))
 			f, _ := strconv.ParseInt(fieldCfg.Enum[idx], 10, 64)
 			return f
@@ -1052,7 +1050,7 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 
 	if fieldCfg.Counter {
 		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
-	emitF = func(state *genState) any {
+		emitF = func(state *genState) any {
 			previous := int64(1)
 			var dummyInt int64
 			var dummyFunc func() int64
@@ -1100,7 +1098,7 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 
 	if fieldCfg.Fuzziness <= 0 {
 		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
-	emitF = func(state *genState) any {
+		emitF = func(state *genState) any {
 			dummyFunc, err := makeIntFunc(state.rand, fieldCfg, field)
 			if err != nil {
 				panic(err)
@@ -1199,7 +1197,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
-	emitF = func(state *genState) any {
+		emitF = func(state *genState) any {
 			idx := state.rand.Intn(len(fieldCfg.Enum))
 			f, _ := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
 			return f
@@ -1211,7 +1209,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 
 	if fieldCfg.Counter {
 		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
-	emitF = func(state *genState) any {
+		emitF = func(state *genState) any {
 			previous := float64(1)
 			var dummyFloat float64
 			var dummyFunc func() float64
@@ -1259,7 +1257,7 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 
 	if fieldCfg.Fuzziness <= 0 {
 		var emitF emitF //nolint:staticcheck // explicit type needed for type assertion
-	emitF = func(state *genState) any {
+		emitF = func(state *genState) any {
 			dummyFunc := makeFloatFunc(state.rand, fieldCfg, field)
 			return dummyFunc()
 		}
@@ -1291,7 +1289,6 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 }
 
 func bindCardinalityWithReturn(cfg Config, field Field, fieldMap map[string]any) error {
-
 	fieldCfg, _ := cfg.GetField(field.Name)
 	cardinality := fieldCfg.Cardinality
 
@@ -1367,7 +1364,6 @@ func bindObjectWithReturn(cfg Config, fieldCfg ConfigField, field Field, fieldMa
 }
 
 func bindDynamicObjectWithReturn(cfg Config, field Field, fieldMap map[string]any) error {
-
 	// Temporary fieldMap which we pass to the bind function,
 	// then extract the generated emitFunction for use in the stub.
 	dynMap := make(map[string]any)

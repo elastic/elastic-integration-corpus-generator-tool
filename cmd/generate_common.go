@@ -7,11 +7,13 @@ import (
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib"
 )
 
-var packageRegistryBaseURL string
-var configFile string
-var totEvents uint64
-var timeNowAsString string
-var randSeed int64
+var (
+	packageRegistryBaseURL string
+	configFile             string
+	totEvents              uint64
+	timeNowAsString        string
+	randSeed               int64
+)
 
 func getTimeNowFromFlag(timeNowAsString string) (time.Time, error) {
 	if len(timeNowAsString) > 0 {

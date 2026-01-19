@@ -2,8 +2,9 @@ package fields
 
 import (
 	"context"
-	"golang.org/x/sync/semaphore"
 	"sync"
+
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -84,7 +85,6 @@ func (f *Cache) LoadFields(ctx context.Context, integration, stream, version str
 	f.mut.RUnlock()
 
 	if !ok {
-
 		if flds, _, err = LoadFields(ctx, f.baseUrl, integration, stream, version); err != nil {
 			return nil, err
 		} else {

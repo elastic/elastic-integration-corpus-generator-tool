@@ -2,19 +2,20 @@ package config
 
 import (
 	"errors"
-	"time"
-
 	"math"
 	"os"
+	"time"
 
 	"github.com/elastic/go-ucfg/yaml"
 	"github.com/spf13/afero"
 )
 
-var errRangeBoundNotSet = errors.New("range bound not set")
-var errRangeTimeNotSet = errors.New("range time not set")
-var errRangeInvalidConfig = errors.New("range defining both `period` and `from`/`to`")
-var errCounterInvalidConfig = errors.New("both `range` and `counter` defined")
+var (
+	errRangeBoundNotSet     = errors.New("range bound not set")
+	errRangeTimeNotSet      = errors.New("range time not set")
+	errRangeInvalidConfig   = errors.New("range defining both `period` and `from`/`to`")
+	errCounterInvalidConfig = errors.New("both `range` and `counter` defined")
+)
 
 type TimeRange struct {
 	time.Time
@@ -177,7 +178,6 @@ func LoadConfig(fs afero.Fs, configFile string) (Config, error) {
 }
 
 func LoadConfigFromYaml(c []byte) (Config, error) {
-
 	cfg, err := yaml.NewConfig(c)
 	if err != nil {
 		return Config{}, err

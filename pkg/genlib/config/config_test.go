@@ -1,12 +1,13 @@
 package config
 
 import (
-	"github.com/elastic/go-ucfg/yaml"
-	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 	"math"
 	"testing"
 	"time"
+
+	"github.com/elastic/go-ucfg/yaml"
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 )
 
 const sampleConfigFile = `---
@@ -20,7 +21,7 @@ func TestLoadConfig(t *testing.T) {
 	configFile := "/cfg.yml"
 
 	data := []byte(sampleConfigFile)
-	_ = afero.WriteFile(fs, configFile, data, 0666)
+	_ = afero.WriteFile(fs, configFile, data, 0o666)
 
 	cfg, err := LoadConfig(fs, configFile)
 	assert.Nil(t, err)
@@ -36,7 +37,7 @@ func TestSetField(t *testing.T) {
 	configFile := "/cfg.yml"
 
 	data := []byte(sampleConfigFile)
-	_ = afero.WriteFile(fs, configFile, data, 0666)
+	_ = afero.WriteFile(fs, configFile, data, 0o666)
 
 	cfg, err := LoadConfig(fs, configFile)
 	assert.Nil(t, err)

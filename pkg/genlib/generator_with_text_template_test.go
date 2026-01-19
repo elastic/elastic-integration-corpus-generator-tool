@@ -31,7 +31,6 @@ func Test_EmptyCaseWithTextTemplate(t *testing.T) {
 }
 
 func Test_CardinalityWithTextTemplate(t *testing.T) {
-
 	test_CardinalityTWithTextTemplate[string](t, FieldTypeKeyword)
 	test_CardinalityTWithTextTemplate[int8](t, FieldTypeByte)
 	test_CardinalityTWithTextTemplate[int16](t, FieldTypeShort)
@@ -201,7 +200,6 @@ func Test_FieldBoolWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldConstKeywordWithTextTemplate(t *testing.T) {
-
 	fld := Field{
 		Name:  "alpha",
 		Type:  FieldTypeConstantKeyword,
@@ -233,7 +231,6 @@ func Test_FieldStaticOverrideStringWithTextTemplate(t *testing.T) {
 
 func Test_FieldStaticOverrideNumericWithTextTemplate(t *testing.T) {
 	fld := Field{
-
 		Name: "alpha",
 		Type: FieldTypeKeyword,
 	}
@@ -869,7 +866,6 @@ func Test_FieldFloatsWithTextTemplate(t *testing.T) {
 	_testNumericWithTextTemplate[float32](t, FieldTypeFloat)
 	_testNumericWithTextTemplate[float32](t, FieldTypeHalfFloat)
 	_testNumericWithTextTemplate[float64](t, FieldTypeScaledFloat)
-
 }
 
 func Test_FieldIntegersWithTextTemplate(t *testing.T) {
@@ -895,7 +891,7 @@ func _testNumericWithTextTemplate[T any](t *testing.T, ty string) {
 	})
 }
 
-func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, template []byte) T {
+func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml, template []byte) T {
 	var err error
 	var cfg Config
 
@@ -925,7 +921,6 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 
 	if !ok {
 		t.Errorf("Missing key %v", fld.Name)
-
 	}
 
 	return v
@@ -933,7 +928,6 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 
 func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64, randSeed int64) Generator {
 	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totEvents, randSeed)
-
 	if err != nil {
 		t.Fatal(err)
 	}

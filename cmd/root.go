@@ -10,7 +10,6 @@ import (
 
 // RootCmd creates and returns root cmd for elastic-integration-corpus-generator-tool.
 func RootCmd() *cobra.Command {
-
 	rootCmd := &cobra.Command{
 		Use:          "elastic-integration-corpus-generator-tool",
 		Long:         "elastic-integration-corpus-generator-tool - Command line tool used for generating events corpus dynamically given a specific integration.",

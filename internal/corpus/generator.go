@@ -28,8 +28,10 @@ const (
 
 var ErrNotValidTemplate = errors.New("please, pass --template-type as one of 'placeholder' or 'gotext'")
 
-type Config = config.Config
-type Fields = fields.Fields
+type (
+	Config = config.Config
+	Fields = fields.Fields
+)
 
 // timestamp represent a function providing a timestamp.
 // It's used to allow replacing the value with a known one during testing.
@@ -46,7 +48,6 @@ func NewGenerator(config Config, fs afero.Fs, location string) (GeneratorCorpus,
 }
 
 func NewGeneratorWithTemplate(config Config, fs afero.Fs, location, templateType string) (GeneratorCorpus, error) {
-
 	var templateTypeValue int
 	switch templateType {
 	case "placeholder":
@@ -104,8 +105,10 @@ func (gc GeneratorCorpus) bulkPayloadFilenameWithTemplate(templatePath string) s
 	return filename
 }
 
-var corpusLocPerm = os.FileMode(0770)
-var corpusPerm = os.FileMode(0660)
+var (
+	corpusLocPerm = os.FileMode(0o770)
+	corpusPerm    = os.FileMode(0o660)
+)
 
 func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totEvents uint64, timeNow time.Time, randSeed int64, createPayload []byte, f afero.File) error {
 	genlib.InitGeneratorTimeNow(timeNow)
@@ -124,7 +127,6 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 		default:
 			return ErrNotValidTemplate
 		}
-
 	}
 
 	if err != nil {

@@ -15,6 +15,12 @@ import (
 	"github.com/elastic/elastic-integration-corpus-generator-tool/internal/settings"
 )
 
+func unsetenv(name string) func() {
+	return func() {
+		os.Unsetenv(name)
+	}
+}
+
 func TestCacheDir(t *testing.T) {
 	settings.Init()
 	t.Cleanup(viper.Reset)
@@ -39,6 +45,7 @@ func TestCacheDir_customValue(t *testing.T) {
 func TestCacheDir_valueFromEnv(t *testing.T) {
 	settings.Init()
 	t.Cleanup(viper.Reset)
+	t.Cleanup(unsetenv("ELASTIC_INTEGRATION_CORPUS_CACHE_DIR"))
 
 	expected := "foobar"
 	os.Setenv("ELASTIC_INTEGRATION_CORPUS_CACHE_DIR", expected)
@@ -72,6 +79,7 @@ func TestConfigDir_customValue(t *testing.T) {
 func TestConfigDir_valueFromEnv(t *testing.T) {
 	settings.Init()
 	t.Cleanup(viper.Reset)
+	t.Cleanup(unsetenv("ELASTIC_INTEGRATION_CORPUS_CONFIG_DIR"))
 
 	expected := "foobar"
 	os.Setenv("ELASTIC_INTEGRATION_CORPUS_CONFIG_DIR", expected)
@@ -105,6 +113,7 @@ func TestDataDir_customValue(t *testing.T) {
 func TestDataDir_valueFromEnv(t *testing.T) {
 	settings.Init()
 	t.Cleanup(viper.Reset)
+	t.Cleanup(unsetenv("ELASTIC_INTEGRATION_CORPUS_DATA_DIR"))
 
 	expected := "foobar"
 	os.Setenv("ELASTIC_INTEGRATION_CORPUS_DATA_DIR", expected)

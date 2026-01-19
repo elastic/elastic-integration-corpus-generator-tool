@@ -7,7 +7,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -43,11 +42,6 @@ func TemplateCmd() *cobra.Command {
 			fs := afero.NewOsFs()
 			location := viper.GetString("corpora_location")
 
-			cfg, err := config.LoadConfig(fs, configFile)
-			if err != nil {
-				return err
-			}
-
 			var errs []error
 			datasetFolder := fmt.Sprintf("%s.%s", args[0], args[1])
 			schema := fmt.Sprintf("schema-%s", flagSchema)
@@ -61,18 +55,27 @@ func TemplateCmd() *cobra.Command {
 
 			fieldsDefinitionFile := "fields.yml"
 			fieldsDefinitionPath := filepath.Join(datasetFolderPath, fieldsDefinitionFile)
-			if _, err := os.Stat(templatePath); errors.Is(err, os.ErrNotExist) {
+			if _, err := os.Stat(fieldsDefinitionPath); errors.Is(err, os.ErrNotExist) {
 				errs = append(errs, errors.New(fmt.Sprintf("fields definition file %s does not exist", fieldsDefinitionPath)))
 			}
 
-			fieldsConfigFile := "configs.yml"
-			fieldsConfigFilePath := filepath.Join(datasetFolderPath, fieldsConfigFile)
-			if _, err := os.Stat(fieldsConfigFilePath); errors.Is(err, os.ErrNotExist) {
-				log.Printf("fields config file %s does not exist", fieldsConfigFilePath)
+			// Use local configs.yml if no --config-file flag provided
+			configFilePath := configFile
+			if configFilePath == "" {
+				fieldsConfigFile := "configs.yml"
+				fieldsConfigFilePath := filepath.Join(datasetFolderPath, fieldsConfigFile)
+				if _, err := os.Stat(fieldsConfigFilePath); err == nil {
+					configFilePath = fieldsConfigFilePath
+				}
 			}
 
 			if len(errs) > 0 {
 				return multierr.Combine(errs...)
+			}
+
+			cfg, err := config.LoadConfig(fs, configFilePath)
+			if err != nil {
+				return err
 			}
 
 			fc, err := corpus.NewGeneratorWithTemplate(cfg, afero.NewOsFs(), location, templateType)

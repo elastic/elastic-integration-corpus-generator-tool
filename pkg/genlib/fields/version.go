@@ -56,7 +56,6 @@ func MapVersion(ctx context.Context, baseUrl, integration, kibanaVersion string)
 }
 
 func makeSearchURL(baseURL, integration, kibanaVersion string) (*url.URL, error) {
-
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err

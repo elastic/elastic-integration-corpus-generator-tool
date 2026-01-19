@@ -5,10 +5,11 @@
 package settings
 
 import (
-	"github.com/OpenPeeDeeP/xdg"
-	"github.com/spf13/viper"
 	"os"
 	"path"
+
+	"github.com/OpenPeeDeeP/xdg"
+	"github.com/spf13/viper"
 )
 
 // Init initalize settings and default values

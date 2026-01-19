@@ -79,7 +79,6 @@ func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) 
 	}
 
 	return orderedFields, templateFieldsMap, fieldPrefixBuffer
-
 }
 
 func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, totEvents uint64, randSeed int64) (*GeneratorWithCustomTemplate, error) {

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/elastic/go-ucfg/yaml"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +15,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/elastic/go-ucfg/yaml"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -34,7 +35,6 @@ type yamlManifest struct {
 }
 
 func LoadFields(ctx context.Context, baseURL, integration, dataStream, version string) (Fields, string, error) {
-
 	fieldsContent, dataStreamType, err := getFieldsFilesAndDataStreamType(ctx, baseURL, integration, dataStream, version)
 	if err != nil {
 		return nil, dataStreamType, err
@@ -105,7 +105,6 @@ func LoadFieldsWithTemplate(ctx context.Context, fieldYamlPath string) (Fields, 
 }
 
 func makePackageURL(baseURL, integration, version string) (*url.URL, error) {
-
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
@@ -116,7 +115,6 @@ func makePackageURL(baseURL, integration, version string) (*url.URL, error) {
 }
 
 func makeDownloadURL(baseURL, donwloadPath string) (*url.URL, error) {
-
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
@@ -142,11 +140,17 @@ func getFieldsFilesAndDataStreamType(ctx context.Context, baseURL, integration, 
 	}
 
 	body, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, "", err
+	}
 	if err = json.Unmarshal(body, &downloadPayload); err != nil {
 		return nil, "", err
 	}
 
 	downloadURL, err := makeDownloadURL(baseURL, downloadPayload.Download)
+	if err != nil {
+		return nil, "", err
+	}
 	r, err = getFromURL(ctx, downloadURL.String())
 	defer func(r io.ReadCloser) {
 		if r != nil {
@@ -231,9 +235,7 @@ func getFieldsFilesAndDataStreamType(ctx context.Context, baseURL, integration, 
 }
 
 func getFromURL(ctx context.Context, srcURL string) (io.ReadCloser, error) {
-
 	req, err := http.NewRequestWithContext(ctx, "GET", srcURL, nil)
-
 	if err != nil {
 		return nil, err
 	}

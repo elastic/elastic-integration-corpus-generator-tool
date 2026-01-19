@@ -34,7 +34,7 @@ func TemplateCmd() *cobra.Command {
 
 			datasetFolder := filepath.Join("assets", "templates", fmt.Sprintf("%s.%s", args[0], args[1]))
 			if _, err := os.Stat(datasetFolder); errors.Is(err, os.ErrNotExist) {
-				return errors.New(fmt.Sprintf("dataset folder %s does not exists", datasetFolder))
+				return fmt.Errorf("dataset folder %s does not exists", datasetFolder)
 			}
 
 			return nil
@@ -56,13 +56,13 @@ func TemplateCmd() *cobra.Command {
 			templateFile := fmt.Sprintf("%s.tpl", templateType)
 			templatePath := filepath.Join(datasetFolderPath, templateFile)
 			if _, err := os.Stat(templatePath); errors.Is(err, os.ErrNotExist) {
-				errs = append(errs, errors.New(fmt.Sprintf("template file %s does not exist", templatePath)))
+				errs = append(errs, fmt.Errorf("template file %s does not exist", templatePath))
 			}
 
 			fieldsDefinitionFile := "fields.yml"
 			fieldsDefinitionPath := filepath.Join(datasetFolderPath, fieldsDefinitionFile)
 			if _, err := os.Stat(templatePath); errors.Is(err, os.ErrNotExist) {
-				errs = append(errs, errors.New(fmt.Sprintf("fields definition file %s does not exist", fieldsDefinitionPath)))
+				errs = append(errs, fmt.Errorf("fields definition file %s does not exist", fieldsDefinitionPath))
 			}
 
 			fieldsConfigFile := "configs.yml"

@@ -28,8 +28,10 @@ const (
 
 var ErrNotValidTemplate = errors.New("please, pass --template-type as one of 'placeholder' or 'gotext'")
 
-type Config = config.Config
-type Fields = fields.Fields
+type (
+	Config = config.Config
+	Fields = fields.Fields
+)
 
 // timestamp represent a function providing a timestamp.
 // It's used to allow replacing the value with a known one during testing.
@@ -46,13 +48,13 @@ func NewGenerator(config Config, fs afero.Fs, location string) (GeneratorCorpus,
 }
 
 func NewGeneratorWithTemplate(config Config, fs afero.Fs, location, templateType string) (GeneratorCorpus, error) {
-
 	var templateTypeValue int
-	if templateType == "placeholder" {
+	switch templateType {
+	case "placeholder":
 		templateTypeValue = templateTypeCustom
-	} else if templateType == "gotext" {
+	case "gotext":
 		templateTypeValue = templateTypeGoText
-	} else {
+	default:
 		return GeneratorCorpus{}, ErrNotValidTemplate
 	}
 
@@ -103,8 +105,10 @@ func (gc GeneratorCorpus) bulkPayloadFilenameWithTemplate(templatePath string) s
 	return filename
 }
 
-var corpusLocPerm = os.FileMode(0770)
-var corpusPerm = os.FileMode(0660)
+var (
+	corpusLocPerm = os.FileMode(0o770)
+	corpusPerm    = os.FileMode(0o660)
+)
 
 func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields, totEvents uint64, timeNow time.Time, randSeed int64, createPayload []byte, f afero.File) error {
 	genlib.InitGeneratorTimeNow(timeNow)
@@ -115,14 +119,14 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 	if len(template) == 0 {
 		evgen, err = genlib.NewGenerator(gc.config, fields, totEvents, randSeed)
 	} else {
-		if gc.templateType == templateTypeCustom {
+		switch gc.templateType {
+		case templateTypeCustom:
 			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields, totEvents, randSeed)
-		} else if gc.templateType == templateTypeGoText {
+		case templateTypeGoText:
 			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields, totEvents, randSeed)
-		} else {
+		default:
 			return ErrNotValidTemplate
 		}
-
 	}
 
 	if err != nil {
@@ -236,9 +240,9 @@ func (gc GeneratorCorpus) GenerateWithTemplate(templatePath, fieldsDefinitionPat
 // used as a bulkPayloadFilename.
 // NOTE: does not prevent command injection or ensure complete escaping of input
 func sanitizeFilename(s string) string {
-	s = strings.Replace(s, " ", "-", -1)
-	s = strings.Replace(s, ":", "-", -1)
-	s = strings.Replace(s, "/", "-", -1)
-	s = strings.Replace(s, "\\", "-", -1)
+	s = strings.ReplaceAll(s, " ", "-")
+	s = strings.ReplaceAll(s, ":", "-")
+	s = strings.ReplaceAll(s, "/", "-")
+	s = strings.ReplaceAll(s, "\\", "-")
 	return s
 }

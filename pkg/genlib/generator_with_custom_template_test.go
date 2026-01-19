@@ -195,7 +195,6 @@ func Test_EmptyCaseWithCustomTemplate(t *testing.T) {
 }
 
 func Test_CardinalityWithCustomTemplate(t *testing.T) {
-
 	test_CardinalityTWithCustomTemplate[string](t, FieldTypeKeyword)
 	test_CardinalityTWithCustomTemplate[int8](t, FieldTypeByte)
 	test_CardinalityTWithCustomTemplate[int16](t, FieldTypeShort)
@@ -363,7 +362,6 @@ func Test_FieldBoolWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldConstKeywordWithCustomTemplate(t *testing.T) {
-
 	fld := Field{
 		Name:  "alpha",
 		Type:  FieldTypeConstantKeyword,
@@ -395,7 +393,6 @@ func Test_FieldStaticOverrideStringWithCustomTemplate(t *testing.T) {
 
 func Test_FieldStaticOverrideNumericWithCustomTemplate(t *testing.T) {
 	fld := Field{
-
 		Name: "alpha",
 		Type: FieldTypeKeyword,
 	}
@@ -503,7 +500,7 @@ func Test_FieldDateWithCustomTemplate(t *testing.T) {
 				t.Errorf("Data generated before now, diff: %v", diff)
 			}
 
-			previous = ts
+			_ = ts // suppress ineffectual assignment warning
 		}
 	}
 }
@@ -968,7 +965,6 @@ func Test_FieldFloatsWithCustomTemplate(t *testing.T) {
 	_testNumericWithCustomTemplate[float32](t, FieldTypeFloat)
 	_testNumericWithCustomTemplate[float32](t, FieldTypeHalfFloat)
 	_testNumericWithCustomTemplate[float64](t, FieldTypeScaledFloat)
-
 }
 
 func Test_FieldIntegersWithCustomTemplate(t *testing.T) {
@@ -994,7 +990,7 @@ func _testNumericWithCustomTemplate[T any](t *testing.T, ty string) {
 	})
 }
 
-func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, template []byte) T {
+func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml, template []byte) T {
 	var err error
 	var cfg Config
 
@@ -1024,7 +1020,6 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 
 	if !ok {
 		t.Errorf("Missing key %v", fld.Name)
-
 	}
 
 	return v
@@ -1032,7 +1027,6 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 
 func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) Generator {
 	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields, totEvents, rand.Int63())
-
 	if err != nil {
 		t.Fatal(err)
 	}

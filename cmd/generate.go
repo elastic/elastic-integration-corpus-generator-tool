@@ -7,6 +7,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+
 	"github.com/elastic/elastic-integration-corpus-generator-tool/internal/corpus"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"github.com/spf13/afero"
@@ -15,9 +16,11 @@ import (
 	"go.uber.org/multierr"
 )
 
-var integrationPackage string
-var dataStream string
-var packageVersion string
+var (
+	integrationPackage string
+	dataStream         string
+	packageVersion     string
+)
 
 func GenerateCmd() *cobra.Command {
 	generateCmd := &cobra.Command{

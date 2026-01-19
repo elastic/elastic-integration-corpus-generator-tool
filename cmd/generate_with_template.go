@@ -7,6 +7,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+
 	"github.com/elastic/elastic-integration-corpus-generator-tool/internal/corpus"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"github.com/spf13/afero"
@@ -17,8 +18,10 @@ import (
 
 var templateType string
 
-var templatePath string
-var fieldsDefinitionPath string
+var (
+	templatePath         string
+	fieldsDefinitionPath string
+)
 
 func GenerateWithTemplateCmd() *cobra.Command {
 	generateWithTemplateCmd := &cobra.Command{

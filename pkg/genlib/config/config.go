@@ -2,19 +2,20 @@ package config
 
 import (
 	"errors"
-	"time"
-
 	"math"
 	"os"
+	"time"
 
 	"github.com/elastic/go-ucfg/yaml"
 	"github.com/spf13/afero"
 )
 
-var rangeBoundNotSet = errors.New("range bound not set")
-var rangeTimeNotSet = errors.New("range time not set")
-var rangeInvalidConfig = errors.New("range defining both `period` and `from`/`to`")
-var counterInvalidConfig = errors.New("both `range` and `counter` defined")
+var (
+	errRangeBoundNotSet     = errors.New("range bound not set")
+	errRangeTimeNotSet      = errors.New("range time not set")
+	errRangeInvalidConfig   = errors.New("range defining both `period` and `from`/`to`")
+	errCounterInvalidConfig = errors.New("both `range` and `counter` defined")
+)
 
 type TimeRange struct {
 	time.Time
@@ -92,7 +93,7 @@ func (cf ConfigField) ValidateCounterResetProbabilistic() error {
 
 func (cf ConfigField) ValidForDateField() error {
 	if cf.Period.Abs() > 0 && (cf.Range.From != nil || cf.Range.To != nil) {
-		return rangeInvalidConfig
+		return errRangeInvalidConfig
 	}
 
 	return nil
@@ -100,7 +101,7 @@ func (cf ConfigField) ValidForDateField() error {
 
 func (cf ConfigField) ValidCounter() error {
 	if cf.Counter && (cf.Range.Min != nil || cf.Range.Max != nil) {
-		return counterInvalidConfig
+		return errCounterInvalidConfig
 	}
 
 	return nil
@@ -108,7 +109,7 @@ func (cf ConfigField) ValidCounter() error {
 
 func (r Range) FromAsTime() (time.Time, error) {
 	if r.From == nil {
-		return time.Time{}, rangeTimeNotSet
+		return time.Time{}, errRangeTimeNotSet
 	}
 
 	return r.From.Time, nil
@@ -116,7 +117,7 @@ func (r Range) FromAsTime() (time.Time, error) {
 
 func (r Range) ToAsTime() (time.Time, error) {
 	if r.To == nil {
-		return time.Time{}, rangeTimeNotSet
+		return time.Time{}, errRangeTimeNotSet
 	}
 
 	return r.To.Time, nil
@@ -124,7 +125,7 @@ func (r Range) ToAsTime() (time.Time, error) {
 
 func (r Range) MinAsInt64() (int64, error) {
 	if r.Min == nil {
-		return 0, rangeBoundNotSet
+		return 0, errRangeBoundNotSet
 	}
 
 	return int64(*r.Min), nil
@@ -132,7 +133,7 @@ func (r Range) MinAsInt64() (int64, error) {
 
 func (r Range) MaxAsInt64() (int64, error) {
 	if r.Max == nil {
-		return math.MaxInt64, rangeBoundNotSet
+		return math.MaxInt64, errRangeBoundNotSet
 	}
 
 	return int64(*r.Max), nil
@@ -140,7 +141,7 @@ func (r Range) MaxAsInt64() (int64, error) {
 
 func (r Range) MinAsFloat64() (float64, error) {
 	if r.Min == nil {
-		return 0, rangeBoundNotSet
+		return 0, errRangeBoundNotSet
 	}
 
 	return *r.Min, nil
@@ -148,7 +149,7 @@ func (r Range) MinAsFloat64() (float64, error) {
 
 func (r Range) MaxAsFloat64() (float64, error) {
 	if r.Max == nil {
-		return math.MaxFloat64, rangeBoundNotSet
+		return math.MaxFloat64, errRangeBoundNotSet
 	}
 
 	return *r.Max, nil
@@ -177,7 +178,6 @@ func LoadConfig(fs afero.Fs, configFile string) (Config, error) {
 }
 
 func LoadConfigFromYaml(c []byte) (Config, error) {
-
 	cfg, err := yaml.NewConfig(c)
 	if err != nil {
 		return Config{}, err

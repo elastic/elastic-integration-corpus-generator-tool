@@ -189,7 +189,7 @@ func bindByType(cfg Config, field Field, fieldMap map[string]any) (err error) {
 		err = bindWordN(field, 25, fieldMap)
 	}
 
-	return
+	return err
 }
 
 func bindByTypeWithReturn(cfg Config, field Field, fieldMap map[string]any) (err error) {
@@ -218,7 +218,7 @@ func bindByTypeWithReturn(cfg Config, field Field, fieldMap map[string]any) (err
 		err = bindWordNWithReturn(field, 25, fieldMap)
 	}
 
-	return
+	return err
 }
 
 func makeFloatFunc(r *rand.Rand, fieldCfg ConfigField, field Field) func() float64 {

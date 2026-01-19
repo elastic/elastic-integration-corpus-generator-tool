@@ -33,7 +33,7 @@ func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
 	r := rand.New(rand.NewSource(rand.Int63()))
 	template, objectKeysField := generateCustomTemplateFromField(Config{}, flds, r)
 	flds = append(flds, objectKeysField...)
-	g, err := NewGeneratorWithCustomTemplate(template, Config{}, flds, uint64(b.N), rand.Int63())
+	g, err := NewGenerator(Config{}, flds, uint64(b.N), WithCustomTemplate(template))
 	defer func() {
 		_ = g.Close()
 	}()
@@ -62,7 +62,7 @@ func Benchmark_GeneratorTextTemplateJSONContent(b *testing.B) {
 	template, objectKeysField := generateTextTemplateFromField(Config{}, flds, r)
 	flds = append(flds, objectKeysField...)
 
-	g, err := NewGeneratorWithTextTemplate(template, Config{}, flds, uint64(b.N), rand.Int63())
+	g, err := NewGenerator(Config{}, flds, uint64(b.N), WithTextTemplate(template))
 	defer func() {
 		_ = g.Close()
 	}()
@@ -187,7 +187,7 @@ func Benchmark_GeneratorCustomTemplateVPCFlowLogs(b *testing.B) {
 	}
 
 	template := []byte(`{{.Version}} {{.AccountID}} {{.InterfaceID}} {{.SrcAddr}} {{.DstAddr}} {{.SrcPort}} {{.DstPort}} {{.Protocol}} {{.Packets}} {{.Bytes}} {{.Start}} {{.End}} {{.Action}} {{.LogStatus}}`)
-	g, err := NewGeneratorWithCustomTemplate(template, cfg, flds, uint64(b.N), rand.Int63())
+	g, err := NewGenerator(cfg, flds, uint64(b.N), WithCustomTemplate(template))
 	defer func() {
 		_ = g.Close()
 	}()
@@ -312,7 +312,7 @@ func Benchmark_GeneratorTextTemplateVPCFlowLogs(b *testing.B) {
 	}
 
 	template := []byte(`{{generate "Version"}} {{generate "AccountID"}} {{generate "InterfaceID"}} {{generate "SrcAddr"}} {{generate "DstAddr"}} {{generate "SrcPort"}} {{generate "DstPort"}} {{generate "Protocol"}}{{ $packets := generate "Packets" }} {{ $packets }} {{generate "Bytes"}} {{$start := generate "Start" }}{{$start.Format "22006-01-02T15:04:05.999999999Z07:00" }} {{$end := generate "End" }}{{$end.Format "2006-01-02T15:04:05.999999Z07:00"}} {{generate "Action"}}{{ if eq $packets 0 }} NODATA {{ else }} {{generate "LogStatus"}} {{ end }}`)
-	g, err := NewGeneratorWithTextTemplate(template, cfg, flds, uint64(b.N), rand.Int63())
+	g, err := NewGenerator(cfg, flds, uint64(b.N), WithTextTemplate(template))
 	defer func() {
 		_ = g.Close()
 	}()

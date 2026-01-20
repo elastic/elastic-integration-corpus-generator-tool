@@ -48,9 +48,9 @@ var awsAZs map[string][]string = map[string][]string{
 	"us-west-2":      {"us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"},
 }
 
-func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEvents uint64, randSeed int64) (*GeneratorWithTextTemplate, error) {
+func newGeneratorWithTextTemplate(cfg Config, fields Fields, totEvents uint64, opts options) (Generator, error) {
 	// Preprocess the fields, generating appropriate bound function
-	state := newGenState(randSeed)
+	state := newGenState(opts.randSeed)
 	fieldMap := make(map[string]any)
 	for _, field := range fields {
 		if err := bindField(cfg, field, fieldMap, true); err != nil {
@@ -87,7 +87,7 @@ func NewGeneratorWithTextTemplate(tpl []byte, cfg Config, fields Fields, totEven
 	t := template.New("generator")
 	t = t.Option("missingkey=error")
 
-	parsedTpl, err := t.Funcs(templateFns).Parse(string(tpl))
+	parsedTpl, err := t.Funcs(templateFns).Parse(string(opts.template))
 	if err != nil {
 		return nil, err
 	}

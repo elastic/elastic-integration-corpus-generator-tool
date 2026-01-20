@@ -110,21 +110,21 @@ func (gc GeneratorCorpus) eventsPayloadFromFields(template []byte, fields Fields
 	genlib.InitGeneratorTimeNow(timeNow)
 	genlib.InitGeneratorRandSeed(randSeed)
 
-	var evgen genlib.Generator
-	var err error
-	if len(template) == 0 {
-		evgen, err = genlib.NewGenerator(gc.config, fields, totEvents, randSeed)
-	} else {
-		if gc.templateType == templateTypeCustom {
-			evgen, err = genlib.NewGeneratorWithCustomTemplate(template, gc.config, fields, totEvents, randSeed)
-		} else if gc.templateType == templateTypeGoText {
-			evgen, err = genlib.NewGeneratorWithTextTemplate(template, gc.config, fields, totEvents, randSeed)
-		} else {
-			return ErrNotValidTemplate
-		}
+	opts := []genlib.Option{genlib.WithRandSeed(randSeed)}
 
+	// Determine template type and set appropriate option
+	switch {
+	case len(template) == 0:
+		// No template provided, use default generator behavior
+	case gc.templateType == templateTypeCustom:
+		opts = append(opts, genlib.WithCustomTemplate(template))
+	case gc.templateType == templateTypeGoText:
+		opts = append(opts, genlib.WithTextTemplate(template))
+	default:
+		return ErrNotValidTemplate
 	}
 
+	evgen, err := genlib.NewGenerator(gc.config, fields, totEvents, opts...)
 	if err != nil {
 		return err
 	}

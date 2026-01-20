@@ -7,6 +7,7 @@ package genlib
 import (
 	"bytes"
 	"io"
+	"math/rand"
 	"regexp"
 )
 
@@ -82,12 +83,20 @@ func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) 
 
 }
 
-func NewGeneratorWithCustomTemplate(template []byte, cfg Config, fields Fields, totEvents uint64, randSeed int64) (*GeneratorWithCustomTemplate, error) {
+func newGeneratorWithCustomTemplate(cfg Config, fields Fields, totEvents uint64, opts options) (Generator, error) {
+	// If no template provided, generate one from fields
+	if opts.template == nil {
+		r := rand.New(rand.NewSource(opts.randSeed))
+		template, objectKeysField := generateCustomTemplateFromField(cfg, fields, r)
+		fields = append(fields, objectKeysField...)
+		opts.template = template
+	}
+
 	// Parse the template and extract relevant information
-	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(template)
+	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(opts.template)
 
 	// Preprocess the fields, generating appropriate emit functions
-	state := newGenState(randSeed)
+	state := newGenState(opts.randSeed)
 	fieldMap := make(map[string]any)
 	fieldTypes := make(map[string]string)
 	for _, field := range fields {

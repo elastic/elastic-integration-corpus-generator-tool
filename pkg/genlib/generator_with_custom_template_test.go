@@ -481,6 +481,8 @@ func Test_FieldGeoPointWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldDateWithCustomTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -509,6 +511,8 @@ func Test_FieldDateWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndPeriodPositiveWithCustomTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -561,6 +565,8 @@ func Test_FieldDateAndPeriodPositiveWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndPeriodNegativeWithCustomTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -613,6 +619,8 @@ func Test_FieldDateAndPeriodNegativeWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromInThePastWithCustomTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -668,6 +676,8 @@ func Test_FieldDateAndRangeFromInThePastWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromInTheFutureWithCustomTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -723,6 +733,8 @@ func Test_FieldDateAndRangeFromInTheFutureWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeToInThePastWithCustomTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -778,6 +790,8 @@ func Test_FieldDateAndRangeToInThePastWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeToInTheFutureWithCustomTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -833,6 +847,8 @@ func Test_FieldDateAndRangeToInTheFutureWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromAndToPositiveWithCustomTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -889,6 +905,8 @@ func Test_FieldDateAndRangeFromAndToPositiveWithCustomTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromAndToNegativeWithCustomTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -1031,7 +1049,7 @@ func testSingleTWithCustomTemplate[T any](t *testing.T, fld Field, yaml []byte, 
 }
 
 func makeGeneratorWithCustomTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) Generator {
-	g, err := NewGeneratorWithCustomTemplate(template, cfg, fields, totEvents, rand.Int63())
+	g, err := NewGenerator(cfg, fields, totEvents, WithCustomTemplate(template))
 
 	if err != nil {
 		t.Fatal(err)

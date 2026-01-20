@@ -5,17 +5,21 @@
 package settings
 
 import (
-	"github.com/OpenPeeDeeP/xdg"
-	"github.com/spf13/viper"
 	"os"
 	"path"
+
+	"github.com/OpenPeeDeeP/xdg"
+	"github.com/spf13/viper"
 )
 
 // Init initalize settings and default values
 func Init() {
 	viper.AutomaticEnv()
+
 	// NOTE: err value is ignored as it only checks for missing argument
-	_ = viper.BindEnv("ELASTIC_INTEGRATION_CORPUS")
+	_ = viper.BindEnv("cache_dir", "ELASTIC_INTEGRATION_CORPUS_CACHE_DIR")
+	_ = viper.BindEnv("config_dir", "ELASTIC_INTEGRATION_CORPUS_CONFIG_DIR")
+	_ = viper.BindEnv("data_dir", "ELASTIC_INTEGRATION_CORPUS_DATA_DIR")
 
 	setDefaults()
 	setConstants()

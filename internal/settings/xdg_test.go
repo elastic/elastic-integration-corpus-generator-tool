@@ -5,7 +5,6 @@
 package settings_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/OpenPeeDeeP/xdg"
@@ -15,8 +14,16 @@ import (
 	"github.com/elastic/elastic-integration-corpus-generator-tool/internal/settings"
 )
 
-func TestCacheDir(t *testing.T) {
+// initSettingsForTest initializes settings and registers cleanup to reset Viper.
+// This ensures test isolation by resetting Viper state after each test.
+func initSettingsForTest(t *testing.T) {
+	t.Helper()
 	settings.Init()
+	t.Cleanup(viper.Reset)
+}
+
+func TestCacheDir(t *testing.T) {
+	initSettingsForTest(t)
 
 	expected := xdg.CacheHome()
 	got := settings.CacheDir()
@@ -25,7 +32,7 @@ func TestCacheDir(t *testing.T) {
 }
 
 func TestCacheDir_customValue(t *testing.T) {
-	settings.Init()
+	initSettingsForTest(t)
 
 	expected := "foobar"
 	viper.Set("cache_dir", expected)
@@ -35,17 +42,19 @@ func TestCacheDir_customValue(t *testing.T) {
 }
 
 func TestCacheDir_valueFromEnv(t *testing.T) {
-	settings.Init()
-
 	expected := "foobar"
-	os.Setenv("ELASTIC_INTEGRATION_CORPUS_CACHE_DIR", expected)
+
+	// Set env var before Init so Viper can read it
+	t.Setenv("ELASTIC_INTEGRATION_CORPUS_CACHE_DIR", expected)
+	initSettingsForTest(t)
+
 	got := settings.CacheDir()
 
 	assert.Equal(t, expected, got)
 }
 
 func TestConfigDir(t *testing.T) {
-	settings.Init()
+	initSettingsForTest(t)
 
 	expected := xdg.ConfigHome()
 	got := settings.ConfigDir()
@@ -54,7 +63,7 @@ func TestConfigDir(t *testing.T) {
 }
 
 func TestConfigDir_customValue(t *testing.T) {
-	settings.Init()
+	initSettingsForTest(t)
 
 	expected := "foobar"
 	viper.Set("config_dir", expected)
@@ -64,17 +73,19 @@ func TestConfigDir_customValue(t *testing.T) {
 }
 
 func TestConfigDir_valueFromEnv(t *testing.T) {
-	settings.Init()
-
 	expected := "foobar"
-	os.Setenv("ELASTIC_INTEGRATION_CORPUS_CONFIG_DIR", expected)
+
+	// Set env var before Init so Viper can read it
+	t.Setenv("ELASTIC_INTEGRATION_CORPUS_CONFIG_DIR", expected)
+	initSettingsForTest(t)
+
 	got := settings.ConfigDir()
 
 	assert.Equal(t, expected, got)
 }
 
 func TestDataDir(t *testing.T) {
-	settings.Init()
+	initSettingsForTest(t)
 
 	expected := xdg.DataHome()
 	got := settings.DataDir()
@@ -83,7 +94,7 @@ func TestDataDir(t *testing.T) {
 }
 
 func TestDataDir_customValue(t *testing.T) {
-	settings.Init()
+	initSettingsForTest(t)
 
 	expected := "foobar"
 	viper.Set("data_dir", expected)
@@ -93,10 +104,12 @@ func TestDataDir_customValue(t *testing.T) {
 }
 
 func TestDataDir_valueFromEnv(t *testing.T) {
-	settings.Init()
-
 	expected := "foobar"
-	os.Setenv("ELASTIC_INTEGRATION_CORPUS_DATA_DIR", expected)
+
+	// Set env var before Init so Viper can read it
+	t.Setenv("ELASTIC_INTEGRATION_CORPUS_DATA_DIR", expected)
+	initSettingsForTest(t)
+
 	got := settings.DataDir()
 
 	assert.Equal(t, expected, got)

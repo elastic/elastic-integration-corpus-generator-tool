@@ -25,6 +25,20 @@ import (
 
 var timeNowToBind time.Time
 
+// saveTimeState saves the current timeNowToBind and registers cleanup to restore it.
+// This ensures test isolation for tests that use or modify timeNowToBind.
+// It also initializes timeNowToBind to the current time truncated to microseconds
+// to match the precision of FieldTypeTimeLayout.
+func saveTimeState(t *testing.T) {
+	t.Helper()
+	saved := timeNowToBind
+	// Initialize to current time truncated to microseconds to match FieldTypeTimeLayout precision
+	timeNowToBind = time.Now().Truncate(time.Microsecond)
+	t.Cleanup(func() {
+		timeNowToBind = saved
+	})
+}
+
 type (
 	Fields      = fields.Fields
 	Field       = fields.Field

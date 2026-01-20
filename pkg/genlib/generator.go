@@ -164,12 +164,10 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, r 
 	return templateBuffer.Bytes(), objectKeysField
 }
 
-func NewGenerator(cfg Config, flds Fields, totEvents uint64, randSeed int64) (Generator, error) {
-	r := rand.New(rand.NewSource(randSeed))
-	template, objectKeysField := generateCustomTemplateFromField(cfg, flds, r)
-	flds = append(flds, objectKeysField...)
-
-	return NewGeneratorWithCustomTemplate(template, cfg, flds, totEvents, randSeed)
+// NewGenerator creates a new generator that auto-generates a custom template from fields.
+func NewGenerator(cfg Config, flds Fields, totEvents uint64, opts ...Option) (Generator, error) {
+	options := applyOptions(opts)
+	return options.make(cfg, flds, totEvents, options)
 }
 
 // InitGeneratorTimeNow sets base timeNow for `date` field

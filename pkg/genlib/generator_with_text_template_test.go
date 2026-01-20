@@ -17,7 +17,7 @@ func Test_EmptyCaseWithTextTemplate(t *testing.T) {
 	r := rand.New(rand.NewSource(rand.Int63()))
 	template, _ := generateTextTemplateFromField(Config{}, []Field{}, r)
 	t.Logf("with template: %s", string(template))
-	g := makeGeneratorWithTextTemplate(t, Config{}, []Field{}, template, 0, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, Config{}, []Field{}, template, 0)
 
 	var buf bytes.Buffer
 
@@ -125,7 +125,7 @@ func test_CardinalityTWithTextTemplate[T any](t *testing.T, ty string) {
 				}
 
 				nSpins := 16384
-				g := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(nSpins), rand.Int63())
+				g := makeGeneratorWithTextTemplate(t, cfg, []Field{fldAlpha, fldBeta}, template, uint64(nSpins))
 
 				vmapAlpha := make(map[any]int)
 				vmapBeta := make(map[any]int)
@@ -365,7 +365,7 @@ func Test_FieldDateAndPeriodPositiveWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
 
 	var buf bytes.Buffer
 
@@ -419,7 +419,7 @@ func Test_FieldDateAndPeriodNegativeWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
 
 	var buf bytes.Buffer
 
@@ -474,7 +474,7 @@ func Test_FieldDateAndRangeFromInThePastWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
 
 	var buf bytes.Buffer
 
@@ -531,7 +531,7 @@ func Test_FieldDateAndRangeFromInTheFutureWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
 
 	var buf bytes.Buffer
 
@@ -588,7 +588,7 @@ func Test_FieldDateAndRangeToInThePastWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
 
 	var buf bytes.Buffer
 
@@ -645,7 +645,7 @@ func Test_FieldDateAndRangeToInTheFutureWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
 
 	var buf bytes.Buffer
 
@@ -703,7 +703,7 @@ func Test_FieldDateAndRangeFromAndToPositiveWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
 
 	var buf bytes.Buffer
 
@@ -761,7 +761,7 @@ func Test_FieldDateAndRangeFromAndToNegativeWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
 
 	var buf bytes.Buffer
 
@@ -841,7 +841,7 @@ func Test_FieldLongCounterResetAfterN5WithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 40, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 40)
 
 	var buf bytes.Buffer
 
@@ -924,7 +924,7 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 		}
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 0, rand.Int63())
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 0)
 
 	var buf bytes.Buffer
 
@@ -949,8 +949,8 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 	return v
 }
 
-func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64, randSeed int64) Generator {
-	g, err := NewGeneratorWithTextTemplate(template, cfg, fields, totEvents, randSeed)
+func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) Generator {
+	g, err := NewGenerator(cfg, fields, totEvents, WithTextTemplate(template))
 
 	if err != nil {
 		t.Fatal(err)

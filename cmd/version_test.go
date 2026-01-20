@@ -13,7 +13,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// saveVersionState saves the current version state and returns a cleanup function
+// that restores it. Use with t.Cleanup() to ensure isolation between tests.
+func saveVersionState(t *testing.T) {
+	t.Helper()
+	origTag := version.Tag
+	origSourceDateEpoch := version.SourceDateEpoch
+	origCommitHash := version.CommitHash
+
+	t.Cleanup(func() {
+		version.Tag = origTag
+		version.SourceDateEpoch = origSourceDateEpoch
+		version.CommitHash = origCommitHash
+	})
+}
+
 func TestVersionCmd_default(t *testing.T) {
+	saveVersionState(t)
+
 	cmd := cmd.VersionCmd()
 
 	b := new(bytes.Buffer)
@@ -31,6 +48,8 @@ func TestVersionCmd_default(t *testing.T) {
 }
 
 func TestVersionCmd_withValues(t *testing.T) {
+	saveVersionState(t)
+
 	cmd := cmd.VersionCmd()
 
 	b := new(bytes.Buffer)

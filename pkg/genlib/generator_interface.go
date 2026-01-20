@@ -25,6 +25,16 @@ import (
 
 var timeNowToBind time.Time
 
+// saveTimeState saves the current timeNowToBind and registers cleanup to restore it.
+// This ensures test isolation for tests that use or modify timeNowToBind.
+func saveTimeState(t *testing.T) {
+	t.Helper()
+	saved := timeNowToBind
+	t.Cleanup(func() {
+		timeNowToBind = saved
+	})
+}
+
 type (
 	Fields      = fields.Fields
 	Field       = fields.Field

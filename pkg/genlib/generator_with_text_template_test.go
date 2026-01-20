@@ -319,6 +319,8 @@ func Test_FieldGeoPointWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateWithTextTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -347,6 +349,8 @@ func Test_FieldDateWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndPeriodPositiveWithTextTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -399,6 +403,8 @@ func Test_FieldDateAndPeriodPositiveWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndPeriodNegativeWithTextTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -451,6 +457,8 @@ func Test_FieldDateAndPeriodNegativeWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromInThePastWithTextTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -506,6 +514,8 @@ func Test_FieldDateAndRangeFromInThePastWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromInTheFutureWithTextTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -561,6 +571,8 @@ func Test_FieldDateAndRangeFromInTheFutureWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeToInThePastWithTextTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -616,6 +628,8 @@ func Test_FieldDateAndRangeToInThePastWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeToInTheFutureWithTextTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -671,6 +685,8 @@ func Test_FieldDateAndRangeToInTheFutureWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromAndToPositiveWithTextTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -727,6 +743,8 @@ func Test_FieldDateAndRangeFromAndToPositiveWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromAndToNegativeWithTextTemplate(t *testing.T) {
+	saveTimeState(t)
+
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,

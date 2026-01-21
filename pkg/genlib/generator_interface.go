@@ -23,22 +23,6 @@ import (
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 )
 
-var timeNowToBind time.Time
-
-// saveTimeState saves the current timeNowToBind and registers cleanup to restore it.
-// This ensures test isolation for tests that use or modify timeNowToBind.
-// It also initializes timeNowToBind to the current time truncated to microseconds
-// to match the precision of FieldTypeTimeLayout.
-func saveTimeState(t *testing.T) {
-	t.Helper()
-	saved := timeNowToBind
-	// Initialize to current time truncated to microseconds to match FieldTypeTimeLayout precision
-	timeNowToBind = time.Now().Truncate(time.Microsecond)
-	t.Cleanup(func() {
-		timeNowToBind = saved
-	})
-}
-
 type (
 	Fields      = fields.Fields
 	Field       = fields.Field
@@ -109,6 +93,8 @@ type Generator interface {
 type genState struct {
 	// random number generator
 	rand *rand.Rand
+	// start time of the generator
+	startTime time.Time
 	// event counter
 	counter uint64
 	// total events
@@ -123,7 +109,7 @@ type genState struct {
 	pool sync.Pool
 }
 
-func newGenState(randSeed int64) *genState {
+func newGenState(randSeed int64, startTime time.Time) *genState {
 	return &genState{
 		prevCache:            make(map[string]any),
 		prevCacheForDup:      make(map[string]map[any]struct{}),
@@ -133,7 +119,8 @@ func newGenState(randSeed int64) *genState {
 				return new(bytes.Buffer)
 			},
 		},
-		rand: rand.New(rand.NewSource(randSeed)),
+		rand:      rand.New(rand.NewSource(randSeed)),
+		startTime: startTime,
 	}
 }
 
@@ -587,24 +574,24 @@ func nearTime(fieldCfg ConfigField, state *genState) time.Time {
 	from, errFrom := fieldCfg.Range.FromAsTime()
 	to, errTo := fieldCfg.Range.ToAsTime()
 	if errFrom == nil && errTo == nil {
-		timeNowToBind = from
+		state.startTime = from
 		fieldCfg.Period = to.UTC().Sub(from.UTC())
 	}
 
 	if errFrom == nil && errTo != nil {
-		if from.UTC().After(timeNowToBind.UTC()) {
-			fieldCfg.Period = from.UTC().Sub(timeNowToBind.UTC())
+		if from.UTC().After(state.startTime.UTC()) {
+			fieldCfg.Period = from.UTC().Sub(state.startTime.UTC())
 		} else {
-			fieldCfg.Period = timeNowToBind.UTC().Sub(from.UTC())
+			fieldCfg.Period = state.startTime.UTC().Sub(from.UTC())
 		}
 
 	}
 
 	if errFrom != nil && errTo == nil {
-		if to.UTC().After(timeNowToBind.UTC()) {
-			fieldCfg.Period = to.UTC().Sub(timeNowToBind.UTC())
+		if to.UTC().After(state.startTime.UTC()) {
+			fieldCfg.Period = to.UTC().Sub(state.startTime.UTC())
 		} else {
-			fieldCfg.Period = timeNowToBind.UTC().Sub(to.UTC())
+			fieldCfg.Period = state.startTime.UTC().Sub(to.UTC())
 		}
 	}
 
@@ -616,10 +603,10 @@ func nearTime(fieldCfg ConfigField, state *genState) time.Time {
 		offset = time.Duration(state.rand.Intn(FieldTypeDurationSpan)) * time.Millisecond
 	}
 
-	newTime := timeNowToBind.Add(offset)
+	newTime := state.startTime.Add(offset)
 
 	if state.totEvents <= 0 {
-		timeNowToBind = newTime
+		state.startTime = newTime
 	}
 
 	return newTime

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/Pallinder/go-randomdata"
 	"github.com/lithammer/shortuuid/v3"
@@ -168,12 +167,6 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, r 
 func NewGenerator(cfg Config, flds Fields, totEvents uint64, opts ...Option) (Generator, error) {
 	options := applyOptions(opts)
 	return options.make(cfg, flds, totEvents, options)
-}
-
-// InitGeneratorTimeNow sets base timeNow for `date` field
-func InitGeneratorTimeNow(timeNow time.Time) {
-	// set timeNowToBind to --now flag (already parsed or now)
-	timeNowToBind = timeNow
 }
 
 // InitGeneratorRandSeed sets rand seed

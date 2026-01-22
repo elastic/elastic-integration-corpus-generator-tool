@@ -96,7 +96,7 @@ func newGeneratorWithCustomTemplate(cfg Config, fields Fields, totEvents uint64,
 	orderedFields, templateFieldsMap, trailingTemplate := parseCustomTemplate(opts.template)
 
 	// Preprocess the fields, generating appropriate emit functions
-	state := newGenState(opts.randSeed)
+	state := newGenState(opts.randSeed, opts.startTime)
 	fieldMap := make(map[string]any)
 	fieldTypes := make(map[string]string)
 	for _, field := range fields {

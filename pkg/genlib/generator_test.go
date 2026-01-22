@@ -7,21 +7,17 @@ import (
 	"math/rand"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/config"
 	"github.com/elastic/elastic-integration-corpus-generator-tool/pkg/genlib/fields"
 )
 
 func TestMain(m *testing.M) {
-	timeNow := time.Now()
 	randSeed := rand.Int63()
 
 	log.Printf("rand seed generator initialised with value `%d`\n", randSeed)
-	log.Printf("time now generator initialised with value `%s`\n", timeNow.UTC().Format(time.RFC3339Nano))
 
 	InitGeneratorRandSeed(randSeed)
-	InitGeneratorTimeNow(timeNow)
 
 	os.Exit(m.Run())
 }

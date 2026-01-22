@@ -14,10 +14,11 @@ import (
 )
 
 func Test_EmptyCaseWithTextTemplate(t *testing.T) {
+	startTime := time.Now().Truncate(time.Microsecond)
 	r := rand.New(rand.NewSource(rand.Int63()))
 	template, _ := generateTextTemplateFromField(Config{}, []Field{}, r)
 	t.Logf("with template: %s", string(template))
-	g := makeGeneratorWithTextTemplate(t, Config{}, []Field{}, template, 0)
+	g := makeGeneratorWithTextTemplate(t, Config{}, []Field{}, template, 0, WithStartTime(startTime))
 
 	var buf bytes.Buffer
 
@@ -319,8 +320,6 @@ func Test_FieldGeoPointWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateWithTextTemplate(t *testing.T) {
-	saveTimeState(t)
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -330,27 +329,22 @@ func Test_FieldDateWithTextTemplate(t *testing.T) {
 	t.Logf("with template: %s", string(template))
 	nSpins := rand.Intn(1024) + 1
 	for i := 0; i < nSpins; i++ {
-		previous := timeNowToBind
-
-		b := testSingleTWithTextTemplate[string](t, fld, nil, template)
+		startTime := time.Now().Truncate(time.Microsecond)
+		b := testSingleTWithTextTemplate[string](t, fld, nil, template, WithStartTime(startTime))
 
 		if ts, err := time.Parse(FieldTypeTimeLayout, b); err != nil {
 			t.Errorf("Fail parse timestamp %v", err)
 		} else {
 			// Timestamp should be from now within a FieldTypeDurationSpan milliseconds of slop
-			diff := ts.Sub(previous)
+			diff := ts.Sub(startTime)
 			if diff < 0 || diff > FieldTypeDurationSpan*time.Millisecond {
 				t.Errorf("Data generated before now, diff: %v", diff)
 			}
-
-			previous = ts
 		}
 	}
 }
 
 func Test_FieldDateAndPeriodPositiveWithTextTemplate(t *testing.T) {
-	saveTimeState(t)
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -365,7 +359,8 @@ func Test_FieldDateAndPeriodPositiveWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+	startTime := time.Now().Truncate(time.Microsecond)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, WithStartTime(startTime))
 
 	var buf bytes.Buffer
 
@@ -392,7 +387,7 @@ func Test_FieldDateAndPeriodPositiveWithTextTemplate(t *testing.T) {
 			t.Errorf("Fail parse timestamp %v", err)
 		} else {
 			// Timestamp should be +1s for every iteration
-			expectedTime := timeNowToBind.Add(time.Second * time.Duration(i))
+			expectedTime := startTime.Add(time.Second * time.Duration(i))
 
 			diff := expectedTime.Sub(ts)
 			if diff != 0 {
@@ -403,8 +398,6 @@ func Test_FieldDateAndPeriodPositiveWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndPeriodNegativeWithTextTemplate(t *testing.T) {
-	saveTimeState(t)
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
@@ -419,7 +412,8 @@ func Test_FieldDateAndPeriodNegativeWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+	startTime := time.Now().Truncate(time.Microsecond)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, WithStartTime(startTime))
 
 	var buf bytes.Buffer
 
@@ -446,7 +440,7 @@ func Test_FieldDateAndPeriodNegativeWithTextTemplate(t *testing.T) {
 			t.Errorf("Fail parse timestamp %v", err)
 		} else {
 			// Timestamp should be +1s for every iteration
-			expectedTime := timeNowToBind.Add(-10*time.Second + time.Second*time.Duration(i))
+			expectedTime := startTime.Add(-10*time.Second + time.Second*time.Duration(i))
 
 			diff := expectedTime.Sub(ts)
 			if diff != 0 {
@@ -457,14 +451,13 @@ func Test_FieldDateAndPeriodNegativeWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromInThePastWithTextTemplate(t *testing.T) {
-	saveTimeState(t)
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
 	}
 
-	from := timeNowToBind.Add(-10 * time.Second)
+	startTime := time.Now().Truncate(time.Microsecond)
+	from := startTime.Add(-10 * time.Second)
 	template := []byte(`{{$alpha := generate "alpha"}}{"alpha":"{{$alpha.Format "2006-01-02T15:04:05.999999999-07:00"}}"}`)
 	configYaml := []byte(fmt.Sprintf("fields:\n  - name: alpha\n    range:\n      from: %s", from.Format("2006-01-02T15:04:05.999999999-07:00")))
 	t.Logf("with template: %s", string(template))
@@ -474,11 +467,11 @@ func Test_FieldDateAndRangeFromInThePastWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, WithStartTime(startTime))
 
 	var buf bytes.Buffer
 
-	period := timeNowToBind.UTC().Sub(from.UTC())
+	period := startTime.UTC().Sub(from.UTC())
 
 	nSpins := int64(10)
 	for i := int64(0); i < nSpins; i++ {
@@ -503,7 +496,7 @@ func Test_FieldDateAndRangeFromInThePastWithTextTemplate(t *testing.T) {
 			t.Errorf("Fail parse timestamp %v", err)
 		} else {
 			// Timestamp should be +(period.Nanoseconds() / nSpins) * i) for every iteration
-			expectedTime := timeNowToBind.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
+			expectedTime := startTime.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
 
 			diff := expectedTime.Sub(ts)
 			if diff != 0 {
@@ -514,14 +507,13 @@ func Test_FieldDateAndRangeFromInThePastWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromInTheFutureWithTextTemplate(t *testing.T) {
-	saveTimeState(t)
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
 	}
 
-	from := timeNowToBind.Add(10 * time.Second)
+	startTime := time.Now().Truncate(time.Microsecond)
+	from := startTime.Add(10 * time.Second)
 	template := []byte(`{{$alpha := generate "alpha"}}{"alpha":"{{$alpha.Format "2006-01-02T15:04:05.999999999-07:00"}}"}`)
 	configYaml := []byte(fmt.Sprintf("fields:\n  - name: alpha\n    range:\n      from: %s", from.Format("2006-01-02T15:04:05.999999999-07:00")))
 	t.Logf("with template: %s", string(template))
@@ -531,11 +523,11 @@ func Test_FieldDateAndRangeFromInTheFutureWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, WithStartTime(startTime))
 
 	var buf bytes.Buffer
 
-	period := from.UTC().Sub(timeNowToBind.UTC())
+	period := from.UTC().Sub(startTime.UTC())
 
 	nSpins := int64(10)
 	for i := int64(0); i < nSpins; i++ {
@@ -560,7 +552,7 @@ func Test_FieldDateAndRangeFromInTheFutureWithTextTemplate(t *testing.T) {
 			t.Errorf("Fail parse timestamp %v", err)
 		} else {
 			// Timestamp should be +(period.Nanoseconds() / nSpins) * i) for every iteration
-			expectedTime := timeNowToBind.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
+			expectedTime := startTime.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
 
 			diff := expectedTime.Sub(ts)
 			if diff != 0 {
@@ -571,14 +563,13 @@ func Test_FieldDateAndRangeFromInTheFutureWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeToInThePastWithTextTemplate(t *testing.T) {
-	saveTimeState(t)
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
 	}
 
-	to := timeNowToBind.Add(-10 * time.Second)
+	startTime := time.Now().Truncate(time.Microsecond)
+	to := startTime.Add(-10 * time.Second)
 	template := []byte(`{{$alpha := generate "alpha"}}{"alpha":"{{$alpha.Format "2006-01-02T15:04:05.999999999-07:00"}}"}`)
 	configYaml := []byte(fmt.Sprintf("fields:\n  - name: alpha\n    range:\n      to: %s", to.Format("2006-01-02T15:04:05.999999999-07:00")))
 	t.Logf("with template: %s", string(template))
@@ -588,11 +579,11 @@ func Test_FieldDateAndRangeToInThePastWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, WithStartTime(startTime))
 
 	var buf bytes.Buffer
 
-	period := timeNowToBind.UTC().Sub(to.UTC())
+	period := startTime.UTC().Sub(to.UTC())
 
 	nSpins := int64(10)
 	for i := int64(0); i < nSpins; i++ {
@@ -617,7 +608,7 @@ func Test_FieldDateAndRangeToInThePastWithTextTemplate(t *testing.T) {
 			t.Errorf("Fail parse timestamp %v", err)
 		} else {
 			// Timestamp should be +(period.Nanoseconds() / nSpins) * i) for every iteration
-			expectedTime := timeNowToBind.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
+			expectedTime := startTime.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
 
 			diff := expectedTime.Sub(ts)
 			if diff != 0 {
@@ -628,14 +619,13 @@ func Test_FieldDateAndRangeToInThePastWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeToInTheFutureWithTextTemplate(t *testing.T) {
-	saveTimeState(t)
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
 	}
 
-	to := timeNowToBind.Add(10 * time.Second)
+	startTime := time.Now().Truncate(time.Microsecond)
+	to := startTime.Add(10 * time.Second)
 	template := []byte(`{{$alpha := generate "alpha"}}{"alpha":"{{$alpha.Format "2006-01-02T15:04:05.999999999-07:00"}}"}`)
 	configYaml := []byte(fmt.Sprintf("fields:\n  - name: alpha\n    range:\n      to: %s", to.Format("2006-01-02T15:04:05.999999999-07:00")))
 	t.Logf("with template: %s", string(template))
@@ -645,11 +635,11 @@ func Test_FieldDateAndRangeToInTheFutureWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, WithStartTime(startTime))
 
 	var buf bytes.Buffer
 
-	period := to.UTC().Sub(timeNowToBind.UTC())
+	period := to.UTC().Sub(startTime.UTC())
 
 	nSpins := int64(10)
 	for i := int64(0); i < nSpins; i++ {
@@ -674,7 +664,7 @@ func Test_FieldDateAndRangeToInTheFutureWithTextTemplate(t *testing.T) {
 			t.Errorf("Fail parse timestamp %v", err)
 		} else {
 			// Timestamp should be +(period.Nanoseconds() / nSpins) * i) for every iteration
-			expectedTime := timeNowToBind.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
+			expectedTime := startTime.Add(time.Duration((period.Nanoseconds() / nSpins) * i))
 
 			diff := expectedTime.Sub(ts)
 			if diff != 0 {
@@ -685,15 +675,14 @@ func Test_FieldDateAndRangeToInTheFutureWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromAndToPositiveWithTextTemplate(t *testing.T) {
-	saveTimeState(t)
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
 	}
 
-	from := timeNowToBind.Add(-10 * time.Second)
-	to := timeNowToBind.Add(10 * time.Second)
+	startTime := time.Now().Truncate(time.Microsecond)
+	from := startTime.Add(-10 * time.Second)
+	to := startTime.Add(10 * time.Second)
 	template := []byte(`{{$alpha := generate "alpha"}}{"alpha":"{{$alpha.Format "2006-01-02T15:04:05.999999999-07:00"}}"}`)
 	configYaml := []byte(fmt.Sprintf("fields:\n  - name: alpha\n    range:\n      from: %s\n      to: %s", from.Format("2006-01-02T15:04:05.999999999-07:00"), to.Format("2006-01-02T15:04:05.999999999-07:00")))
 	t.Logf("with template: %s", string(template))
@@ -703,7 +692,7 @@ func Test_FieldDateAndRangeFromAndToPositiveWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, WithStartTime(startTime))
 
 	var buf bytes.Buffer
 
@@ -743,15 +732,14 @@ func Test_FieldDateAndRangeFromAndToPositiveWithTextTemplate(t *testing.T) {
 }
 
 func Test_FieldDateAndRangeFromAndToNegativeWithTextTemplate(t *testing.T) {
-	saveTimeState(t)
-
 	fld := Field{
 		Name: "alpha",
 		Type: FieldTypeDate,
 	}
 
-	from := timeNowToBind.Add(10 * time.Second)
-	to := timeNowToBind.Add(-10 * time.Second)
+	startTime := time.Now().Truncate(time.Microsecond)
+	from := startTime.Add(10 * time.Second)
+	to := startTime.Add(-10 * time.Second)
 	template := []byte(`{{$alpha := generate "alpha"}}{"alpha":"{{$alpha.Format "2006-01-02T15:04:05.999999999-07:00"}}"}`)
 	configYaml := []byte(fmt.Sprintf("fields:\n  - name: alpha\n    range:\n      from: %s\n      to: %s", from.Format("2006-01-02T15:04:05.999999999-07:00"), to.Format("2006-01-02T15:04:05.999999999-07:00")))
 	t.Logf("with template: %s", string(template))
@@ -761,7 +749,7 @@ func Test_FieldDateAndRangeFromAndToNegativeWithTextTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10, WithStartTime(startTime))
 
 	var buf bytes.Buffer
 
@@ -913,7 +901,7 @@ func _testNumericWithTextTemplate[T any](t *testing.T, ty string) {
 	})
 }
 
-func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, template []byte) T {
+func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, template []byte, opts ...Option) T {
 	var err error
 	var cfg Config
 
@@ -924,7 +912,7 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 		}
 	}
 
-	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 0)
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 0, opts...)
 
 	var buf bytes.Buffer
 
@@ -949,8 +937,9 @@ func testSingleTWithTextTemplate[T any](t *testing.T, fld Field, yaml []byte, te
 	return v
 }
 
-func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64) Generator {
-	g, err := NewGenerator(cfg, fields, totEvents, WithTextTemplate(template))
+func makeGeneratorWithTextTemplate(t *testing.T, cfg Config, fields Fields, template []byte, totEvents uint64, opts ...Option) Generator {
+	opts = append(opts, WithTextTemplate(template))
+	g, err := NewGenerator(cfg, fields, totEvents, opts...)
 
 	if err != nil {
 		t.Fatal(err)

@@ -1,11 +1,11 @@
 module github.com/elastic/elastic-integration-corpus-generator-tool
 
-go 1.18
+go 1.22
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/OpenPeeDeeP/xdg v1.0.0
-	github.com/Pallinder/go-randomdata v1.2.0
+	github.com/brianvoe/gofakeit/v7 v7.1.2
 	github.com/elastic/go-ucfg v0.8.8
 	github.com/lithammer/shortuuid/v3 v3.0.7
 	github.com/spf13/afero v1.11.0

@@ -67,6 +67,10 @@ func TemplateCmd() *cobra.Command {
 				if _, err := os.Stat(fieldsConfigFilePath); err == nil {
 					configFilePath = fieldsConfigFilePath
 				}
+			} else {
+				if _, err := os.Stat(configFilePath); errors.Is(err, os.ErrNotExist) {
+					errs = append(errs, fmt.Errorf("config file %s does not exist", configFilePath))
+				}
 			}
 
 			if len(errs) > 0 {

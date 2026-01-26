@@ -62,8 +62,7 @@ func TemplateCmd() *cobra.Command {
 			// Use local configs.yml if no --config-file flag provided
 			configFilePath := configFile
 			if configFilePath == "" {
-				fieldsConfigFile := "configs.yml"
-				fieldsConfigFilePath := filepath.Join(datasetFolderPath, fieldsConfigFile)
+				fieldsConfigFilePath := filepath.Join(datasetFolderPath, "configs.yml")
 				if _, err := os.Stat(fieldsConfigFilePath); err == nil {
 					configFilePath = fieldsConfigFilePath
 				}

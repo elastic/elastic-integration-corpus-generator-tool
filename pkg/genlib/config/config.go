@@ -39,16 +39,17 @@ type Config struct {
 }
 
 type ConfigField struct {
-	Name         string        `config:"name"`
-	Fuzziness    float64       `config:"fuzziness"`
-	Range        Range         `config:"range"`
-	Cardinality  int           `config:"cardinality"`
-	Period       time.Duration `config:"period"`
-	Enum         []string      `config:"enum"`
-	ObjectKeys   []string      `config:"object_keys"`
-	Value        any           `config:"value"`
-	Counter      bool          `config:"counter"`
-	CounterReset *CounterReset `config:"counter_reset"`
+	Name              string        `config:"name"`
+	Fuzziness         float64       `config:"fuzziness"`
+	Range             Range         `config:"range"`
+	Cardinality       int           `config:"cardinality"`
+	Period            time.Duration `config:"period"`
+	Enum              []string      `config:"enum"`
+	ObjectKeys        []string      `config:"object_keys"`
+	Value             any           `config:"value"`
+	Counter           bool          `config:"counter"`
+	CounterReset      *CounterReset `config:"counter_reset"`
+	FormattingPattern string        `config:"formatting_pattern"`
 }
 
 const (

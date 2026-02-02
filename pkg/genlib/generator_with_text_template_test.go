@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -879,6 +880,104 @@ func Test_FieldLongCounterResetAfterN5WithTextTemplate(t *testing.T) {
 
 	if resetCount != expectedResetCount {
 		t.Errorf("Expected counter to reset %d times, got %d", expectedResetCount, resetCount)
+	}
+}
+
+func Test_FieldKeywordFormattingPatternPathWithTextTemplate(t *testing.T) {
+	fld := Field{
+		Name: "path",
+		Type: FieldTypeKeyword,
+	}
+
+	template := []byte(`{{$path := generate "path"}}{"path":"{{$path}}"}`)
+	configYaml := []byte(`fields:
+- name: path
+  cardinality: 25
+  formatting_pattern: "/home/{string}/{string}/{string}"`)
+	t.Logf("with template: %s", string(template))
+
+	cfg, err := config.LoadConfigFromYaml(configYaml)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+
+	var buf bytes.Buffer
+
+	pathRegex := regexp.MustCompile(`^/home/[^/]+/[^/]+/[^/]+$`)
+
+	nSpins := int64(10)
+
+	for i := int64(0); i < nSpins; i++ {
+		if err := g.Emit(&buf); err != nil {
+			t.Fatal(err)
+		}
+
+		m := unmarshalJSONT[string](t, buf.Bytes())
+		buf.Reset()
+
+		if len(m) != 1 {
+			t.Errorf("Expected map size 1, got %d", len(m))
+		}
+
+		v, ok := m[fld.Name]
+		if !ok {
+			t.Errorf("Missing key %v", fld.Name)
+		}
+
+		if !pathRegex.MatchString(v) {
+			t.Errorf("Generated path %v does not match expected format", v)
+		}
+	}
+}
+
+func Test_FieldKeywordFormattingPatternHostIPWithTextTemplate(t *testing.T) {
+	fld := Field{
+		Name: "hostIP",
+		Type: FieldTypeKeyword,
+	}
+
+	template := []byte(`{{$hostIP := generate "hostIP"}}{"hostIP":"{{$hostIP}}"}`)
+	configYaml := []byte(`fields:
+- name: hostIP
+  cardinality: 25
+  formatting_pattern: "{ipv4}:{port}|{ipv6}"`)
+	t.Logf("with template: %s", string(template))
+
+	cfg, err := config.LoadConfigFromYaml(configYaml)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	g := makeGeneratorWithTextTemplate(t, cfg, []Field{fld}, template, 10)
+
+	var buf bytes.Buffer
+
+	ipRegex := regexp.MustCompile(`^((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5})|(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}))$`)
+
+	nSpins := int64(10)
+
+	for i := int64(0); i < nSpins; i++ {
+		if err := g.Emit(&buf); err != nil {
+			t.Fatal(err)
+		}
+
+		m := unmarshalJSONT[string](t, buf.Bytes())
+		buf.Reset()
+
+		if len(m) != 1 {
+			t.Errorf("Expected map size 1, got %d", len(m))
+		}
+
+		v, ok := m[fld.Name]
+		if !ok {
+			t.Errorf("Missing key %v", fld.Name)
+		}
+
+		if !ipRegex.MatchString(v) {
+			t.Errorf("Generated pattern %v does not match expected format", v)
+		}
 	}
 }
 

@@ -137,6 +137,35 @@ func newGenState(randSeed int64) *genState {
 	}
 }
 
+// replacePattern replaces placeholders in a pattern with random data.
+func replacePattern(pattern string) string {
+	options := strings.Split(pattern, "|")
+	chosenOption := options[rand.Intn(len(options))]
+
+	replacements := map[string]func() string{
+		"{string}": func() string {
+			return randomdata.Noun()
+		},
+		"{ipv4}": func() string {
+			return randomdata.IpV4Address()
+		},
+		"{ipv6}": func() string {
+			return randomdata.IpV6Address()
+		},
+		"{port}": func() string {
+			return fmt.Sprintf("%d", randomdata.Number(1024, 65535))
+		},
+	}
+
+	for placeholder, replacementFunc := range replacements {
+		if strings.Contains(chosenOption, placeholder) {
+			chosenOption = strings.Replace(chosenOption, placeholder, replacementFunc(), -1)
+		}
+	}
+
+	return chosenOption
+}
+
 func bindField(cfg Config, field Field, fieldMap map[string]any, withReturn bool) error {
 	// Check for hardcoded field value
 	if len(field.Value) > 0 {
@@ -929,6 +958,17 @@ func bindConstantKeywordWithReturn(field Field, fieldMap map[string]any) error {
 }
 
 func bindKeywordWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]any) error {
+	if fieldCfg.FormattingPattern != "" {
+		var emitF emitF
+		emitF = func(state *genState) any {
+			res := replacePattern(fieldCfg.FormattingPattern)
+			return res
+		}
+
+		fieldMap[field.Name] = emitF
+		return nil
+	}
+
 	if len(fieldCfg.Enum) > 0 {
 		var emitF emitF
 		emitF = func(state *genState) any {

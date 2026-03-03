@@ -7,11 +7,9 @@ package genlib
 import (
 	"bytes"
 	"fmt"
-	"math/rand"
 	"strings"
 	"time"
 
-	"github.com/Pallinder/go-randomdata"
 	"github.com/lithammer/shortuuid/v3"
 )
 
@@ -52,15 +50,15 @@ func fieldValueWrapByType(field Field) string {
 	}
 }
 
-func generateCustomTemplateFromField(cfg Config, fields Fields, r *rand.Rand) ([]byte, []Field) {
-	return generateTemplateFromField(cfg, fields, customTemplateEngine, r)
+func generateCustomTemplateFromField(cfg Config, fields Fields, state *genState) ([]byte, []Field) {
+	return generateTemplateFromField(cfg, fields, customTemplateEngine, state)
 }
 
-func generateTextTemplateFromField(cfg Config, fields Fields, r *rand.Rand) ([]byte, []Field) {
-	return generateTemplateFromField(cfg, fields, textTemplateEngine, r)
+func generateTextTemplateFromField(cfg Config, fields Fields, state *genState) ([]byte, []Field) {
+	return generateTemplateFromField(cfg, fields, textTemplateEngine, state)
 }
 
-func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, r *rand.Rand) ([]byte, []Field) {
+func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, state *genState) ([]byte, []Field) {
 	if len(fields) == 0 {
 		return nil, nil
 	}
@@ -89,7 +87,7 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, r 
 			N := 5
 			for ii := 0; ii < N; ii++ {
 				// Fire or skip
-				if r.Int()%2 == 0 {
+				if state.rand.Int()%2 == 0 {
 					continue
 				}
 
@@ -99,10 +97,10 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, r 
 
 				var try int
 				const maxTries = 10
-				rNoun := randomdata.Noun()
+				rNoun := state.faker.Noun()
 				_, ok := dupes[rNoun]
 				for ; ok && try < maxTries; try++ {
-					rNoun = randomdata.Noun()
+					rNoun = state.faker.Noun()
 					_, ok = dupes[rNoun]
 				}
 
@@ -174,10 +172,4 @@ func NewGenerator(cfg Config, flds Fields, totEvents uint64, opts ...Option) (Ge
 func InitGeneratorTimeNow(timeNow time.Time) {
 	// set timeNowToBind to --now flag (already parsed or now)
 	timeNowToBind = timeNow
-}
-
-// InitGeneratorRandSeed sets rand seed
-func InitGeneratorRandSeed(randSeed int64) {
-	// set randomdata seed to --seed flag (custom or 1)
-	randomdata.CustomRand(rand.New(rand.NewSource(randSeed)))
 }

@@ -8,13 +8,21 @@ import "time"
 
 // options holds the configuration options for generators.
 type options struct {
-	randSeed int64
-	template []byte
-	make     func(Config, Fields, uint64, options) (Generator, error)
+	randSeed  int64
+	startTime time.Time
+	template  []byte
+	make      func(Config, Fields, uint64, options) (Generator, error)
 }
 
 // Option defines a functional option for configuring generators.
 type Option func(*options)
+
+// WithStartTime sets the start time for the generator.
+func WithStartTime(t time.Time) Option {
+	return func(o *options) {
+		o.startTime = t
+	}
+}
 
 // WithRandSeed sets the random seed for the generator.
 func WithRandSeed(seed int64) Option {
@@ -44,8 +52,9 @@ func applyOptions(opts []Option) options {
 	// This initialization is executed in a concurrent context, any accesss
 	// to non thread-safe resources must be properly synchronized.
 	o := options{
-		randSeed: time.Now().UnixNano(),
-		make:     newGeneratorWithCustomTemplate,
+		make:      newGeneratorWithCustomTemplate,
+		randSeed:  time.Now().UnixNano(),
+		startTime: time.Now(),
 	}
 	for _, opt := range opts {
 		opt(&o)

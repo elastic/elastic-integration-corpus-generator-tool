@@ -83,7 +83,7 @@ func parseCustomTemplate(template []byte) ([]string, map[string][]byte, []byte) 
 }
 
 func newGeneratorWithCustomTemplate(cfg Config, fields Fields, totEvents uint64, opts options) (Generator, error) {
-	state := newGenState(opts.randSeed)
+	state := newGenState(opts.randSeed, opts.startTime)
 
 	// If no template provided, generate one from fields
 	if opts.template == nil {

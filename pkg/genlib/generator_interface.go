@@ -95,6 +95,8 @@ type genState struct {
 	rand *rand.Rand
 	// start time of the generator
 	startTime time.Time
+	// simulated time advance control
+	timeSpeed float64
 	// gofakeit instance
 	faker *gofakeit.Faker
 	// event counter
@@ -111,7 +113,7 @@ type genState struct {
 	pool sync.Pool
 }
 
-func newGenState(randSeed int64, startTime time.Time) *genState {
+func newGenState(randSeed int64, startTime time.Time, timeSpeed float64) *genState {
 	return &genState{
 		prevCache:            make(map[string]any),
 		prevCacheForDup:      make(map[string]map[any]struct{}),
@@ -124,6 +126,7 @@ func newGenState(randSeed int64, startTime time.Time) *genState {
 		rand:      rand.New(rand.NewSource(randSeed)),
 		faker:     gofakeit.New(uint64(randSeed)),
 		startTime: startTime,
+		timeSpeed: timeSpeed,
 	}
 }
 
@@ -595,6 +598,12 @@ func nearTime(fieldCfg ConfigField, state *genState) time.Time {
 		offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * int64(state.counter))
 	} else if fieldCfg.Period < 0 && state.totEvents > 0 {
 		offset = time.Duration((fieldCfg.Period.Nanoseconds() / int64(state.totEvents)) * (int64(state.totEvents - state.counter)))
+	} else if state.timeSpeed > 0 {
+		// user wants time to advance relative to real elapsed time; simulate that by using
+		// the generator start time as a fixed origin, then add elapsed time scaled by timeSpeed
+		elapsed := time.Since(state.startTime)
+		delta := float64(elapsed) * state.timeSpeed
+		return state.startTime.Add(time.Duration(delta))
 	} else {
 		offset = time.Duration(state.rand.Intn(FieldTypeDurationSpan)) * time.Millisecond
 	}

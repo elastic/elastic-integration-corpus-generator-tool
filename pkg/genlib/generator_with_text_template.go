@@ -50,7 +50,7 @@ var awsAZs map[string][]string = map[string][]string{
 
 func newGeneratorWithTextTemplate(cfg Config, fields Fields, totEvents uint64, opts options) (Generator, error) {
 	// Preprocess the fields, generating appropriate bound function
-	state := newGenState(opts.randSeed, opts.startTime)
+	state := newGenState(opts.randSeed, opts.startTime, opts.timeSpeed)
 	fieldMap := make(map[string]any)
 	for _, field := range fields {
 		if err := bindField(cfg, field, fieldMap, true); err != nil {

@@ -10,6 +10,7 @@ import "time"
 type options struct {
 	randSeed  int64
 	startTime time.Time
+	timeSpeed float64
 	template  []byte
 	make      func(Config, Fields, uint64, options) (Generator, error)
 }
@@ -21,6 +22,25 @@ type Option func(*options)
 func WithStartTime(t time.Time) Option {
 	return func(o *options) {
 		o.startTime = t
+	}
+}
+
+// WithTimeSpeed controls how fast simulated time advances relative to wall
+// clock time elapsed since the generator's start time.
+//
+//	0   (default) → time accumulates randomly per Emit call (legacy behaviour)
+//	1.0           → simulated clock matches wall clock
+//	2.0           → twice real time
+//	0.5           → half speed (e.g. historical replay)
+//
+// Negative values are invalid and will cause NewGenerator to return an error.
+//
+// Note: WithTimeSpeed only takes effect when no Period is configured on the
+// timestamp field. When Period is set and totEvents > 0, the period-based
+// distribution takes precedence regardless of this setting.
+func WithTimeSpeed(factor float64) Option {
+	return func(o *options) {
+		o.timeSpeed = factor
 	}
 }
 

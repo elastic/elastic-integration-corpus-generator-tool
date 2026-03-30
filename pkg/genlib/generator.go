@@ -164,5 +164,8 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, st
 // NewGenerator creates a new generator that auto-generates a custom template from fields.
 func NewGenerator(cfg Config, flds Fields, totEvents uint64, opts ...Option) (Generator, error) {
 	options := applyOptions(opts)
+	if options.timeSpeed < 0 {
+		return nil, fmt.Errorf("time speed factor must be non-negative")
+	}
 	return options.make(cfg, flds, totEvents, options)
 }

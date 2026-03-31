@@ -1064,7 +1064,8 @@ func bindLongWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string]a
 	}
 
 	if len(fieldCfg.Enum) > 0 {
-		emitF := func(state *genState) any {
+		var emitF emitF
+		emitF = func(state *genState) any {
 			idx := state.rand.Intn(len(fieldCfg.Enum))
 			f, _ := strconv.ParseInt(fieldCfg.Enum[idx], 10, 64)
 			return f
@@ -1223,7 +1224,8 @@ func bindDoubleWithReturn(fieldCfg ConfigField, field Field, fieldMap map[string
 	}
 
 	if len(fieldCfg.Enum) > 0 {
-		emitF := func(state *genState) any {
+		var emitF emitF
+		emitF = func(state *genState) any {
 			idx := state.rand.Intn(len(fieldCfg.Enum))
 			f, _ := strconv.ParseFloat(fieldCfg.Enum[idx], 64)
 			return f

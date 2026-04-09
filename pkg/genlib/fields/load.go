@@ -147,6 +147,9 @@ func getFieldsFilesAndDataStreamType(ctx context.Context, baseURL, integration, 
 	}
 
 	downloadURL, err := makeDownloadURL(baseURL, downloadPayload.Download)
+	if err != nil {
+		return nil, "", err
+	}
 	r, err = getFromURL(ctx, downloadURL.String())
 	defer func(r io.ReadCloser) {
 		if r != nil {

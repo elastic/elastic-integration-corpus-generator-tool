@@ -244,7 +244,7 @@ func getFromURL(ctx context.Context, srcURL string) (io.ReadCloser, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		if resp.Body != nil {
+		if resp != nil && resp.Body != nil {
 			_ = resp.Body.Close()
 		}
 		return nil, err

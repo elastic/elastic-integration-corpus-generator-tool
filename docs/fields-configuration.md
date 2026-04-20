@@ -22,8 +22,11 @@ For each config entry the following fields are available:
       - `"after_n"`: resets the counter after a specific number of iterations.
   - `probability` *required when strategy is "probabilistic"*: an integer between 1 and 100 representing the percentage chance of reset for each generated value.
   - `reset_after_n` *required when strategy is "after_n"*: an integer specifying the number of values to generate before resetting the counter.
-
-Note: The `counter_reset` configuration is only applicable when `counter` is set to `true`. 
+- `formatting_pattern` *optional (applicable to `string` type fields)*: a string that defines a pattern for generating formatted string values. The pattern can include static text and placeholders that will be replaced with random values. Multiple options can be provided, separated by `|`, from which one will be randomly selected for each generated value. Available placeholders are:
+  - `{string}`: replaced with a random noun
+  - `{ipv4}`: replaced with a random IPv4 address
+  - `{ipv6}`: replaced with a random IPv6 address
+  - `{port}`: replaced with a random port number between 1024 and 65535
 - `period` *optional (`date` type only)*: values will be evenly generated between `time.Now()` and `time.Now().Add(period)`, where period is expressed as `time.Duration`. It accepts also a negative duration: in this case  values will be evenly generated between `time.Now().Add(period)` and `time.Now()`. If both `period` and at least one of `range.from` or `range.to` settings are defined an error will be returned and the generator will stop.
 - `object_keys` *optional (`object` type only)*: list of field names to generate in a object field type; if not specified a random number of field names will be generated in the object filed type
 - `value` *optional*: hardcoded value to set for the field (any `cardinality` will be ignored)

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"reflect"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -48,53 +49,109 @@ var awsAZs map[string][]string = map[string][]string{
 	"us-west-2":      {"us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"},
 }
 
-func newGeneratorWithTextTemplate(cfg Config, fields Fields, totEvents uint64, opts options) (Generator, error) {
-	// Preprocess the fields, generating appropriate bound function
-	state := newGenState(opts.randSeed, opts.startTime, opts.timeSpeed)
+func newGeneratorWithTextTemplate(template []byte) func(Config, Fields, uint64, options) (Generator, error) {
+	return func(cfg Config, flds Fields, totEvents uint64, opts options) (Generator, error) {
+		compiled, err := NewTextTemplate(cfg, flds, totEvents, template)
+		if err != nil {
+			return nil, err
+		}
+		var o2 options
+		compiled(&o2)
+		return o2.make(Config{}, nil, 0, opts)
+	}
+}
+
+// buildTextFuncMap is the single place where all state-capturing template
+// functions are defined. state may be (*genState)(nil) at compile time
+// (Parse only checks function signatures, never calls them); any attempt to
+// Execute the unbound template will panic immediately, making the bug obvious.
+func buildTextFuncMap(state *genState, fieldMap map[string]any, errChan chan error) template.FuncMap {
+	return template.FuncMap{
+		"generate": func(field string) any {
+			bindF, ok := fieldMap[field].(emitF)
+			if !ok {
+				close(errChan)
+				return nil
+			}
+			return bindF(state)
+		},
+		"awsAZFromRegion": func(region string) string {
+			azs, ok := awsAZs[region]
+			if !ok {
+				return "NoAZ"
+			}
+			return azs[state.rand.Intn(len(azs))]
+		},
+	}
+}
+
+// NewTextTemplate compiles a Go text template from cfg and fields. The result
+// is returned as an Option that can be passed to NewGenerator to cheaply create
+// multiple Generator instances sharing the compiled template.
+//
+// If templateBytes is nil, the template is auto-generated from fields.
+//
+// Intended usage:
+//
+//	// Compile once per stream (expensive)
+//	opt, err := genlib.NewTextTemplate(cfg, flds, totEvents, nil)
+//
+//	// Per drone (cheap — only allocates genState)
+//	g, err := genlib.NewGenerator(nil, nil, 0, opt, genlib.WithRandSeed(seed))
+func NewTextTemplate(cfg Config, flds Fields, totEvents uint64, templateBytes []byte, opts ...Option) (Option, error) {
+	o := applyOptions(opts)
+
+	if templateBytes == nil {
+		tmpState := newGenState(o.randSeed, o.startTime, o.timeSpeed)
+		var objectKeysFields Fields
+		templateBytes, objectKeysFields = generateTextTemplateFromField(cfg, flds, tmpState)
+		flds = append(flds, objectKeysFields...)
+	}
+
 	fieldMap := make(map[string]any)
-	for _, field := range fields {
+	fieldNames := make([]string, 0, len(flds))
+	for _, field := range flds {
 		if err := bindField(cfg, field, fieldMap, true); err != nil {
 			return nil, err
 		}
-
-		state.prevCacheForDup[field.Name] = make(map[any]struct{})
-		state.prevCacheCardinality[field.Name] = make([]any, 0)
+		fieldNames = append(fieldNames, field.Name)
 	}
 
-	errChan := make(chan error)
-
-	templateFns := sprig.TxtFuncMap()
-
-	templateFns["awsAZFromRegion"] = func(region string) string {
-		azs, ok := awsAZs[region]
-		if !ok {
-			return "NoAZ"
-		}
-
-		return azs[state.rand.Intn(len(azs))]
+	// Parse with poisoned nil-state closures. Parse only validates function
+	// signatures, never calls them; nil-state panics loudly if the template is
+	// ever executed without per-drone rebinding via Clone + Funcs.
+	allFns := sprig.TxtFuncMap()
+	for k, v := range buildTextFuncMap((*genState)(nil), fieldMap, make(chan error)) {
+		allFns[k] = v
 	}
-
-	templateFns["generate"] = func(field string) any {
-		bindF, ok := fieldMap[field].(emitF)
-		if !ok {
-			close(errChan)
-			return nil
-		}
-
-		return bindF(state)
-	}
-
-	t := template.New("generator")
-	t = t.Option("missingkey=error")
-
-	parsedTpl, err := t.Funcs(templateFns).Parse(string(opts.template))
+	t := template.New("generator").Option("missingkey=error")
+	parsedTpl, err := t.Funcs(allFns).Parse(string(templateBytes))
 	if err != nil {
 		return nil, err
 	}
 
-	state.totEvents = totEvents
+	return func(o *options) {
+		o.make = func(cfg Config, flds Fields, argTotEvents uint64, opts options) (Generator, error) {
+			if len(flds) != 0 || argTotEvents != 0 || !reflect.ValueOf(cfg).IsZero() {
+				return nil, errors.New("cfg, flds and totEvents must be nil/zero when using a pre-compiled template option; pass them to NewTextTemplate instead")
+			}
+			state := newGenState(opts.randSeed, opts.startTime, opts.timeSpeed)
+			for _, fieldName := range fieldNames {
+				state.prevCacheForDup[fieldName] = make(map[any]struct{})
+				state.prevCacheCardinality[fieldName] = make([]any, 0)
+			}
+			state.totEvents = totEvents
 
-	return &GeneratorWithTextTemplate{tpl: parsedTpl, totEvents: totEvents, state: state, errChan: errChan}, nil
+			errChan := make(chan error)
+			cloned, err := parsedTpl.Clone()
+			if err != nil {
+				return nil, err
+			}
+			cloned.Funcs(buildTextFuncMap(state, fieldMap, errChan))
+
+			return &GeneratorWithTextTemplate{tpl: cloned, totEvents: totEvents, state: state, errChan: errChan}, nil
+		}
+	}, nil
 }
 
 func (gen *GeneratorWithTextTemplate) Close() error {

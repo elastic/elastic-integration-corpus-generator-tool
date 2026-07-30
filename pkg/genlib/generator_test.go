@@ -39,6 +39,28 @@ func Benchmark_GeneratorCustomTemplateJSONContent(b *testing.B) {
 	}
 }
 
+func TestGeneratedTemplatesSkipAliasFields(t *testing.T) {
+	fields := Fields{
+		{Name: "event.dataset", Type: FieldTypeKeyword},
+		{Name: "cluster_uuid", Type: FieldTypeAlias},
+	}
+
+	for name, generate := range map[string]func(Config, Fields, *genState) ([]byte, []Field){
+		"custom": generateCustomTemplateFromField,
+		"text":   generateTextTemplateFromField,
+	} {
+		t.Run(name, func(t *testing.T) {
+			template, _ := generate(Config{}, fields, newGenState(1, time.Now(), 0))
+			if bytes.Contains(template, []byte("cluster_uuid")) {
+				t.Fatalf("generated template contains read-only alias field: %s", template)
+			}
+			if !bytes.Contains(template, []byte("event.dataset")) {
+				t.Fatalf("generated template omits writable field: %s", template)
+			}
+		})
+	}
+}
+
 func Benchmark_GeneratorTextTemplateJSONContent(b *testing.B) {
 	ctx := context.Background()
 	flds, _, err := fields.LoadFields(ctx, fields.ProductionBaseURL, "endpoint", "process", "8.2.0")

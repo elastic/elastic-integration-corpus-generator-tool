@@ -49,6 +49,7 @@ const (
 	FieldTypeNested          = "nested"
 	FieldTypeFlattened       = "flattened"
 	FieldTypeGeoPoint        = "geo_point"
+	FieldTypeAlias           = "alias"
 
 	FieldTypeDurationSpan = 1000 // milliseconds
 	FieldTypeTimeLayout   = "2006-01-02T15:04:05.999999Z07:00"

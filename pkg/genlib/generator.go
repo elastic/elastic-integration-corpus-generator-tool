@@ -129,10 +129,8 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, st
 					}
 				}
 
-				// Build the sub-key field with the resolved leaf type so that
-				// bindField uses bindKeyword directly rather than recursing
-				// through bindObject → bindDynamicObject with Type = "flattened"
-				// (which could wrap a nil emitter under race conditions).
+				// Resolve the leaf type so bindField binds the sub-key directly
+				// (e.g. keyword/long) instead of re-entering bindObject → bindDynamicObject.
 				subKeyField := field
 				subKeyField.Name = fieldNameRoot + "." + rNoun
 				if subKeyField.ObjectType != "" {

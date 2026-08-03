@@ -11,7 +11,6 @@ type options struct {
 	randSeed  int64
 	startTime time.Time
 	timeSpeed float64
-	template  []byte
 	make      func(Config, Fields, uint64, options) (Generator, error)
 }
 
@@ -52,27 +51,29 @@ func WithRandSeed(seed int64) Option {
 }
 
 // WithTextTemplate sets a Go text template for the generator.
+// The template is compiled on each NewGenerator call. To compile once and share
+// across multiple generators, use NewTextTemplate instead.
 func WithTextTemplate(template []byte) Option {
 	return func(o *options) {
-		o.template = template
-		o.make = newGeneratorWithTextTemplate
+		o.make = newGeneratorWithTextTemplate(template)
 	}
 }
 
 // WithCustomTemplate sets a custom placeholder template for the generator.
+// The template is compiled on each NewGenerator call. To compile once and share
+// across multiple generators, use NewCustomTemplate instead.
 func WithCustomTemplate(template []byte) Option {
 	return func(o *options) {
-		o.template = template
-		o.make = newGeneratorWithCustomTemplate
+		o.make = newGeneratorWithCustomTemplate(template)
 	}
 }
 
 // applyOptions applies the given options and returns the final configuration.
 func applyOptions(opts []Option) options {
-	// This initialization is executed in a concurrent context, any accesss
+	// This initialization is executed in a concurrent context, any access
 	// to non thread-safe resources must be properly synchronized.
 	o := options{
-		make:      newGeneratorWithCustomTemplate,
+		make:      newGeneratorWithCustomTemplate(nil),
 		randSeed:  time.Now().UnixNano(),
 		startTime: time.Now(),
 	}

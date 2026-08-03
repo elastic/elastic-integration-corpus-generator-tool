@@ -130,10 +130,16 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, st
 					}
 				}
 
-				originalFieldName := field.Name
-				field.Name = fieldNameRoot + "." + rNoun
-				objectKeysField = append(objectKeysField, field)
-				field.Name = originalFieldName
+				// Resolve the leaf type so bindField binds the sub-key directly
+				// (e.g. keyword/long) instead of re-entering bindObject → bindDynamicObject.
+				subKeyField := field
+				subKeyField.Name = fieldNameRoot + "." + rNoun
+				if subKeyField.ObjectType != "" {
+					subKeyField.Type = subKeyField.ObjectType
+				} else {
+					subKeyField.Type = FieldTypeKeyword
+				}
+				objectKeysField = append(objectKeysField, subKeyField)
 
 				templateBuffer.WriteString(fieldTemplate)
 			}

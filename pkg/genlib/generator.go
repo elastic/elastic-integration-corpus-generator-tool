@@ -58,6 +58,7 @@ func generateTextTemplateFromField(cfg Config, fields Fields, state *genState) (
 }
 
 func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, state *genState) ([]byte, []Field) {
+	fields = writableFields(fields)
 	if len(fields) == 0 {
 		return nil, nil
 	}
@@ -165,6 +166,19 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, st
 	}
 
 	return templateBuffer.Bytes(), objectKeysField
+}
+
+// writableFields returns the fields that may be written into an Elasticsearch
+// document. Alias fields are query-time paths and Elasticsearch rejects
+// documents that contain a value for them.
+func writableFields(fields Fields) Fields {
+	result := make(Fields, 0, len(fields))
+	for _, field := range fields {
+		if field.Type != FieldTypeAlias {
+			result = append(result, field)
+		}
+	}
+	return result
 }
 
 // NewGenerator creates a new generator that auto-generates a custom template from fields.

@@ -81,5 +81,11 @@ func normaliseFields(fields Fields) (Fields, error) {
 	}
 
 	sort.Sort(normalisedFields)
+	// Trim excess capacity so that callers sharing this slice across goroutines
+	// cannot inadvertently share the backing array when they append to it.
+	// normaliseFields allocates cap=len(fields) but may keep fewer entries when
+	// wildcard fields are filtered; without this trim the surplus capacity is
+	// a latent data-race vector (see fbxj-vtfy-yrbl-mlyw).
+	normalisedFields = normalisedFields[:len(normalisedFields):len(normalisedFields)]
 	return normalisedFields, nil
 }

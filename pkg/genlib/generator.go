@@ -58,6 +58,7 @@ func generateTextTemplateFromField(cfg Config, fields Fields, state *genState) (
 }
 
 func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, state *genState) ([]byte, []Field) {
+	fields = writableFields(fields)
 	if len(fields) == 0 {
 		return nil, nil
 	}
@@ -129,10 +130,16 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, st
 					}
 				}
 
-				originalFieldName := field.Name
-				field.Name = fieldNameRoot + "." + rNoun
-				objectKeysField = append(objectKeysField, field)
-				field.Name = originalFieldName
+				// Resolve the leaf type so bindField binds the sub-key directly
+				// (e.g. keyword/long) instead of re-entering bindObject → bindDynamicObject.
+				subKeyField := field
+				subKeyField.Name = fieldNameRoot + "." + rNoun
+				if subKeyField.ObjectType != "" {
+					subKeyField.Type = subKeyField.ObjectType
+				} else {
+					subKeyField.Type = FieldTypeKeyword
+				}
+				objectKeysField = append(objectKeysField, subKeyField)
 
 				templateBuffer.WriteString(fieldTemplate)
 			}
@@ -159,6 +166,19 @@ func generateTemplateFromField(cfg Config, fields Fields, templateEngine int, st
 	}
 
 	return templateBuffer.Bytes(), objectKeysField
+}
+
+// writableFields returns the fields that may be written into an Elasticsearch
+// document. Alias fields are query-time paths and Elasticsearch rejects
+// documents that contain a value for them.
+func writableFields(fields Fields) Fields {
+	result := make(Fields, 0, len(fields))
+	for _, field := range fields {
+		if field.Type != FieldTypeAlias {
+			result = append(result, field)
+		}
+	}
+	return result
 }
 
 // NewGenerator creates a new generator that auto-generates a custom template from fields.

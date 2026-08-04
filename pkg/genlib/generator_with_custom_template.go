@@ -88,7 +88,16 @@ func newGeneratorWithCustomTemplate(cfg Config, fields Fields, totEvents uint64,
 	// If no template provided, generate one from fields
 	if opts.template == nil {
 		template, objectKeysField := generateCustomTemplateFromField(cfg, fields, state)
-		fields = append(fields, objectKeysField...)
+		// Use a three-index slice to cap capacity at len, forcing append to
+		// allocate a fresh backing array. This prevents a data race when the
+		// caller's fields slice shares a backing array across goroutines (a
+		// common pattern when normaliseFields returns cap > len after filtering
+		// wildcard fields). Without this, concurrent NewGenerator calls can
+		// write objectKeysField entries into the same backing-array slots,
+		// corrupting each other's view of the field list and leaving fieldMap
+		// without an entry for a template token — causing the nil type-
+		// assertion panic at line 116 (fbxj-vtfy-yrbl-mlyw).
+		fields = append(fields[:len(fields):len(fields)], objectKeysField...)
 		opts.template = template
 	}
 

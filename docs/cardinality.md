@@ -1,24 +1,115 @@
 # Cardinality
 
-The cardinality of a field refers to the number of distinct values that it can have.
+Cardinality is the number of distinct values a field can have. Understanding and controlling cardinality is essential for generating realistic test data.
 
-For example: a `boolean` will have cardinality of 2, an `integer` 4294967295, a `version` field may have a cardinality of some dozens.
+## What is Cardinality?
 
-Low cardinality fields, like `boolean` or `version` in the example above do not pose a particular issue when observing your system.
-This is the opposite for high cardinality fields, which due to their size create challenges in indexing, searching and visualising them.
+Cardinality refers to the uniqueness of values in a field:
 
-We refer to **high cardinality** when fields cardinality is in the order of hundreds of thousands or millions.
+| Field Type | Typical Cardinality | Example Values |
+|------------|---------------------|----------------|
+| `boolean` | 2 | `true`, `false` |
+| `log.level` | 4-5 | `DEBUG`, `INFO`, `WARN`, `ERROR` |
+| `http.status_code` | ~60 | `200`, `404`, `500`, etc. |
+| `host.name` | 10-10,000 | Server names in your fleet |
+| `request.id` | Millions | Unique per request |
 
-Example of these values may be: request IDs, trace IDs, value of tags attached to compute instances (es a tag with 20 distinct values in a 5000 instances fleet).
+**Low cardinality:** Few unique values (boolean, status codes)
 
-These fields are extremely valuable as they allow to fine grain your search. From a testing point of view they allow to stress test a system.
+**High cardinality:** Many unique values (IDs, timestamps)
 
-## Fields generation configuration
+## Why Cardinality Matters
 
-For these reasons one of the goals for this tool is to be able to generate high cardinality fields. An additional complexity we face is to generate plausible cardinality. 
+### Testing Perspective
 
-Let's make an exmaple: we manage a fleet of 1000 Kubernetes nodes. Each node hosts 100 pods. Pods in Kubernetes are within a namespace. Let's say we want to test the use case of few namespaces with thousands of pods (i.e. 1:1000 ration). This is a valid scenario, but we may be interested in another use case: namespaces containing very few pods (i.e. 1:10 ratio).
+High cardinality fields stress test your system:
+- **Indexing performance** - More unique values = larger inverted index
+- **Aggregation performance** - More buckets in terms aggregations
+- **Memory usage** - Field data cache grows with cardinality
+- **Storage** - Less compression for high cardinality fields
 
-To support generating dataset for both uses cases, is possible to specify a `cardinality` parameter in the field generation configuration file to tweak generated data.
-See [Fields generation configuration](./fields-configuration.md).
+### Realism Perspective
 
+Real observability data has specific cardinality patterns. For example, a Kubernetes cluster with 100 nodes, 1000 pods, and 50 namespaces would have:
+- `kubernetes.node.name`: cardinality of 100
+- `kubernetes.pod.name`: cardinality of 1000
+- `kubernetes.namespace`: cardinality of 50
+
+Generating data with wrong cardinality produces unrealistic test results.
+
+## Configuring Cardinality
+
+Set cardinality in your `configs.yml`:
+
+```yaml
+fields:
+  - name: host.name
+    cardinality: 100
+
+  - name: source.ip
+    cardinality: 50
+
+  - name: user.id
+    cardinality: 1000
+```
+
+### With Enums
+
+Cardinality is limited by enum size:
+
+```yaml
+fields:
+  - name: log.level
+    enum: ["INFO", "WARN", "ERROR"]
+    cardinality: 100  # Only 3 values possible
+```
+
+### With Ranges
+
+Cardinality is limited by range:
+
+```yaml
+fields:
+  - name: priority
+    range:
+      min: 1
+      max: 5
+    cardinality: 100  # Only 5 values possible
+```
+
+## Examples
+
+### Simulating a Server Fleet
+
+```yaml
+fields:
+  - name: host.name
+    cardinality: 50
+  - name: host.ip
+    cardinality: 50
+```
+
+### Simulating Kubernetes
+
+```yaml
+fields:
+  - name: kubernetes.node.name
+    cardinality: 20
+  - name: kubernetes.pod.name
+    cardinality: 200
+  - name: kubernetes.namespace
+    cardinality: 10
+```
+
+## Best Practices
+
+1. **Match real-world patterns** - Research actual cardinalities in production
+2. **Consider event count** - Cardinality is limited by events generated
+3. **Use correlated cardinalities** - Related fields should be consistent
+4. **Test both extremes** - Generate low and high cardinality datasets
+5. **Document assumptions** - Add comments explaining choices
+
+## See Also
+
+- [Fields Configuration](./fields-configuration.md) - All configuration options
+- [Dimensionality](./dimensionality.md) - Field count in datasets

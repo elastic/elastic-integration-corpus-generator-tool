@@ -1,4 +1,4 @@
-* @elastic/obs-infraobs-integrations
+* @elastic/obs-signals-integrations-team
 
 /assets/templates/ec2* @elastic/obs-ds-hosted-services
 /assets/templates/kubernetes* @elastic/obs-cloudnative-monitoring 
